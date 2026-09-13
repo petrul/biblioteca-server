@@ -40,14 +40,19 @@ public class ControllerTool {
         this.teiElemToTextInOutputStream(elemInfo, response.getOutputStream());
     }
 
-    /**
-     * @param elemInfo warning this method is destructive in relation to elemInfo.nodeCopy (removes divs)
-     */
     public void teiElemToTextInOutputStream(ElemInfo elemInfo, OutputStream outputStream) throws IOException {
-        Util.removeDivChildren(elemInfo);
+        final Node selectedDiv = elemInfo.getNodeCopy();
 
-        final Node selectedDiv = elemInfo.getNodeCopy(); // should have no under-divs now
-
+        // Deliberately NOT stripping nested <div> children (unlike the .xml/.json
+        // handlers) - tei2text.xsl has no template matching tei:div, so the XSLT
+        // built-in rule just recurses into it, rendering nested sub-chapters'
+        // heads/paragraphs/etc in reading order. That's what makes requesting the
+        // .txt of a non-leaf div (a whole chapter with sub-chapters) return its
+        // full text rather than only the fragment directly under it, between the
+        // sub-chapter boundaries. For an actual leaf element (the overwhelming
+        // majority of callers - GrepSearchService/LuceneIndexService index
+        // individual paragraphs, FragmentResolutionService quotes individual
+        // leaves), there are no div children to begin with, so this is a no-op.
         final var xslt2txt = this.getTei2TxtTransformer();
         XsltTool.apply(xslt2txt,
                 selectedDiv,

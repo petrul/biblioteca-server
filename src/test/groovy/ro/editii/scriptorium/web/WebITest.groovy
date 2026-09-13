@@ -350,6 +350,12 @@ class WebITest {
         }
 
         _2: {
+            // txt1 is an ancestor of txt2, which is an ancestor of the leaf txt3 -
+            // a non-leaf fragment's .txt must include every descendant sub-chapter's
+            // text (not just what's directly under it, between the sub-chapters),
+            // so anything found in a descendant must also be found in all its
+            // ancestors. Only the reverse never holds: a fragment never contains
+            // text that lives strictly above it.
             final txt1 = this.tbc.getTextPlain('/alecsandri/legende/')
             final txt2 = this.tbc.getTextPlain('/alecsandri/legende/legenda_ciocarliei')
             final txt3 = this.tbc.getTextPlain('/alecsandri/legende/legenda_ciocarliei/iii')
@@ -358,21 +364,26 @@ class WebITest {
             assert ! txt2.empty
             assert ! txt3.empty
 
+            // 'Legende' is txt1's own head - neither descendant carries an
+            // ancestor's heading.
             final legendeTxt = 'Legende'
             assert   txt1.contains(legendeTxt)
             assert ! txt2.contains(legendeTxt)
             assert ! txt3.contains(legendeTxt)
 
-            // 'Zbori în soare' se gaseste nummai in epigraphul la legenda ciocarliei,
-            // nici in strofe nici deasupra
+            // the epigraph directly under legenda_ciocarliei (not under any of its
+            // numbered sections) - present in it and in its ancestor, absent from
+            // the leaf section which is a sibling of where the epigraph actually is
             final zbori_in_soare = 'Zbori în soare'
-            assert ! txt1.contains(zbori_in_soare)
+            assert   txt1.contains(zbori_in_soare)
             assert   txt2.contains(zbori_in_soare)
             assert ! txt3.contains(zbori_in_soare)
 
+            // section III's own text - present in the leaf itself and in both its
+            // ancestors now that a non-leaf fragment recurses into its sub-chapters
             final in_revărsatul_zilei = 'În revărsatul zilei, când nasc a vieții șoapte'
-            assert ! txt1.contains(in_revărsatul_zilei)
-            assert ! txt2.contains(in_revărsatul_zilei)
+            assert   txt1.contains(in_revărsatul_zilei)
+            assert   txt2.contains(in_revărsatul_zilei)
             assert   txt3.contains(in_revărsatul_zilei)
             assert   txt3.contains("III\n\nÎn revărsatul zilei, când nasc a vieții șoapte\nȘi lin se dezvelește seninul cer din noapte,")
         }
