@@ -431,20 +431,72 @@ public class Util {
     }
 
     public static final String TEI_DIV = "tei:div";
+
     /**
-     * destructively removes tei:div children from node
+     * Destructively prunes a fragment's sub-chapters down to a maximum
+     * nesting depth, counted from the requested div itself (depth 0), in
+     * the same units as the div's own addressable sub-chapters - i.e. the
+     * same parent/child structure TeiElem.getDbChildren() and the URL path
+     * structure use (see TeifileParser.parcurge_rec): a structural div
+     * with no {@code <head>} of its own (TEI produced by odt-to-tei
+     * conversions for a heading level with nothing above it, for
+     * instance) never got its own TeiDiv row or path segment at import
+     * time, and is likewise transparent here - it doesn't consume a depth
+     * level, so its own sub-divs are pruned as if they were direct children
+     * of its nearest headed ancestor.
+     * <ul>
+     *     <li>{@code maxDepth == null}: no pruning at all - the full
+     *     sub-chapter tree, all the way down to its leaves, is kept. This
+     *     is the default when a request doesn't specify a depth.</li>
+     *     <li>{@code maxDepth == 0}: every direct (addressable) sub-chapter
+     *     div is removed (and, as a consequence of removing a whole subtree
+     *     at once, everything nested inside them too) - only the fragment's
+     *     own direct content (its own head/paragraphs/etc, not belonging
+     *     to any sub-chapter) survives.</li>
+     *     <li>{@code maxDepth == N} (N &gt; 0): addressable sub-chapters up
+     *     to N levels below the requested div are kept in full; anything
+     *     nested deeper than that is pruned.</li>
+     * </ul>
      * so you'd better provide a deep copy or know what you're doing.
-     * @param elemInfo . nodeCopy will be changed by this method
+     * @param elemInfo . nodeCopy will be changed by this method (unless maxDepth is null)
      */
-    public static XpathTool removeDivChildren(ElemInfo elemInfo) {
-        final Node node = elemInfo.getNodeCopy();
+    public static void pruneDivsBeyondDepth(ElemInfo elemInfo, Integer maxDepth) {
+        if (maxDepth == null)
+            return;
+        pruneDivsBeyondDepth(elemInfo.getNodeCopy(), maxDepth);
+    }
+
+    private static void pruneDivsBeyondDepth(Node node, int remainingDepth) {
         final XpathTool xt = new XpathTool(node);
-        final NodeList subdivs = xt.applyXpathForNodeSet(TEI_DIV);
-        if (subdivs.getLength() > 0) {
-            for (int i = 0; i < subdivs.getLength(); i++)
-                node.removeChild(subdivs.item(i));
+        // TEI_DIV as a bare xpath step selects the child:: axis - direct
+        // sub-divs only, not all descendants at any depth.
+        final NodeList directSubdivs = xt.applyXpathForNodeSet(TEI_DIV);
+        for (int i = 0; i < directSubdivs.getLength(); i++) {
+            final Node child = directSubdivs.item(i);
+            if (!isAddressableDiv(child)) {
+                // transparent structural wrapper (no head of its own) - doesn't
+                // consume a depth level, but its own sub-divs still need pruning
+                pruneDivsBeyondDepth(child, remainingDepth);
+            } else if (remainingDepth <= 0) {
+                node.removeChild(child);
+            } else {
+                pruneDivsBeyondDepth(child, remainingDepth - 1);
+            }
         }
-        return xt;
+    }
+
+    /**
+     * mirrors TeifileParser's own import-time rule for whether a div gets
+     * its own TeiDiv row (a direct tei:head child with non-blank text) -
+     * see {@code TeifileParser.parcurge_rec}'s {@code head == null || head.isEmpty()} check.
+     */
+    private static boolean isAddressableDiv(Node divNode) {
+        final XpathTool xt = new XpathTool(divNode, true);
+        final NodeList heads = xt.applyXpathForNodeSet("/tei:div/tei:head");
+        if (heads.getLength() < 1)
+            return false;
+        final String text = heads.item(0).getTextContent();
+        return text != null && !text.isBlank();
     }
 
 }

@@ -386,6 +386,15 @@ class WebITest {
             assert   txt2.contains(in_revărsatul_zilei)
             assert   txt3.contains(in_revărsatul_zilei)
             assert   txt3.contains("III\n\nÎn revărsatul zilei, când nasc a vieții șoapte\nȘi lin se dezvelește seninul cer din noapte,")
+
+            // depth=1 on txt1 (legende) keeps one level below it in full - legenda_ciocarliei's
+            // own epigraph - but prunes anything nested a level deeper still - legenda_ciocarliei's
+            // OWN sections (i/ii/iii), two levels below legende. Distinguishes depth=1 from both
+            // depth=0 (would also drop the epigraph) and the unlimited default (would also keep III).
+            final txt1Depth1 = this.tbc.getTextPlain('/alecsandri/legende/?depth=1')
+            assert   txt1Depth1.contains(legendeTxt)
+            assert   txt1Depth1.contains(zbori_in_soare)
+            assert ! txt1Depth1.contains(in_revărsatul_zilei)
         }
 
         _3: {
@@ -424,10 +433,12 @@ class WebITest {
     }
 
     /**
-     * a toc page (like /creanga/povesti) should only contain links to chapters, not really the text
+     * a non-leaf fragment (like /creanga/povesti) defaults to its FULL text,
+     * subchapters included; ?depth=0 opts back into the old toc-only view
+     * (this div's own direct content, no subchapter bodies at all)
      */
     @Test
-    void aTocPageDoesNotContainActualText() {
+    void nonLeafFragmentDefaultsToFullTextDepthParamLimitsIt() {
         assert countTableRows("author") > 0
         assert countTableRows("tei_file_authors") > 0
         assert countTableRows(TEI_ELEM) > 0
@@ -447,15 +458,21 @@ class WebITest {
         assert xt.applyXpathForNodeSet(xpath_for_soacra_cu_3_nurori).length == 1
         assert xt.applyXpathForNodeSet(xpath_for_soacra_cu_3_nurori + "/ttt").length == 0
 
-        final String text = this.tbc.getTextHtml("/creanga/povesti")
+        final String textFull = this.tbc.getTextHtml("/creanga/povesti")
 
-        assert text.contains("Iubite cetitoriu") // the motto should appear
-        assert text.contains("Soacra cu trei nurori") // the motto should appear
-        assert !text.contains("Era odată o babă") // the beginning of the sub-story should not be here
-        assert isDecoratedHtml(text)
-        // but not the content of one of the stories
+        assert textFull.contains("Iubite cetitoriu") // the motto should appear
+        assert textFull.contains("Soacra cu trei nurori") // the sub-story's own head
+        assert textFull.contains("Era odată o babă") // and now its body too - full text by default
+        assert isDecoratedHtml(textFull)
 
-        // but the actual sub-story contains the text
+        final String textShallow = this.tbc.getTextHtml("/creanga/povesti?depth=0")
+
+        assert textShallow.contains("Iubite cetitoriu") // still this div's own content
+        assert textShallow.contains("Soacra cu trei nurori") // the front-matter toc listing, not the sub-story div itself
+        assert !textShallow.contains("Era odată o babă") // but no sub-story body at depth=0
+        assert isDecoratedHtml(textShallow)
+
+        // the actual sub-story on its own always contains its own text, regardless of depth
         final String text2 = this.tbc.getTextHtml("/creanga/povesti/soacra_cu_trei_nurori")
 
         assert !text2.empty

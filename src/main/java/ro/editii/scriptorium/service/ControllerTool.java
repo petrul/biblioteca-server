@@ -33,26 +33,40 @@ public class ControllerTool {
 
 
     public void teiElemToText(ElemInfo elemInfo, HttpServletResponse response) throws IOException {
+        this.teiElemToText(elemInfo, response, null);
+    }
+
+    /**
+     * @param maxDepth null keeps every sub-chapter no matter how deep (the
+     *                 default); see {@link Util#pruneDivsBeyondDepth}
+     */
+    public void teiElemToText(ElemInfo elemInfo, HttpServletResponse response, Integer maxDepth) throws IOException {
 
         response.setCharacterEncoding(StandardCharsets.UTF_8.name());
         response.addHeader(HttpHeaders.CONTENT_TYPE, MimeTypeUtils.TEXT_PLAIN_VALUE + "; charset=utf-8");
 
-        this.teiElemToTextInOutputStream(elemInfo, response.getOutputStream());
+        this.teiElemToTextInOutputStream(elemInfo, response.getOutputStream(), maxDepth);
     }
 
     public void teiElemToTextInOutputStream(ElemInfo elemInfo, OutputStream outputStream) throws IOException {
+        this.teiElemToTextInOutputStream(elemInfo, outputStream, null);
+    }
+
+    /**
+     * @param maxDepth null keeps every sub-chapter no matter how deep (the
+     *                 default, and a no-op for the leaf elements every other
+     *                 caller of this method passes - grep/lucene indexing,
+     *                 FragmentResolutionService quotes, the /paras endpoint);
+     *                 see {@link Util#pruneDivsBeyondDepth}
+     */
+    public void teiElemToTextInOutputStream(ElemInfo elemInfo, OutputStream outputStream, Integer maxDepth) throws IOException {
+        Util.pruneDivsBeyondDepth(elemInfo, maxDepth);
+
         final Node selectedDiv = elemInfo.getNodeCopy();
 
-        // Deliberately NOT stripping nested <div> children (unlike the .xml/.json
-        // handlers) - tei2text.xsl has no template matching tei:div, so the XSLT
-        // built-in rule just recurses into it, rendering nested sub-chapters'
-        // heads/paragraphs/etc in reading order. That's what makes requesting the
-        // .txt of a non-leaf div (a whole chapter with sub-chapters) return its
-        // full text rather than only the fragment directly under it, between the
-        // sub-chapter boundaries. For an actual leaf element (the overwhelming
-        // majority of callers - GrepSearchService/LuceneIndexService index
-        // individual paragraphs, FragmentResolutionService quotes individual
-        // leaves), there are no div children to begin with, so this is a no-op.
+        // tei2text.xsl has no template matching tei:div, so the XSLT built-in
+        // rule just recurses into whatever survived pruning above, rendering
+        // nested sub-chapters' heads/paragraphs/etc in reading order.
         final var xslt2txt = this.getTei2TxtTransformer();
         XsltTool.apply(xslt2txt,
                 selectedDiv,

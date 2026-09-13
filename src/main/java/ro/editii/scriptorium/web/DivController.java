@@ -2,6 +2,7 @@ package ro.editii.scriptorium.web;
 
 import editii.commons.xml.DomTool;
 import editii.commons.xml.XpathTool;
+import io.swagger.v3.oas.annotations.Parameter;
 import jakarta.persistence.EntityManager;
 import jakarta.servlet.ServletOutputStream;
 import jakarta.servlet.http.HttpServletRequest;
@@ -20,6 +21,7 @@ import org.springframework.util.MimeTypeUtils;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.servlet.HandlerMapping;
@@ -170,6 +172,11 @@ public class DivController {
     @Transactional
     public void catchAllDivDispatcher(@PathVariable(name = "authorId") String authorId,
                                        @PathVariable(name = "opusId") String opusId,
+                                       @RequestParam(name = "depth", required = false)
+                                       @Parameter(description = "how many levels of sub-chapters to include below the requested div: " +
+                                               "omitted keeps every sub-chapter no matter how deep (default); 0 keeps none, only this " +
+                                               "div's own direct content; N keeps sub-chapters up to N levels deep")
+                                       Integer depth,
                                        HttpServletRequest request,
                                        HttpServletResponse response,
                                        Model model,
@@ -196,20 +203,20 @@ public class DivController {
         try {
             // text was specifically requested either by extension or by Accept accept
             if (EXT_TXT.equals(extension) || MimeTypeUtils.TEXT_PLAIN_VALUE.equals(accept)) {
-                this.requestForTxt(authorId, request, response,  uriComponentsBuilder);
+                this.requestForTxt(authorId, request, response,  uriComponentsBuilder, depth);
             } else
             if (EXT_JSON.equals(extension) || MimeTypeUtils.APPLICATION_JSON_VALUE.equals(accept)) {
-                this.requestForJson(authorId, request, response, uriComponentsBuilder);
+                this.requestForJson(authorId, request, response, uriComponentsBuilder, depth);
             } else
             if (EXT_XML.equals(extension) || MimeTypeUtils.TEXT_XML_VALUE.equals(accept)) {
-                this.requestForXml(authorId, request, response, uriComponentsBuilder);
+                this.requestForXml(authorId, request, response, uriComponentsBuilder, depth);
             } else
             if (EXT_HTML.equals(extension)) {
                 // on .html extension, serve undecorated html
-                this.requestForUndecoratedHtml(authorId,  request, response, uriComponentsBuilder);
+                this.requestForUndecoratedHtml(authorId,  request, response, uriComponentsBuilder, depth);
             } else {
                 // default to decorated html
-                this.requestForDecoratedHtml(authorId, opusId, request, response, model, uriComponentsBuilder);
+                this.requestForDecoratedHtml(authorId, opusId, request, response, model, uriComponentsBuilder, depth);
             }
         } catch (ResponseStatusException e) {
             throw e;
@@ -246,11 +253,11 @@ public class DivController {
 
     protected ElemInfoAndText _teiDivAsUndecoratedHtml(String authorId,
                                                       HttpServletRequest request,
-                                                      UriComponentsBuilder uriComponentsBuilder) {
+                                                      UriComponentsBuilder uriComponentsBuilder,
+                                                      Integer depth) {
         final ElemInfo elemInfo = this.getElemInfo(authorId, request, uriComponentsBuilder);
 
-        // remove sub-chapters
-        Util.removeDivChildren(elemInfo);
+        Util.pruneDivsBeyondDepth(elemInfo, depth);
 
         final Node selectedDiv = elemInfo.getNodeCopy();
 
@@ -272,10 +279,11 @@ public class DivController {
     public void requestForUndecoratedHtml(@PathVariable String authorId,
                                           HttpServletRequest request,
                                           HttpServletResponse response,
-                                          UriComponentsBuilder uriComponentsBuilder) {
+                                          UriComponentsBuilder uriComponentsBuilder,
+                                          Integer depth) {
         final StopWatch watch = new StopWatch();
         watch.start();
-        final var stuff = this._teiDivAsUndecoratedHtml(authorId, request, uriComponentsBuilder);
+        final var stuff = this._teiDivAsUndecoratedHtml(authorId, request, uriComponentsBuilder, depth);
 
         response.addHeader(HttpHeaders.CONTENT_TYPE, MimeTypeUtils.TEXT_HTML_VALUE + "; charset=utf-8");
         response.setCharacterEncoding(StandardCharsets.UTF_8.name());
@@ -299,14 +307,15 @@ public class DivController {
                                         HttpServletRequest request,
                                         HttpServletResponse response,
                                         Model model,
-                                        UriComponentsBuilder uriComponentsBuilder) {
+                                        UriComponentsBuilder uriComponentsBuilder,
+                                        Integer depth) {
 
         final StopWatch watch = new StopWatch();
         watch.start();
 
         final var opusIdNoExt = Util.basename(opusId); // eliminate extension if any
 
-        final var elemInfoAndText = this._teiDivAsUndecoratedHtml(authorId, request, uriComponentsBuilder);
+        final var elemInfoAndText = this._teiDivAsUndecoratedHtml(authorId, request, uriComponentsBuilder, depth);
         final var ucb = Util.cloneUriComponentBuilder(uriComponentsBuilder, request);
 
         final var relativeRoot = elemInfoAndText.elemInfo.getTeiElem().getRelativeRoot();
@@ -383,10 +392,11 @@ public class DivController {
     public void requestForXml(String authorId,
                               HttpServletRequest request,
                               HttpServletResponse response,
-                              UriComponentsBuilder uriComponentsBuilder) throws IOException {
+                              UriComponentsBuilder uriComponentsBuilder,
+                              Integer depth) throws IOException {
         final ElemInfo elemInfo = this.getElemInfo(authorId, request, uriComponentsBuilder);
 
-        Util.removeDivChildren(elemInfo);
+        Util.pruneDivsBeyondDepth(elemInfo, depth);
         final Node selectedDiv = elemInfo.getNodeCopy();
 
         response.addHeader(HttpHeaders.CONTENT_TYPE, MimeTypeUtils.TEXT_XML_VALUE + "; charset=utf-8");
@@ -401,11 +411,12 @@ public class DivController {
     public void requestForTxt(String authorId,
                               HttpServletRequest request,
                               HttpServletResponse response,
-                              UriComponentsBuilder uriComponentsBuilder) throws IOException {
+                              UriComponentsBuilder uriComponentsBuilder,
+                              Integer depth) throws IOException {
 
         final ElemInfo elemInfo = this.getElemInfo(authorId, request, uriComponentsBuilder);
 
-        this.controllerTool.teiElemToText(elemInfo, response);
+        this.controllerTool.teiElemToText(elemInfo, response, depth);
 
     }
 
@@ -413,10 +424,11 @@ public class DivController {
     public void requestForJson(@PathVariable String authorId,
                                HttpServletRequest request,
                                HttpServletResponse response,
-                               UriComponentsBuilder uriComponentsBuilder) throws IOException {
+                               UriComponentsBuilder uriComponentsBuilder,
+                               Integer depth) throws IOException {
         final ElemInfo elemInfo = this.getElemInfo(authorId, request, uriComponentsBuilder);
 
-        Util.removeDivChildren(elemInfo);
+        Util.pruneDivsBeyondDepth(elemInfo, depth);
         final Node selectedDiv = elemInfo.getNodeCopy();
 
         response.setCharacterEncoding(StandardCharsets.UTF_8.name());
