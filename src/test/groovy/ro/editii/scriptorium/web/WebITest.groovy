@@ -434,8 +434,12 @@ class WebITest {
 
     /**
      * a non-leaf fragment (like /creanga/povesti) defaults to its FULL text,
-     * subchapters included; ?depth=0 opts back into the old toc-only view
-     * (this div's own direct content, no subchapter bodies at all)
+     * subchapters included, in every format - EXCEPT the decorated reader
+     * page (no extension - the actual Spring MVC "teidiv" UI, with its own
+     * breadcrumb/prev/next/children nav below), which stays chapter-by-
+     * chapter as it always was: it defaults to depth=0 instead, and only
+     * goes deeper if a caller explicitly asks via ?depth=. Otherwise the
+     * reader would inline an entire work's text onto a single page.
      */
     @Test
     void nonLeafFragmentDefaultsToFullTextDepthParamLimitsIt() {
@@ -458,19 +462,28 @@ class WebITest {
         assert xt.applyXpathForNodeSet(xpath_for_soacra_cu_3_nurori).length == 1
         assert xt.applyXpathForNodeSet(xpath_for_soacra_cu_3_nurori + "/ttt").length == 0
 
-        final String textFull = this.tbc.getTextHtml("/creanga/povesti")
+        // the decorated reader page (no extension) - unchanged, chapter-by-chapter behavior
+        final String readerDefault = this.tbc.getTextHtml("/creanga/povesti")
 
-        assert textFull.contains("Iubite cetitoriu") // the motto should appear
-        assert textFull.contains("Soacra cu trei nurori") // the sub-story's own head
-        assert textFull.contains("Era odată o babă") // and now its body too - full text by default
-        assert isDecoratedHtml(textFull)
+        assert readerDefault.contains("Iubite cetitoriu") // still this div's own content
+        assert readerDefault.contains("Soacra cu trei nurori") // the front-matter toc listing, not the sub-story div itself
+        assert !readerDefault.contains("Era odată o babă") // no sub-story body inlined by default
+        assert isDecoratedHtml(readerDefault)
 
-        final String textShallow = this.tbc.getTextHtml("/creanga/povesti?depth=0")
+        // but an explicit ?depth= still expands the reader page too, if asked for
+        final String readerExpanded = this.tbc.getTextHtml("/creanga/povesti?depth=1")
+        assert readerExpanded.contains("Era odată o babă")
+        assert isDecoratedHtml(readerExpanded)
 
-        assert textShallow.contains("Iubite cetitoriu") // still this div's own content
-        assert textShallow.contains("Soacra cu trei nurori") // the front-matter toc listing, not the sub-story div itself
-        assert !textShallow.contains("Era odată o babă") // but no sub-story body at depth=0
-        assert isDecoratedHtml(textShallow)
+        // the undecorated .html (no site chrome - a raw export format like .txt/.xml/.json)
+        // defaults to full text instead, same as the other formats
+        final String undecoratedFull = this.tbc.getDefault("/creanga/povesti.html")
+        assert undecoratedFull.contains("Iubite cetitoriu")
+        assert undecoratedFull.contains("Era odată o babă") // full text by default, unlike the reader page
+
+        final String undecoratedShallow = this.tbc.getDefault("/creanga/povesti.html?depth=0")
+        assert undecoratedShallow.contains("Iubite cetitoriu")
+        assert !undecoratedShallow.contains("Era odată o babă")
 
         // the actual sub-story on its own always contains its own text, regardless of depth
         final String text2 = this.tbc.getTextHtml("/creanga/povesti/soacra_cu_trei_nurori")

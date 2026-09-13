@@ -315,7 +315,13 @@ public class DivController {
 
         final var opusIdNoExt = Util.basename(opusId); // eliminate extension if any
 
-        final var elemInfoAndText = this._teiDivAsUndecoratedHtml(authorId, request, uriComponentsBuilder, depth);
+        // The decorated reader page is chapter-by-chapter by design (its own
+        // breadcrumb/prev/next/children nav below assumes that), unlike the
+        // other formats' new unlimited-by-default: an explicit ?depth= still
+        // overrides it, but left unspecified this stays the shallow "this
+        // div's own content only" view it always was, instead of silently
+        // inlining a whole work's text onto one page.
+        final var elemInfoAndText = this._teiDivAsUndecoratedHtml(authorId, request, uriComponentsBuilder, depth != null ? depth : 0);
         final var ucb = Util.cloneUriComponentBuilder(uriComponentsBuilder, request);
 
         final var relativeRoot = elemInfoAndText.elemInfo.getTeiElem().getRelativeRoot();
