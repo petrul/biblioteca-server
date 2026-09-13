@@ -61,6 +61,15 @@ public class SecurityConfig {
                     // DivCollectionRestController. System collections
                     // (by-repo/by-language/by-author) stay public below.
                     .requestMatchers("/api/collections/mine/**").authenticated()
+                    // Reading position ("bookmark") per work - see
+                    // ReadingProgress/ReadingProgressRestController. Same
+                    // reasoning as collections/mine above: always scoped to
+                    // a real signed-in reader, no anonymous concept here.
+                    .requestMatchers("/api/reading-progress/**").authenticated()
+                    // Deliberately NOT in this authenticated list - /api/users/me
+                    // must stay reachable while anonymous (that's exactly how a
+                    // caller finds out it's anonymous); it reports its own
+                    // authenticated:false rather than the security layer 401ing.
                     .anyRequest().permitAll()
                 );
 
