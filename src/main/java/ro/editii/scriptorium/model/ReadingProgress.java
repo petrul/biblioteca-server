@@ -70,4 +70,14 @@ public class ReadingProgress implements Serializable {
     // readers from passers-by.
     @Builder.Default
     long attentionSeconds = 0;
+
+    // Scroll position *within* div, as a 0-1 fraction of its scrollable
+    // height - reported the same way as attentionSeconds (see
+    // ReadingProgressRestController#updateScrollPosition). Meaningful only
+    // together with div: ReadingProgressService#save resets this to 0
+    // whenever div actually changes (a new chapter starts at its top), and
+    // leaves it alone when re-saving the same div (resuming exactly where
+    // a reader left off).
+    @Builder.Default
+    double scrollFraction = 0.0;
 }

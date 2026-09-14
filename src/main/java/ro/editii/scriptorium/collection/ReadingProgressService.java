@@ -35,6 +35,12 @@ public class ReadingProgressService {
                 .orElse(null);
 
         if (existing != null) {
+            // A genuinely new div starts at its own top; re-saving the SAME
+            // div (e.g. "Continue Reading" resuming exactly where a reader
+            // left off) must not wipe the scroll position they're resuming to.
+            if (!existing.getDiv().equals(div)) {
+                existing.setScrollFraction(0.0);
+            }
             existing.setDiv(div);
             existing.setUpdatedAt(new Timestamp(System.currentTimeMillis()));
             existing.setTouchCount(existing.getTouchCount() + 1);
@@ -63,6 +69,33 @@ public class ReadingProgressService {
                         "no reading progress yet for this work - open a chapter before reporting attention"));
 
         existing.setAttentionSeconds(existing.getAttentionSeconds() + secondsDelta);
+        return this.readingProgressRepository.save(existing);
+    }
+
+    /**
+     * Updates just the in-chapter scroll position for a work the reader
+     * already has a saved position in - reported in small debounced/
+     * heartbeat chunks by the reader app while a chapter is open (mirrors
+     * addAttention above), only for signed-in readers.
+     *
+     * divPath must match the div this reader is currently saved on: a
+     * late update after they've since moved to a different chapter (a
+     * benign race between this and the next save()) is silently ignored
+     * rather than clobbering the new chapter's own scroll position.
+     */
+    @Transactional
+    public ReadingProgress updateScrollPosition(AppUser user, String opusPath, String divPath, double scrollFraction) {
+        final TeiDiv opus = resolveDiv(opusPath);
+        final ReadingProgress existing = this.readingProgressRepository
+                .findByUserAndOpus(user, opus)
+                .orElseThrow(() -> new IllegalArgumentException(
+                        "no reading progress yet for this work - open a chapter before reporting scroll position"));
+
+        if (!existing.getDiv().getCompletePath().equals(divPath)) {
+            return existing;
+        }
+
+        existing.setScrollFraction(Math.max(0.0, Math.min(1.0, scrollFraction)));
         return this.readingProgressRepository.save(existing);
     }
 

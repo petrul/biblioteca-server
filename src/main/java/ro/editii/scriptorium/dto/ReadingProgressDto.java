@@ -22,6 +22,7 @@ public class ReadingProgressDto {
     int touchCount;
     boolean read;
     long attentionSeconds;
+    double scrollFraction;
 
     public static ReadingProgressDto from(ReadingProgress progress) {
         return ReadingProgressDto.builder()
@@ -32,6 +33,7 @@ public class ReadingProgressDto {
                 .touchCount(progress.getTouchCount())
                 .read(progress.getTouchCount() >= READ_THRESHOLD_TOUCHES)
                 .attentionSeconds(progress.getAttentionSeconds())
+                .scrollFraction(progress.getScrollFraction())
                 .build();
     }
 }

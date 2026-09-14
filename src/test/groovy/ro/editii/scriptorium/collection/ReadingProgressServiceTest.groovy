@@ -196,6 +196,71 @@ class ReadingProgressServiceTest {
     }
 
     @Test
+    void scrollFractionIsSavedAndReadBack() {
+        final name = "scroll_" + System.nanoTime()
+        final user = this.registrationService.register(name, "correcthorsebattery")
+
+        this.readingProgressService.save(user, this.chapterDivs[0].completePath)
+        this.readingProgressService.updateScrollPosition(user, this.opus.completePath, this.chapterDivs[0].completePath, 0.42d)
+
+        final saved = this.readingProgressService.get(user, this.opus.completePath).get()
+        assert saved.scrollFraction == 0.42d
+    }
+
+    @Test
+    void scrollFractionIsClampedToZeroOneEvenIfTheCallerSendsOutOfRange() {
+        final name = "scrollclamp_" + System.nanoTime()
+        final user = this.registrationService.register(name, "correcthorsebattery")
+
+        this.readingProgressService.save(user, this.chapterDivs[0].completePath)
+        this.readingProgressService.updateScrollPosition(user, this.opus.completePath, this.chapterDivs[0].completePath, 1.7d)
+        assert this.readingProgressService.get(user, this.opus.completePath).get().scrollFraction == 1.0d
+
+        this.readingProgressService.updateScrollPosition(user, this.opus.completePath, this.chapterDivs[0].completePath, -0.3d)
+        assert this.readingProgressService.get(user, this.opus.completePath).get().scrollFraction == 0.0d
+    }
+
+    @Test
+    void reSavingTheSameDivPreservesScrollFractionButANewDivResetsIt() {
+        final name = "scrollreset_" + System.nanoTime()
+        final user = this.registrationService.register(name, "correcthorsebattery")
+
+        this.readingProgressService.save(user, this.chapterDivs[0].completePath)
+        this.readingProgressService.updateScrollPosition(user, this.opus.completePath, this.chapterDivs[0].completePath, 0.65d)
+
+        // Resuming the SAME div ("Continue Reading") must not wipe the position being resumed to.
+        this.readingProgressService.save(user, this.chapterDivs[0].completePath)
+        assert this.readingProgressService.get(user, this.opus.completePath).get().scrollFraction == 0.65d
+
+        // Turning the page to a genuinely different div starts fresh at its own top.
+        this.readingProgressService.save(user, this.chapterDivs[1].completePath)
+        assert this.readingProgressService.get(user, this.opus.completePath).get().scrollFraction == 0.0d
+    }
+
+    @Test
+    void aStaleScrollUpdateForAnOldDivIsIgnoredOnceTheReaderHasMovedOn() {
+        final name = "scrollstale_" + System.nanoTime()
+        final user = this.registrationService.register(name, "correcthorsebattery")
+
+        this.readingProgressService.save(user, this.chapterDivs[0].completePath)
+        this.readingProgressService.save(user, this.chapterDivs[1].completePath)
+
+        // Late update naming the chapter the reader has since left - ignored, not an error.
+        this.readingProgressService.updateScrollPosition(user, this.opus.completePath, this.chapterDivs[0].completePath, 0.9d)
+
+        final saved = this.readingProgressService.get(user, this.opus.completePath).get()
+        assert saved.div.id == this.chapterDivs[1].id
+        assert saved.scrollFraction == 0.0d
+    }
+
+    @Test
+    void rejectsScrollPositionForAWorkWithNoSavedPositionYet() {
+        final otherUser = this.registrationService.register("noscroll_" + System.nanoTime(), "correcthorsebattery")
+        final ex = shouldFail { this.readingProgressService.updateScrollPosition(otherUser, this.opus.completePath, this.chapterDivs[0].completePath, 0.5d) }
+        assert ex != null
+    }
+
+    @Test
     void rejectsAPathThatDoesNotResolveToADiv() {
         final ex = shouldFail { this.readingProgressService.save(this.user, "not/a/real/path") }
         assert ex != null

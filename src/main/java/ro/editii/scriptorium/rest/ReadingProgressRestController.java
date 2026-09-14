@@ -45,6 +45,13 @@ public class ReadingProgressRestController {
         long secondsDelta;
     }
 
+    @Value
+    public static class ScrollRequest {
+        String opusPath;
+        String divPath;
+        double scrollFraction;
+    }
+
     /** Every work this reader has any saved position in. */
     @GetMapping
     public List<ReadingProgressDto> mine(Authentication authentication) {
@@ -89,6 +96,23 @@ public class ReadingProgressRestController {
         try {
             return ReadingProgressDto.from(this.readingProgressService.addAttention(
                     currentUser(authentication), request.getOpusPath(), request.getSecondsDelta()));
+        } catch (IllegalArgumentException e) {
+            RestUtil.throw400(e.getMessage());
+            return null;
+        }
+    }
+
+    /**
+     * Updates the in-chapter scroll position (0-1 fraction) for a work
+     * this reader already has a position saved in - reported in small
+     * debounced/heartbeat chunks by the reader app while a chapter is
+     * open, same pattern as addAttention above.
+     */
+    @PutMapping("/scroll")
+    public ReadingProgressDto updateScrollPosition(Authentication authentication, @RequestBody ScrollRequest request) {
+        try {
+            return ReadingProgressDto.from(this.readingProgressService.updateScrollPosition(
+                    currentUser(authentication), request.getOpusPath(), request.getDivPath(), request.getScrollFraction()));
         } catch (IllegalArgumentException e) {
             RestUtil.throw400(e.getMessage());
             return null;
