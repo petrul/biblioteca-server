@@ -39,6 +39,12 @@ public class ReadingProgressRestController {
         String divPath;
     }
 
+    @Value
+    public static class AttentionRequest {
+        String opusPath;
+        long secondsDelta;
+    }
+
     /** Every work this reader has any saved position in. */
     @GetMapping
     public List<ReadingProgressDto> mine(Authentication authentication) {
@@ -66,6 +72,23 @@ public class ReadingProgressRestController {
         try {
             return ReadingProgressDto.from(
                     this.readingProgressService.save(currentUser(authentication), request.getDivPath()));
+        } catch (IllegalArgumentException e) {
+            RestUtil.throw400(e.getMessage());
+            return null;
+        }
+    }
+
+    /**
+     * Adds to this reader's cumulative time spent on a work - reported in
+     * small heartbeat chunks by the reader app while a chapter is visibly
+     * open, only for signed-in readers. Requires a position to already be
+     * saved for that work (i.e. at least one chapter opened first).
+     */
+    @PutMapping("/attention")
+    public ReadingProgressDto addAttention(Authentication authentication, @RequestBody AttentionRequest request) {
+        try {
+            return ReadingProgressDto.from(this.readingProgressService.addAttention(
+                    currentUser(authentication), request.getOpusPath(), request.getSecondsDelta()));
         } catch (IllegalArgumentException e) {
             RestUtil.throw400(e.getMessage());
             return null;

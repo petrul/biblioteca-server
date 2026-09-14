@@ -16,6 +16,7 @@ import ro.editii.scriptorium.TestConfig
 import ro.editii.scriptorium.TestUtils
 import ro.editii.scriptorium.TextbaseServer
 import ro.editii.scriptorium.dao.TeiDivRepository
+import ro.editii.scriptorium.dto.ReadingProgressDto
 import ro.editii.scriptorium.model.AppUser
 import ro.editii.scriptorium.model.TeiDiv
 import ro.editii.scriptorium.security.AppUserRegistrationService
@@ -155,6 +156,44 @@ class ReadingProgressServiceTest {
         this.readingProgressService.save(this.user, this.chapterDivs[0].completePath)
 
         assert !this.readingProgressService.get(otherUser, this.opus.completePath).isPresent()
+    }
+
+    @Test
+    void touchCountIncrementsOnEachSaveAndDrivesTheReadFlag() {
+        final name = "touches_" + System.nanoTime()
+        final user = this.registrationService.register(name, "correcthorsebattery")
+
+        this.readingProgressService.save(user, this.chapterDivs[0].completePath)
+        final firstSave = this.readingProgressService.get(user, this.opus.completePath).get()
+        assert firstSave.touchCount == 1
+        assert !ReadingProgressDto.from(firstSave).read
+
+        this.readingProgressService.save(user, this.chapterDivs[1].completePath)
+        this.readingProgressService.save(user, this.chapterDivs[0].completePath)
+
+        final thirdSave = this.readingProgressService.get(user, this.opus.completePath).get()
+        assert thirdSave.touchCount == 3
+        assert ReadingProgressDto.from(thirdSave).read
+    }
+
+    @Test
+    void attentionAccumulatesOnTopOfAnExistingPosition() {
+        final name = "attention_" + System.nanoTime()
+        final user = this.registrationService.register(name, "correcthorsebattery")
+
+        this.readingProgressService.save(user, this.chapterDivs[0].completePath)
+        this.readingProgressService.addAttention(user, this.opus.completePath, 45L)
+        this.readingProgressService.addAttention(user, this.opus.completePath, 30L)
+
+        final saved = this.readingProgressService.get(user, this.opus.completePath).get()
+        assert saved.attentionSeconds == 75L
+    }
+
+    @Test
+    void rejectsAttentionForAWorkWithNoSavedPositionYet() {
+        final otherUser = this.registrationService.register("noattention_" + System.nanoTime(), "correcthorsebattery")
+        final ex = shouldFail { this.readingProgressService.addAttention(otherUser, this.opus.completePath, 10L) }
+        assert ex != null
     }
 
     @Test

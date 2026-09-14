@@ -24,7 +24,8 @@ import java.util.Date;
  * One reader's current position within one work ("bookmark"): which div
  * (usually a leaf chapter/section) they last had open. One row per
  * (user, opus) - a fresh save replaces whatever position was there before,
- * this is never a history.
+ * this is never a history. Also doubles as this reader's light engagement
+ * stat for that work via touchCount, incremented on every save.
  */
 @Entity
 @Data
@@ -56,4 +57,17 @@ public class ReadingProgress implements Serializable {
 
     @Builder.Default
     Timestamp updatedAt = new Timestamp(new Date().getTime());
+
+    // How many times this (user, opus) row has been saved - a light
+    // engagement signal, see ReadingProgressDto.READ_THRESHOLD_TOUCHES.
+    @Builder.Default
+    int touchCount = 1;
+
+    // Cumulative tab-visible seconds spent reading this work, reported in
+    // small heartbeat chunks by the reader app (only for signed-in
+    // readers - see ReadingProgressRestController#addAttention). Light,
+    // best-effort - not wall-clock-precise, just enough to tell engaged
+    // readers from passers-by.
+    @Builder.Default
+    long attentionSeconds = 0;
 }

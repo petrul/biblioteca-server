@@ -37,6 +37,7 @@ public class ReadingProgressService {
         if (existing != null) {
             existing.setDiv(div);
             existing.setUpdatedAt(new Timestamp(System.currentTimeMillis()));
+            existing.setTouchCount(existing.getTouchCount() + 1);
             return this.readingProgressRepository.save(existing);
         }
 
@@ -45,6 +46,24 @@ public class ReadingProgressService {
                 .opus(opus)
                 .div(div)
                 .build());
+    }
+
+    /**
+     * Adds to this reader's cumulative time-spent for a work they already
+     * have a saved position in (see ReadingProgress.attentionSeconds).
+     * Only ever called for signed-in readers - there is no anonymous
+     * attention tracking, same as reading progress itself.
+     */
+    @Transactional
+    public ReadingProgress addAttention(AppUser user, String opusPath, long secondsDelta) {
+        final TeiDiv opus = resolveDiv(opusPath);
+        final ReadingProgress existing = this.readingProgressRepository
+                .findByUserAndOpus(user, opus)
+                .orElseThrow(() -> new IllegalArgumentException(
+                        "no reading progress yet for this work - open a chapter before reporting attention"));
+
+        existing.setAttentionSeconds(existing.getAttentionSeconds() + secondsDelta);
+        return this.readingProgressRepository.save(existing);
     }
 
     @Transactional(readOnly = true)
