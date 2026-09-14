@@ -2,6 +2,7 @@ package ro.editii.scriptorium.rest;
 
 import lombok.RequiredArgsConstructor;
 import lombok.Value;
+import lombok.extern.log4j.Log4j2;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 import ro.editii.scriptorium.dao.AppUserRepository;
@@ -10,6 +11,7 @@ import ro.editii.scriptorium.security.AppUserRegistrationService;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Optional;
 
 /**
  * Account creation only - login itself goes through Spring Security's
@@ -20,6 +22,7 @@ import java.util.Map;
 @RequestMapping("/api/users")
 @CrossOrigin
 @RequiredArgsConstructor
+@Log4j2
 public class UserRestController {
 
     final AppUserRegistrationService registrationService;
@@ -50,6 +53,11 @@ public class UserRestController {
      */
     @GetMapping("/me")
     public Map<String, Object> me(Authentication authentication) {
+        log.debug("GET /api/users/me: authentication={}, name={}, authenticated={}",
+                authentication == null ? null : authentication.getClass().getSimpleName(),
+                authentication == null ? null : authentication.getName(),
+                authentication != null && authentication.isAuthenticated());
+
         if (authentication == null || !authentication.isAuthenticated()
                 || "anonymousUser".equals(authentication.getName()))
             return Map.of("authenticated", false);
@@ -57,9 +65,10 @@ public class UserRestController {
         final Map<String, Object> result = new HashMap<>();
         result.put("authenticated", true);
         result.put("username", authentication.getName());
-        this.appUserRepository.findByUsername(authentication.getName())
-                .map(AppUser::getAvatarUrl)
-                .ifPresent(avatarUrl -> result.put("avatarUrl", avatarUrl));
+        final Optional<AppUser> appUser = this.appUserRepository.findByUsername(authentication.getName());
+        log.debug("GET /api/users/me: AppUser lookup for '{}' found={}, avatarUrl={}",
+                authentication.getName(), appUser.isPresent(), appUser.map(AppUser::getAvatarUrl).orElse(null));
+        appUser.map(AppUser::getAvatarUrl).ifPresent(avatarUrl -> result.put("avatarUrl", avatarUrl));
         return result;
     }
 }

@@ -48,6 +48,9 @@ public class GoogleTokenInfoVerifier implements GoogleIdTokenVerifier {
 
     @Override
     public GoogleClaims verify(String idToken) {
+        log.debug("Google verify() called, configured={}, expectedClientId={}, credentialLength={}",
+                isConfigured(), this.expectedClientId, idToken == null ? 0 : idToken.length());
+
         if (!isConfigured())
             throw new IllegalStateException("Google sign-in is not configured (google.oauth.client-id is unset)");
         if (idToken == null || idToken.isBlank())
@@ -57,17 +60,30 @@ public class GoogleTokenInfoVerifier implements GoogleIdTokenVerifier {
         try {
             info = this.restTemplate.getForObject(TOKENINFO_URL, TokenInfoResponse.class, idToken);
         } catch (RestClientException e) {
-            log.warn("Google tokeninfo verification failed: {}", e.getMessage());
+            log.warn("Google tokeninfo call failed: {}", e.getMessage(), e);
             throw new IllegalArgumentException("invalid Google credential", e);
         }
+        log.debug("Google tokeninfo response: sub={}, email={}, aud={}, iss={}, email_verified={}, hasPicture={}",
+                info == null ? null : info.getSub(),
+                info == null ? null : info.getEmail(),
+                info == null ? null : info.getAud(),
+                info == null ? null : info.getIss(),
+                info == null ? null : info.getEmail_verified(),
+                info != null && info.getPicture() != null);
+
         if (info == null || info.getSub() == null)
             throw new IllegalArgumentException("invalid Google credential (empty tokeninfo response)");
 
-        if (!this.expectedClientId.equals(info.getAud()))
-            throw new IllegalArgumentException("Google credential audience does not match this app's client id");
+        if (!this.expectedClientId.equals(info.getAud())) {
+            log.warn("Google credential audience mismatch: expected clientId='{}', got aud='{}'",
+                    this.expectedClientId, info.getAud());
+            throw new IllegalArgumentException("Google credential audience ('" + info.getAud()
+                    + "') does not match this app's configured client id ('" + this.expectedClientId + "')");
+        }
         if (!"accounts.google.com".equals(info.getIss()) && !"https://accounts.google.com".equals(info.getIss()))
             throw new IllegalArgumentException("unexpected Google credential issuer: " + info.getIss());
 
+        log.debug("Google credential verified OK for sub={}", info.getSub());
         return new GoogleClaims(info.getSub(), info.getEmail(), info.getName(), info.getPicture(), "true".equals(info.getEmail_verified()));
     }
 }

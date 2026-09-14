@@ -40,12 +40,16 @@ public class GoogleAuthController {
                               @RequestParam(value = "redirect", required = false) String redirect,
                               HttpServletRequest request,
                               HttpServletResponse response) throws IOException {
+        log.debug("POST /api/auth/google received, credentialLength={}, redirect={}, sessionId={}",
+                credential == null ? 0 : credential.length(), redirect, request.getSession(true).getId());
         try {
             final AppUser user = this.googleAuthService.signIn(credential);
             establishSession(user, request, response);
-            response.sendRedirect(safeRedirectTarget(redirect));
+            final String target = safeRedirectTarget(redirect);
+            log.debug("Google sign-in OK for username={}, redirecting to {}", user.getUsername(), target);
+            response.sendRedirect(target);
         } catch (IllegalArgumentException | IllegalStateException e) {
-            log.warn("Google sign-in failed: {}", e.getMessage());
+            log.warn("Google sign-in failed ({}): {}", e.getClass().getSimpleName(), e.getMessage(), e);
             response.sendRedirect("/?googleSignInError="
                     + URLEncoder.encode(e.getMessage(), StandardCharsets.UTF_8));
         }
@@ -70,6 +74,7 @@ public class GoogleAuthController {
         // Not going through Spring Security's normal login filter chain, so
         // the context has to be persisted into the session explicitly here.
         new HttpSessionSecurityContextRepository().saveContext(context, request, response);
+        log.debug("Security session established for username={}, sessionId={}", user.getUsername(), request.getSession().getId());
     }
 
     private static String safeRedirectTarget(String redirect) {
