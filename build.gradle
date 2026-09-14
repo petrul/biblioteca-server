@@ -431,7 +431,7 @@ tasks.withType(ProcessForkOptions).configureEach { task ->
                     "MILVUS_HOST", "MILVUS_PORT",
                     "EMBEDDER_HOST", "EMBEDDER_PORT",
                     "REPO_TEI_DIRS", "CACHE_DIR", "KAFKA_BROKERS",
-                    "MYSQL_HOST", "MYSQL_DB", "MYSQL_USER", "MYSQL_PASSWORD"
+                    "MYSQL_JDBC_URL"
             ]
             final missingKeys = requiredKeys.findAll {
                 System.getenv(it) == null && props.getProperty(it) == null

@@ -18,7 +18,14 @@ public class RunStuffOnStartup {
     public CommandLineRunner printJdbcUrlCLR(DataSource dataSource) {
         return args -> {
             try {
-                System.out.println("jdbc url: " + dataSource.getConnection().getMetaData().getURL());
+                // MYSQL_JDBC_URL embeds credentials as user:password@host
+                // (see application.properties) - this is the one place
+                // they should stay visible at runtime (which DB textbase
+                // is actually connected to), so redact just the password
+                // rather than suppressing the whole line.
+                final String url = dataSource.getConnection().getMetaData().getURL();
+                final String redacted = url.replaceAll("(jdbc:\\w+://[^:/@]+:)[^@]*(@)", "$1***$2");
+                System.out.println("jdbc url: " + redacted);
             } catch (SQLException e) {
                 throw new RuntimeException(e);
             }
