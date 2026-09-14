@@ -105,6 +105,77 @@ class GoogleSignInWhoAmIITest {
     }
 
     @Test
+    void anInvalidCredentialRedirectsWithAnErrorAndEstablishesNoSession() {
+        final signInRequest = HttpRequest.newBuilder(URI.create(url("/api/auth/google")))
+                .header("Content-Type", "application/x-www-form-urlencoded")
+                .POST(HttpRequest.BodyPublishers.ofString(
+                        "credential=" + URLEncoder.encode(FakeGoogleIdTokenVerifier.INVALID_TOKEN, "UTF-8")))
+                .build()
+        final signInResponse = this.client.send(signInRequest, HttpResponse.BodyHandlers.ofString())
+
+        assert signInResponse.statusCode() == 302
+        final location = signInResponse.headers().firstValue("Location").orElse("")
+        assert location.startsWith(url("/?googleSignInError="))
+
+        // Spring lazily creates a plain (unauthenticated) HTTP session on
+        // any request regardless of outcome, so a JSESSIONID cookie may
+        // still be present here - that's normal. What actually matters:
+        // whatever cookie came back must NOT authenticate.
+        final sessionCookie = signInResponse.headers().allValues("Set-Cookie")
+                .find { it.startsWith("JSESSIONID=") }
+        if (sessionCookie != null) {
+            final whoAmI = this.client.send(
+                    HttpRequest.newBuilder(URI.create(url("/api/users/me")))
+                            .header("Accept", "*/*").header("Cookie", sessionCookie.split(";")[0]).GET().build(),
+                    HttpResponse.BodyHandlers.ofString())
+            assert whoAmI.body().contains('"authenticated":false')
+        }
+    }
+
+    /**
+     * Sign-out is the mirror of sign-in - just as real a place for the
+     * app's real auth state to silently drift from the session, so it
+     * gets the same round-trip scrutiny: sign in, confirm authenticated,
+     * sign out, confirm the SAME session cookie no longer authenticates.
+     */
+    @Test
+    void signOutInvalidatesTheSessionSoWhoAmIGoesBackToAnonymous() {
+        final credential = FakeGoogleIdTokenVerifier.fakeToken(
+                "google-sub-signout-test", "signout@example.com", "Signout Tester")
+
+        final signInResponse = this.client.send(
+                HttpRequest.newBuilder(URI.create(url("/api/auth/google")))
+                        .header("Content-Type", "application/x-www-form-urlencoded")
+                        .POST(HttpRequest.BodyPublishers.ofString("credential=" + URLEncoder.encode(credential, "UTF-8")))
+                        .build(),
+                HttpResponse.BodyHandlers.ofString())
+        final sessionCookie = signInResponse.headers().allValues("Set-Cookie")
+                .find { it.startsWith("JSESSIONID=") }
+                .split(";")[0]
+
+        final beforeLogout = this.client.send(
+                HttpRequest.newBuilder(URI.create(url("/api/users/me")))
+                        .header("Accept", "*/*").header("Cookie", sessionCookie).GET().build(),
+                HttpResponse.BodyHandlers.ofString())
+        assert beforeLogout.body().contains('"authenticated":true')
+
+        final logoutResponse = this.client.send(
+                HttpRequest.newBuilder(URI.create(url("/logout")))
+                        .header("Cookie", sessionCookie)
+                        .POST(HttpRequest.BodyPublishers.noBody()).build(),
+                HttpResponse.BodyHandlers.discarding())
+        assert logoutResponse.statusCode() == 302
+
+        // The SAME cookie, reused after logout - must no longer authenticate.
+        final afterLogout = this.client.send(
+                HttpRequest.newBuilder(URI.create(url("/api/users/me")))
+                        .header("Accept", "*/*").header("Cookie", sessionCookie).GET().build(),
+                HttpResponse.BodyHandlers.ofString())
+        assert afterLogout.statusCode() == 200
+        assert afterLogout.body().contains('"authenticated":false')
+    }
+
+    @Test
     void aBrowsableBookPageStillDefaultsToDecoratedHtmlWithABareFetchAcceptHeader() {
         // Guards the ORIGINAL intent of WebConfig's defaultContentType -
         // must not regress while fixing the JSON-endpoint bug above.
