@@ -40,6 +40,7 @@ public class GoogleTokenInfoVerifier implements GoogleIdTokenVerifier {
         String sub;
         String email;
         String name;
+        String picture;
         String email_verified;
         String aud;
         String iss;
@@ -67,6 +68,6 @@ public class GoogleTokenInfoVerifier implements GoogleIdTokenVerifier {
         if (!"accounts.google.com".equals(info.getIss()) && !"https://accounts.google.com".equals(info.getIss()))
             throw new IllegalArgumentException("unexpected Google credential issuer: " + info.getIss());
 
-        return new GoogleClaims(info.getSub(), info.getEmail(), info.getName(), "true".equals(info.getEmail_verified()));
+        return new GoogleClaims(info.getSub(), info.getEmail(), info.getName(), info.getPicture(), "true".equals(info.getEmail_verified()));
     }
 }

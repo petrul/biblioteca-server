@@ -35,7 +35,7 @@ class GoogleAuthServiceTest {
 
     @Test
     void createsANewAccountOnFirstGoogleSignIn() {
-        final claims = new GoogleClaims("google-sub-1", "alice@example.com", "Alice", true)
+        final claims = new GoogleClaims("google-sub-1", "alice@example.com", "Alice", "https://example.com/alice.jpg", true)
         when(tokenVerifier.verify("credential")).thenReturn(claims)
         when(appUserRepository.findByGoogleSub(claims.sub())).thenReturn(Optional.empty())
         when(appUserRepository.existsByUsername(claims.email())).thenReturn(false)
@@ -45,6 +45,7 @@ class GoogleAuthServiceTest {
         assert user.id == 1L
         assert user.googleSub == claims.sub()
         assert user.username == claims.email()
+        assert user.avatarUrl == claims.picture()
         assert user.passwordHash == null
         assert user.role == AppUser.Role.USER
         verify(appUserRepository).save(user)
@@ -52,8 +53,30 @@ class GoogleAuthServiceTest {
     }
 
     @Test
+    void refreshesTheAvatarOnRepeatSignInWhenGoogleReturnsADifferentPicture() {
+        final firstClaims = new GoogleClaims("google-sub-3", "dora@example.com", "Dora", "https://example.com/old.jpg", true)
+        final secondClaims = new GoogleClaims("google-sub-3", "dora@example.com", "Dora", "https://example.com/new.jpg", true)
+        final saved = new AtomicReference<AppUser>()
+        when(tokenVerifier.verify("credential")).thenReturn(firstClaims, secondClaims)
+        when(appUserRepository.findByGoogleSub(firstClaims.sub())).thenAnswer { Optional.ofNullable(saved.get()) }
+        when(appUserRepository.save(any(AppUser))).thenAnswer { invocation ->
+            final user = invocation.getArgument(0, AppUser)
+            if (user.id == null) user.id = 3L
+            saved.set(user)
+            return user
+        }
+        when(appUserRepository.existsByUsername(firstClaims.email())).thenReturn(false)
+
+        service.signIn("credential")
+        final second = service.signIn("credential")
+
+        assert second.avatarUrl == "https://example.com/new.jpg"
+        verify(appUserRepository, times(2)).save(any(AppUser))
+    }
+
+    @Test
     void reusesTheSameAccountOnRepeatSignIn() {
-        final claims = new GoogleClaims("google-sub-2", "bob@example.com", "Bob", true)
+        final claims = new GoogleClaims("google-sub-2", "bob@example.com", "Bob", null, true)
         final saved = new AtomicReference<AppUser>()
         when(tokenVerifier.verify("credential")).thenReturn(claims)
         when(appUserRepository.findByGoogleSub(claims.sub())).thenAnswer {
@@ -76,7 +99,7 @@ class GoogleAuthServiceTest {
 
     @Test
     void disambiguatesAnExistingUsername() {
-        final claims = new GoogleClaims("abcdef123456", "carol@example.com", "Carol", true)
+        final claims = new GoogleClaims("abcdef123456", "carol@example.com", "Carol", null, true)
         when(tokenVerifier.verify("credential")).thenReturn(claims)
         when(appUserRepository.findByGoogleSub(claims.sub())).thenReturn(Optional.empty())
         when(appUserRepository.existsByUsername(claims.email())).thenReturn(true)

@@ -25,7 +25,19 @@ public class GoogleAuthService {
         final GoogleClaims claims = this.googleIdTokenVerifier.verify(idToken);
 
         return this.appUserRepository.findByGoogleSub(claims.sub())
+                .map(user -> updateAvatarIfChanged(user, claims))
                 .orElseGet(() -> createFromGoogleAccount(claims));
+    }
+
+    // Google's profile picture can change over time (or simply wasn't
+    // captured yet on accounts created before avatarUrl existed) - refresh
+    // it on every sign-in rather than only at account creation.
+    private AppUser updateAvatarIfChanged(AppUser user, GoogleClaims claims) {
+        if (claims.picture() != null && !claims.picture().equals(user.getAvatarUrl())) {
+            user.setAvatarUrl(claims.picture());
+            this.appUserRepository.save(user);
+        }
+        return user;
     }
 
     private AppUser createFromGoogleAccount(GoogleClaims claims) {
@@ -41,6 +53,7 @@ public class GoogleAuthService {
         final AppUser user = AppUser.builder()
                 .username(username)
                 .googleSub(claims.sub())
+                .avatarUrl(claims.picture())
                 .passwordHash(null)
                 .role(AppUser.Role.USER)
                 .build();

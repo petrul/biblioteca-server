@@ -4,9 +4,11 @@ import lombok.RequiredArgsConstructor;
 import lombok.Value;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
+import ro.editii.scriptorium.dao.AppUserRepository;
 import ro.editii.scriptorium.model.AppUser;
 import ro.editii.scriptorium.security.AppUserRegistrationService;
 
+import java.util.HashMap;
 import java.util.Map;
 
 /**
@@ -21,6 +23,7 @@ import java.util.Map;
 public class UserRestController {
 
     final AppUserRegistrationService registrationService;
+    final AppUserRepository appUserRepository;
 
     @Value
     public static class RegisterRequest {
@@ -50,6 +53,13 @@ public class UserRestController {
         if (authentication == null || !authentication.isAuthenticated()
                 || "anonymousUser".equals(authentication.getName()))
             return Map.of("authenticated", false);
-        return Map.of("authenticated", true, "username", authentication.getName());
+
+        final Map<String, Object> result = new HashMap<>();
+        result.put("authenticated", true);
+        result.put("username", authentication.getName());
+        this.appUserRepository.findByUsername(authentication.getName())
+                .map(AppUser::getAvatarUrl)
+                .ifPresent(avatarUrl -> result.put("avatarUrl", avatarUrl));
+        return result;
     }
 }

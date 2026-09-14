@@ -53,6 +53,11 @@ public class AppUser implements Serializable {
     @Column(unique = true)
     String googleSub;
 
+    // Google's "picture" claim, refreshed on every Google sign-in (see
+    // GoogleAuthService) - null for accounts that never signed in with
+    // Google. Just a URL; nothing here fetches or caches the image itself.
+    String avatarUrl;
+
     @Enumerated(EnumType.STRING)
     @Builder.Default
     Role role = Role.USER;
