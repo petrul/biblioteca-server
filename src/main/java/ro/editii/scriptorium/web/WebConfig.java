@@ -16,12 +16,20 @@ import java.io.IOException;
 public class WebConfig implements WebMvcConfigurer {
 
     /**
-     * maybe this will help me serve html by default unless
-     * somebody actually specifies xml
+     * Browsable book/chapter pages default to HTML when the client's Accept
+     * header is ambiguous - but "ambiguous" includes the bare wildcard a
+     * plain browser fetch() sends with no explicit Accept header at all,
+     * and a single hard defaultContentType(TEXT_HTML) applied to that too,
+     * breaking every plain fetch() against a JSON RestController endpoint
+     * (its handler can't produce text/html, so negotiation 406s instead of
+     * falling through to JSON). Listing candidates in priority order fixes
+     * that: JSON-producing endpoints match application/json first, and
+     * HTML-page endpoints (which can't produce JSON) still fall through to
+     * text/html exactly as before.
      */
     @Override
     public void configureContentNegotiation(ContentNegotiationConfigurer configurer) {
-        configurer.defaultContentType(MediaType.TEXT_HTML);
+        configurer.defaultContentType(MediaType.APPLICATION_JSON, MediaType.TEXT_HTML);
     }
 
     @Override
