@@ -428,8 +428,7 @@ tasks.withType(ProcessForkOptions).configureEach { task ->
 
         if (task.name != 'unittest') {
             final requiredKeys = [
-                    "MILVUS_HOST", "MILVUS_PORT",
-                    "EMBEDDER_HOST", "EMBEDDER_PORT",
+                    "MILVUS_ADDRESS", "EMBEDDER_ADDRESS",
                     "REPO_TEI_DIRS", "CACHE_DIR", "KAFKA_BROKERS",
                     "MYSQL_JDBC_URL"
             ]

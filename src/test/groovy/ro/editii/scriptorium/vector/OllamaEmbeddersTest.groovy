@@ -14,10 +14,8 @@ import org.springframework.boot.test.context.SpringBootTest
 @SpringBootTest(
         classes = [VectorConfig.class, MilvusService.class],
         properties = [
-            "embedder.host=zmeu.local",
-            "embedder.port=11434",
-            "milvus.host=zmeu.local",
-            "milvus.port=20112",
+            "embedder.address=zmeu.local:11434",
+            "milvus.address=zmeu.local:20112",
         ])
 class OllamaEmbeddersTest {
 

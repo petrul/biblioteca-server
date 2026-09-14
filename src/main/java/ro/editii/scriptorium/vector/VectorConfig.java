@@ -18,11 +18,16 @@ public class VectorConfig {
 
     public static final String TEXTBASE_CLIENT = "textbaseClient";
 
+    // Host and port only ever travel together to address one service, so
+    // MILVUS_ADDRESS/EMBEDDER_ADDRESS are each a single "host:port" Vault
+    // secret rather than two - trivial to split back apart here.
+    private static String hostOf(String address) { return address.substring(0, address.lastIndexOf(':')); }
+    private static int portOf(String address) { return Integer.parseInt(address.substring(address.lastIndexOf(':') + 1)); }
+
     @Bean
-    public MilvusServiceClient milvusClient(
-            @Value("${milvus.host}")        String milvusHost,
-            @Value("${milvus.port}")        int milvusPort
-    ) {
+    public MilvusServiceClient milvusClient(@Value("${milvus.address}") String milvusAddress) {
+        final String milvusHost = hostOf(milvusAddress);
+        final int milvusPort = portOf(milvusAddress);
         log.info(String.format("MilvusServiceClient: %s:%d", milvusHost, milvusPort));
         return new MilvusServiceClient(ConnectParam.newBuilder()
             .withHost(milvusHost)
@@ -67,33 +72,30 @@ public class VectorConfig {
     @Bean
     @Primary
     public Embedder bgeM3Embedder(
-            @Value("${embedder.host}") String ollamaHost,
-            @Value("${embedder.port}") int ollamaPort,
+            @Value("${embedder.address}") String embedderAddress,
             RestTemplate restTemplate
     ) {
-        final Embedder embedder = new OllamaEmbedder(ollamaHost, ollamaPort, "bge-m3", "BGE_M3", MilvusCollection.DIM_1024, restTemplate);
+        final Embedder embedder = new OllamaEmbedder(hostOf(embedderAddress), portOf(embedderAddress), "bge-m3", "BGE_M3", MilvusCollection.DIM_1024, restTemplate);
         log.info(embedder.toString());
         return embedder;
     }
 
     @Bean
     public Embedder qwen3EmbeddingEmbedder(
-            @Value("${embedder.host}") String ollamaHost,
-            @Value("${embedder.port}") int ollamaPort,
+            @Value("${embedder.address}") String embedderAddress,
             RestTemplate restTemplate
     ) {
-        final Embedder embedder = new OllamaEmbedder(ollamaHost, ollamaPort, "qwen3-embedding:4b", "QWEN3_EMBEDDING_4B", MilvusCollection.DIM_2560, restTemplate);
+        final Embedder embedder = new OllamaEmbedder(hostOf(embedderAddress), portOf(embedderAddress), "qwen3-embedding:4b", "QWEN3_EMBEDDING_4B", MilvusCollection.DIM_2560, restTemplate);
         log.info(embedder.toString());
         return embedder;
     }
 
     @Bean
     public Embedder nomicEmbedder(
-            @Value("${embedder.host}") String ollamaHost,
-            @Value("${embedder.port}") int ollamaPort,
+            @Value("${embedder.address}") String embedderAddress,
             RestTemplate restTemplate
     ) {
-        final Embedder embedder = new OllamaEmbedder(ollamaHost, ollamaPort, "nomic-embed-text:v1.5", "NOMIC_EMBED_TEXT", MilvusCollection.DIM_768, restTemplate);
+        final Embedder embedder = new OllamaEmbedder(hostOf(embedderAddress), portOf(embedderAddress), "nomic-embed-text:v1.5", "NOMIC_EMBED_TEXT", MilvusCollection.DIM_768, restTemplate);
         log.info(embedder.toString());
         return embedder;
     }

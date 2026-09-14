@@ -33,13 +33,11 @@ import static ro.editii.scriptorium.TestUtils.TEI_ELEM
         "spring.jpa.database-platform=org.hibernate.dialect.H2Dialect",
         "spring.main.allow-bean-definition-overriding=true",
         "spring.jpa.hibernate.ddl-auto=create",
-        "milvus.host=zmeu.local",
-        "milvus.port=20112",
+        "milvus.address=zmeu.local:20112",
         "milvus.collection=test_tb_paras_qwen3_embedding_4b_duplicate",
         "embeddings.host=mini.local",
         "embeddings.port=11200",
-        "embedder.host=zmeu.local",
-        "embedder.port=11434",
+        "embedder.address=zmeu.local:11434",
         "textbase.advertised.url=http://localhost:8080"
 ])
 @SpringBootTest(

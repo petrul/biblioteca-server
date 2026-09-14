@@ -14,10 +14,8 @@ import static ro.editii.scriptorium.GTestUtil.p
 @SpringBootTest(
         classes = [ VectorConfig.class, MilvusService.class, VectorSearchAvailability.class, MilvusTextSearchService.class],
         properties = [
-                "milvus.host=zmeu.local",
-                "milvus.port=20112",
-                "embedder.host=zmeu.local",
-                "embedder.port=11434",
+                "milvus.address=zmeu.local:20112",
+                "embedder.address=zmeu.local:11434",
                 "spring.main.allow-bean-definition-overriding=true"
         ])
 @Import(TestConfig.class)

@@ -11,7 +11,7 @@ class VectorConfigWiringTest {
     @Test
     void semanticSearchUsesTheBgeM3CollectionPair() {
         final config = new VectorConfig()
-        final embedder = config.bgeM3Embedder("unused.invalid", 11434, mock(RestTemplate.class))
+        final embedder = config.bgeM3Embedder("unused.invalid:11434", mock(RestTemplate.class))
         final collection = config.prodCollection(mock(MilvusService.class), "int_tb_paras_bge_m3")
 
         assert embedder.modelName() == "BGE_M3"

@@ -25,10 +25,8 @@ import org.springframework.boot.test.context.SpringBootTest
         properties = [
             "sts.host=mini.local",
             "sts.port=11200",
-            "milvus.host=zmeu.local",
-            "milvus.port=20112",
-            "embedder.host=zmeu.local",
-            "embedder.port=11434",
+            "milvus.address=zmeu.local:20112",
+            "embedder.address=zmeu.local:11434",
         ])
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 @Tag("external")

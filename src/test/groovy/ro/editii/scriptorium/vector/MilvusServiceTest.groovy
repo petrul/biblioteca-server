@@ -28,13 +28,11 @@ import static ro.editii.scriptorium.GTestUtil.p
             // list, so VectorConfig's real bean would win instead.
             FakeEmbedderTestConfig.class],
         properties = [
-        "milvus.host=zmeu.local",
-        "milvus.port=20112",
+        "milvus.address=zmeu.local:20112",
         "milvus.collection=test_tb_paras_qwen3_embedding_4b_duplicate",
         "embeddings.host=mini.local",
         "embeddings.port=11200",
-        "embedder.host=zmeu.local",
-        "embedder.port=11434",
+        "embedder.address=zmeu.local:11434",
         "textbase-dl.dir=~/data/textbase-dl",
         "spring.main.allow-bean-definition-overriding=true"
 ])
