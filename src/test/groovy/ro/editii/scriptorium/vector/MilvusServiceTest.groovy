@@ -20,6 +20,7 @@ import static ro.editii.scriptorium.GTestUtil.p
             MilvusService.class,
             VectorSearchAvailability.class,
             MilvusTextSearchService.class,
+            ro.editii.scriptorium.health.OllamaHealthTracker.class,
             // must come AFTER VectorConfig.class - classes= entries are
             // processed in order, and a later definition for the same bean
             // name wins (allow-bean-definition-overriding=true below).

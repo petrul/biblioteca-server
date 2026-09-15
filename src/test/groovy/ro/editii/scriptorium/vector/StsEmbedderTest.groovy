@@ -21,7 +21,7 @@ import org.springframework.boot.test.context.SpringBootTest
  * "make encoding test target sts" test.
  */
 @SpringBootTest(
-        classes = [VectorConfig.class, MilvusService.class],
+        classes = [VectorConfig.class, MilvusService.class, ro.editii.scriptorium.health.OllamaHealthTracker.class],
         properties = [
             "sts.host=mini.local",
             "sts.port=11200",
