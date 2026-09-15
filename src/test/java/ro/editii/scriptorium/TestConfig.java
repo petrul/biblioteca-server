@@ -18,6 +18,7 @@ import ro.editii.scriptorium.cache.CacheConf;
 import ro.editii.scriptorium.cache.DiskCache;
 import ro.editii.scriptorium.client.TextbaseClient;
 import ro.editii.scriptorium.dto.TeiDivDto;
+import ro.editii.scriptorium.dto.UserLoggedInDto;
 import ro.editii.scriptorium.kafka.TextbaseEventsPublisher;
 import ro.editii.scriptorium.tei.TeiDirRepoImpl;
 import ro.editii.scriptorium.tei.TeiRepo;
@@ -110,6 +111,7 @@ public class TestConfig {
 
         final List<TeiDivDto> newOpus = new ArrayList<>();
         final List<TeiDivDto> reimportedOpus = new ArrayList<>();
+        final List<UserLoggedInDto> logins = new ArrayList<>();
 
         @Override
         public void signalNewOpusImported(TeiDivDto div) {
@@ -119,6 +121,11 @@ public class TestConfig {
         @Override
         public void signalOpusReimported(TeiDivDto div) {
             this.reimportedOpus.add(div);
+        }
+
+        @Override
+        public void signalUserLoggedIn(UserLoggedInDto event) {
+            this.logins.add(event);
         }
     }
 }

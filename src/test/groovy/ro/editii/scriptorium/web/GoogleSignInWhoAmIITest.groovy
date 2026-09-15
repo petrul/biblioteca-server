@@ -11,6 +11,7 @@ import org.springframework.test.context.TestPropertySource
 import org.springframework.test.context.bean.override.mockito.MockitoBean
 import ro.editii.scriptorium.TestConfig
 import ro.editii.scriptorium.dao.AppUserRepository
+import ro.editii.scriptorium.dto.UserLoggedInDto
 import ro.editii.scriptorium.kafka.TextbaseEventsPublisher
 import ro.editii.scriptorium.security.google.FakeGoogleAuthTestConfig
 import ro.editii.scriptorium.security.google.FakeGoogleIdTokenVerifier
@@ -18,6 +19,9 @@ import ro.editii.scriptorium.security.google.FakeGoogleIdTokenVerifier
 import java.net.http.HttpClient
 import java.net.http.HttpRequest
 import java.net.http.HttpResponse
+
+import static org.mockito.Mockito.verify
+import static org.mockito.ArgumentMatchers.argThat
 
 /**
  * Regression coverage for a real bug: signing in via Google worked
@@ -91,6 +95,26 @@ class GoogleSignInWhoAmIITest {
         assert whoAmIResponse.body().contains('"authenticated":true')
         assert whoAmIResponse.body().contains('"username":"reader@example.com"')
         assert whoAmIResponse.body().contains('"avatarUrl":"https://example.com/avatar.jpg"')
+    }
+
+    @Test
+    void googleSignInPublishesAUserLoggedInEvent() {
+        final credential = FakeGoogleIdTokenVerifier.fakeToken(
+                "google-sub-login-event-test", "logintest@example.com", "Login Event Tester")
+
+        final signInRequest = HttpRequest.newBuilder(URI.create(url("/api/auth/google")))
+                .header("Content-Type", "application/x-www-form-urlencoded")
+                .POST(HttpRequest.BodyPublishers.ofString("credential=" + URLEncoder.encode(credential, "UTF-8")))
+                .build()
+        final signInResponse = this.client.send(signInRequest, HttpResponse.BodyHandlers.ofString())
+        assert signInResponse.statusCode() == 302
+
+        verify(this.textbaseEventsPublisher).signalUserLoggedIn(argThat { UserLoggedInDto event ->
+            event.username == "logintest@example.com" &&
+                    event.provider == "google" &&
+                    event.userId != null &&
+                    event.loginAt != null
+        })
     }
 
     @Test

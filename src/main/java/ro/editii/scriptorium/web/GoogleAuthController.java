@@ -13,12 +13,15 @@ import org.springframework.security.web.context.HttpSessionSecurityContextReposi
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
+import ro.editii.scriptorium.dto.UserLoggedInDto;
+import ro.editii.scriptorium.kafka.TextbaseEventsPublisher;
 import ro.editii.scriptorium.model.AppUser;
 import ro.editii.scriptorium.security.google.GoogleAuthService;
 
 import java.io.IOException;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
+import java.time.Instant;
 
 /**
  * Receives what Google's One Tap widget posts after a successful sign-in:
@@ -34,6 +37,7 @@ import java.nio.charset.StandardCharsets;
 public class GoogleAuthController {
 
     final GoogleAuthService googleAuthService;
+    final TextbaseEventsPublisher textbaseEventsPublisher;
 
     @PostMapping("/api/auth/google")
     public void googleSignIn(@RequestParam("credential") String credential,
@@ -45,6 +49,12 @@ public class GoogleAuthController {
         try {
             final AppUser user = this.googleAuthService.signIn(credential);
             establishSession(user, request, response);
+            this.textbaseEventsPublisher.signalUserLoggedIn(UserLoggedInDto.builder()
+                    .userId(user.getId())
+                    .username(user.getUsername())
+                    .provider("google")
+                    .loginAt(Instant.now())
+                    .build());
             final String target = safeRedirectTarget(redirect);
             log.debug("Google sign-in OK for username={}, redirecting to {}", user.getUsername(), target);
             response.sendRedirect(target);
