@@ -20,6 +20,7 @@ import org.springframework.ui.Model;
 import org.springframework.util.MimeTypeUtils;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
@@ -50,6 +51,7 @@ import java.net.URISyntaxException;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 /**
@@ -94,9 +96,37 @@ public class DivController {
     final TeiRepo           teiRepo;
     final ThymeleafViewResolver viewResolver;
 
+    // Real evergreen browser engines only (Chrome/Chromium/Edge/Opera/
+    // Firefox/Safari, desktop and mobile) - the bar is "can run the
+    // reader's React/Vite bundle", not precise feature detection.
+    private static final Pattern MODERN_BROWSER_UA = Pattern.compile(
+            "(?i)Chrome/|Chromium/|CriOS/|Edg/|OPR/|Firefox/|FxiOS/|Safari/");
+
+    // Bots often spoof a Chrome/Safari UA to get real content out of
+    // sites that special-case old browsers - these must still land on
+    // the crawlable Spring MVC page, not be sent to a JS-only SPA shell.
+    // Covers common crawlers plus plain HTTP clients (curl, wget,
+    // scripting libraries) as a belt-and-braces exclusion, even though
+    // most of those don't match MODERN_BROWSER_UA at all to begin with.
+    private static final Pattern NON_BROWSER_UA = Pattern.compile(
+            "(?i)bot|crawl|spider|curl|wget|python-requests|httpclient|okhttp|" +
+            "libwww|lynx|links|w3m|postman|axios|go-http-client|java/");
+
+    private static boolean isModernJsCapableBrowser(String userAgent) {
+        if (userAgent == null || userAgent.isBlank()) return false;
+        return MODERN_BROWSER_UA.matcher(userAgent).find() && !NON_BROWSER_UA.matcher(userAgent).find();
+    }
+
     @GetMapping("/")
     @Transactional
-    public String index(Model model) {
+    public String index(Model model, @RequestHeader(value = HttpHeaders.USER_AGENT, required = false) String userAgent) {
+        // Modern browsers get the reader SPA; anything else (curl, text
+        // browsers, bots, ancient/non-JS browsers) keeps getting the
+        // server-rendered index page below, unchanged.
+        if (isModernJsCapableBrowser(userAgent)) {
+            return "redirect:/app";
+        }
+
         final List<Author> all = this.authorRepository
                 .findAll().stream()
                 .sorted()

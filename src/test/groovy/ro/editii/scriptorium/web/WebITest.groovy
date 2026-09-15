@@ -268,6 +268,56 @@ class WebITest {
     }
 
     @Test
+    void rootRedirectsModernBrowsersToTheReaderAppButServesEveryoneElseTheIndexPage() {
+        final client = java.net.http.HttpClient.newBuilder()
+                .followRedirects(java.net.http.HttpClient.Redirect.NEVER)
+                .build()
+
+        final modernUserAgents = [
+                'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36',
+                'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.5 Safari/605.1.15',
+                'Mozilla/5.0 (X11; Linux x86_64; rv:128.0) Gecko/20100101 Firefox/128.0',
+                'Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) CriOS/126.0.6478.54 Mobile/15E148 Safari/604.1',
+        ]
+        modernUserAgents.each { ua ->
+            final request = java.net.http.HttpRequest.newBuilder(URI.create("http://localhost:${port}/"))
+                    .header('User-Agent', ua)
+                    .GET().build()
+            final response = client.send(request, java.net.http.HttpResponse.BodyHandlers.discarding())
+            assert response.statusCode() == 302 : "expected a redirect for UA: ${ua}"
+            // sendRedirect() turns the "redirect:/app" view's relative
+            // target into an absolute URL per the servlet spec - assert
+            // on the path only, not the scheme/host.
+            assert response.headers().firstValue('Location').orElse('') == "http://localhost:${port}/app" : "wrong redirect target for UA: ${ua}"
+        }
+
+        final nonBrowserOrOldUserAgents = [
+                'curl/8.4.0',
+                'Wget/1.21.4',
+                'python-requests/2.31.0',
+                'Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)',
+                'Mozilla/4.0 (compatible; MSIE 6.0; Windows NT 5.1)',
+                'Lynx/2.9.2 libwww-FM/2.14',
+                '',
+        ]
+        nonBrowserOrOldUserAgents.each { ua ->
+            final builder = java.net.http.HttpRequest.newBuilder(URI.create("http://localhost:${port}/")).GET()
+            if (ua) builder.header('User-Agent', ua)
+            final response = client.send(builder.build(), java.net.http.HttpResponse.BodyHandlers.ofString())
+            assert response.statusCode() == 200 : "expected the index page for UA: '${ua}'"
+            assert response.body().contains('<html') : "expected HTML index body for UA: '${ua}'"
+        }
+
+        // No User-Agent header at all (some HEAD-ish/legacy clients) is
+        // just as "not a modern browser" as an empty one.
+        final noUaRequest = java.net.http.HttpRequest.newBuilder(URI.create("http://localhost:${port}/"))
+                .GET().build()
+        final noUaResponse = client.send(noUaRequest, java.net.http.HttpResponse.BodyHandlers.ofString())
+        assert noUaResponse.statusCode() == 200
+        assert noUaResponse.body().contains('<html')
+    }
+
+    @Test
     void exportedOpenApiYamlIsValidAndInternallyConsistent() {
         final request = java.net.http.HttpRequest.newBuilder(
                 URI.create("http://localhost:${port}/api/docs.yaml"))
