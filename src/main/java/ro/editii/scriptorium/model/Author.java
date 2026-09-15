@@ -110,6 +110,31 @@ public class Author implements Comparable<Author>, Serializable {
     @Enumerated(EnumType.STRING)
     Languages nativeLanguage;
 
+    // Auto-generated alongside bio (AiEnrichmentService, same call, same
+    // "only ever set once" one-shot rule) - free-text rather than a
+    // parsed date, since the source material often only gives an
+    // approximate or partial date (a bare year, "c. 1837") and a strict
+    // date type would just reject those instead of storing them.
+    @Column(length = 100)
+    String birthDate;
+
+    @Column(length = 100)
+    String deathDate;
+
+    @Column(length = 255)
+    String birthPlace;
+
+    // The language the author actually wrote in - usually the same as
+    // nativeLanguage, but not always (a bilingual author, someone who
+    // wrote mainly in a learned/literary language other than their
+    // mother tongue). Auto-generated alongside bio, same as the fields
+    // above.
+    @Enumerated(EnumType.STRING)
+    Languages writingLanguage;
+
+    @Column(length = 255)
+    String country;
+
 
     /**
      * how to parse an originalNameInTeiFile : e.g. Alecsandri,Vasile.

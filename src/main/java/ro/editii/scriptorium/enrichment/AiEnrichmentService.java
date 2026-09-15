@@ -28,10 +28,21 @@ import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 /**
- * Best-effort background enrichment: a short author bio or opus summary,
- * synthesized from real-world material via SearXNG (self-hosted
- * metasearch, docker/searxng in the scripts repo) + Ollama (a plain
- * generative model, not the embedding-only ones VectorConfig configures).
+ * Best-effort background enrichment: a short author bio and opus summary,
+ * taken directly from real-world search material via SearXNG (self-hosted
+ * metasearch, docker/searxng in the scripts repo) - no LLM rewrite. A
+ * Wikipedia REST summary extract is already clean, condensed prose (see
+ * findSourceMaterial); the generic-snippet fallback is rougher (several
+ * unrelated sites' blurbs concatenated) but still usable as-is, truncated
+ * to a reasonable length - accepted as a fair tradeoff for never touching
+ * Ollama on this path, since these fire once per author AND once per opus
+ * (dozens of calls for one big multi-work TEI file).
+ *
+ * Ollama is used for exactly one thing here: extracting a small structured
+ * JSON of author facts (birthDate, deathDate, birthPlace, etc.) that plain
+ * text truncation can't produce - see enrichAuthorFactsAsync. That's
+ * author-only (never per-opus) and genuinely rare in volume, unlike the
+ * old "summarize every opus via Ollama" design this replaced.
  *
  * Every call here happens on its own virtual thread, fire-and-forget from
  * AdminService right after an opus/author is (re)imported - never blocks
@@ -39,8 +50,8 @@ import java.util.stream.Collectors;
  * usable search results, whatever) is caught and logged, never thrown
  * back at the caller. Runs at most once per author/opus: both entities
  * only ever get enriched while their bio/summary is still null (see
- * AdminService), so this never re-spends an LLM call on every reimport,
- * and a manual edit to either field is never silently overwritten later.
+ * AdminService), so this never re-spends work on every reimport, and a
+ * manual edit to either field is never silently overwritten later.
  *
  * Source preference, per the user's own instruction: an established
  * reference source (Wikipedia, Britannica) beats generic search-result
@@ -113,14 +124,13 @@ public class AiEnrichmentService {
                     log.info("No usable search material found to enrich author bio for '{}'", query);
                     return;
                 }
-                final String bio = summarize(material.text(),
-                        "Write a concise two-paragraph biography of " + author.getVisualName()
-                                + " based only on the material below. Do not invent facts that aren't in it.");
-                if (bio == null) return;
+                final String bio = truncateMaterial(material.text());
+                final AuthorFacts facts = extractAuthorFacts(material.text(), author.getVisualName());
 
                 this.authorRepository.findById(authorId).ifPresent(a -> {
                     a.setBio(bio);
                     a.setBioSourceUrl(material.url());
+                    applyAuthorFacts(a, facts);
                     this.authorRepository.save(a);
                 });
                 log.info("Enriched author bio for '{}' from {}", author.getVisualName(), material.url());
@@ -128,6 +138,84 @@ public class AiEnrichmentService {
                 log.warn("Author bio enrichment failed for '{}': {}", query, e.getMessage());
             }
         });
+    }
+
+    private record AuthorFacts(String firstName, String lastName, String birthDate, String deathDate,
+                                String nativeLanguage, String writingLanguage, String birthPlace, String country) {}
+
+    /**
+     * The only Ollama call left in this class - author-only (never
+     * per-opus), so nowhere near the volume the old "summarize everything"
+     * design produced. Best-effort like everything else here: any failure
+     * (Ollama unreachable, bad JSON, whatever) returns null rather than
+     * taking the bio - which doesn't need Ollama at all anymore - down
+     * with it.
+     */
+    private AuthorFacts extractAuthorFacts(String material, String authorVisualName) throws InterruptedException {
+        final String instruction = "Extract facts about " + authorVisualName + " from the material below."
+                + " Respond with ONLY a single-line JSON object, no other text, with these exact keys:"
+                + " firstName, lastName, birthDate, deathDate, nativeLanguage, writingLanguage, birthPlace,"
+                + " country. Use a JSON null for any field you cannot determine from the material - do not guess.";
+        final String raw = callOllama(instruction, material);
+        log.info("extractAuthorFacts raw Ollama response for '{}': {}", authorVisualName, raw);
+        return raw == null ? null : parseAuthorFacts(raw);
+    }
+
+    // Best-effort: a model that wraps its JSON in a markdown code fence
+    // despite the "ONLY a JSON object" instruction (a common LLM quirk),
+    // or produces invalid JSON outright, must never throw - just no facts
+    // get applied.
+    private AuthorFacts parseAuthorFacts(String raw) {
+        final String json = stripCodeFence(raw.trim());
+        try {
+            return new com.fasterxml.jackson.databind.ObjectMapper()
+                    .configure(com.fasterxml.jackson.databind.DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false)
+                    .readValue(json, AuthorFacts.class);
+        } catch (Exception e) {
+            log.info("Couldn't parse the author-facts JSON Ollama returned ({}): {}", e.getMessage(), json);
+            return null;
+        }
+    }
+
+    private static String stripCodeFence(String s) {
+        if (!s.startsWith("```")) return s;
+        final int firstNewline = s.indexOf('\n');
+        final int lastFence = s.lastIndexOf("```");
+        return firstNewline > 0 && lastFence > firstNewline ? s.substring(firstNewline + 1, lastFence).trim() : s;
+    }
+
+    // Only ever fills in a field that's still blank - existing structured
+    // data (firstName/lastName from the TEI file, nativeLanguage from
+    // backfillNativeLanguageIfMissing) is more reliable than an LLM's
+    // guess at the same thing, so this never overwrites it. birthDate/
+    // deathDate/birthPlace have no other source, so this is the only way
+    // they ever get set.
+    private static void applyAuthorFacts(Author a, AuthorFacts facts) {
+        if (facts == null) return;
+        if (isBlank(a.getFirstName()) && !isBlank(facts.firstName())) a.setFirstName(facts.firstName());
+        if (isBlank(a.getLastName()) && !isBlank(facts.lastName())) a.setLastName(facts.lastName());
+        if (isBlank(a.getBirthDate()) && !isBlank(facts.birthDate())) a.setBirthDate(facts.birthDate());
+        if (isBlank(a.getDeathDate()) && !isBlank(facts.deathDate())) a.setDeathDate(facts.deathDate());
+        if (isBlank(a.getBirthPlace()) && !isBlank(facts.birthPlace())) a.setBirthPlace(facts.birthPlace());
+        if (isBlank(a.getCountry()) && !isBlank(facts.country())) a.setCountry(facts.country());
+        if (a.getNativeLanguage() == null) parseLanguage(facts.nativeLanguage()).ifPresent(a::setNativeLanguage);
+        if (a.getWritingLanguage() == null) parseLanguage(facts.writingLanguage()).ifPresent(a::setWritingLanguage);
+    }
+
+    private static boolean isBlank(String s) {
+        return s == null || s.isBlank();
+    }
+
+    // Not one of our ISO-639-1 enum codes (a full language name, an
+    // unsupported language, whatever) -> empty, rather than guessing
+    // further or throwing.
+    private static java.util.Optional<Languages> parseLanguage(String code) {
+        if (isBlank(code)) return java.util.Optional.empty();
+        try {
+            return java.util.Optional.of(Languages.valueOf(code.trim().toUpperCase()));
+        } catch (IllegalArgumentException e) {
+            return java.util.Optional.empty();
+        }
     }
 
     public void enrichOpusAsync(TeiDiv opus) {
@@ -140,6 +228,9 @@ public class AiEnrichmentService {
         final String query = title + (authorName != null ? " by " + authorName : "");
         final Languages language = opus.getTeiFile().getLanguage();
 
+        // No Ollama involved at all here - see the class doc comment.
+        // findSourceMaterial's own text (a Wikipedia extract, or the
+        // generic-snippet fallback), truncated, IS the summary.
         Thread.ofVirtual().name("ai-enrich-opus-" + opusId).start(() -> {
             try {
                 final SourceMaterial material = findSourceMaterial(query, language);
@@ -147,10 +238,7 @@ public class AiEnrichmentService {
                     log.info("No usable search material found to enrich opus summary for '{}'", query);
                     return;
                 }
-                final String summary = summarize(material.text(),
-                        "Write a concise two-paragraph summary of the work \"" + title
-                                + "\" based only on the material below. Do not invent facts that aren't in it.");
-                if (summary == null) return;
+                final String summary = truncateMaterial(material.text());
 
                 this.teiDivRepository.findById(opusId).ifPresent(o -> {
                     o.setSummary(summary);
@@ -278,32 +366,36 @@ public class AiEnrichmentService {
         }
     }
 
-    // Every enrichAuthorAsync/enrichOpusAsync call runs on its own virtual
-    // thread, so a single big import (dozens of opera at once) would
-    // otherwise fire that many concurrent Ollama generate requests -
-    // this shared Ollama instance also serves live vector-search
-    // embeddings, and a pile of simultaneous generate calls is exactly
-    // the kind of GPU contention that's already a known problem here
-    // (see the int-greg Ollama load concern). One at a time keeps this
-    // enrichment work from ever being the thing that makes Ollama
-    // unusably slow for everything else - it's already best-effort
+    // Author-only now (opus summaries no longer call Ollama at all - see
+    // the class doc comment), so nowhere near the volume that justified
+    // this originally, but still real: a big author-heavy import could
+    // still fire several concurrent extractAuthorFacts calls, and this
+    // shared Ollama instance also serves live vector-search embeddings.
+    // One at a time keeps this from ever being the thing that makes
+    // Ollama unusably slow for everything else - it's already best-effort
     // background work, queueing is free.
     private final java.util.concurrent.Semaphore ollamaGate = new java.util.concurrent.Semaphore(1);
 
+    // Roughly 3 short paragraphs worth of source text - plenty for a
+    // stored bio/summary, and (for the author-facts call) short enough
+    // that it doesn't sit at the front of the input context for ages
+    // before generation even starts.
+    private static final int MAX_MATERIAL_CHARS = 1200;
+
     @SuppressWarnings("unchecked")
-    private String summarize(String material, String instruction) throws InterruptedException {
+    private String callOllama(String instruction, String material) throws InterruptedException {
         this.ollamaGate.acquire();
         try {
-            // Background enrichment only ever gets ONE shot per author/opus
-            // (see AdminService's null-gating) - bailing out the instant
-            // Ollama is flagged unavailable would permanently skip that
-            // author/opus's enrichment for a merely transient outage. This
-            // waits out the tracker's own remaining cooldown instead (a
-            // virtual thread, already serialized by ollamaGate, so idle
-            // waiting here is free) - bounded by that same cooldown, so it
-            // never waits past the point the tracker would auto-reset
-            // anyway, matching "wait before the 15/20 min interval
-            // elapses, not indefinitely beyond it."
+            // Background enrichment only ever gets ONE shot per author
+            // (see AdminService's null-gating on bio) - bailing out the
+            // instant Ollama is flagged unavailable would permanently
+            // skip that author's facts for a merely transient outage.
+            // This waits out the tracker's own remaining cooldown instead
+            // (a virtual thread, already serialized by ollamaGate, so
+            // idle waiting here is free) - bounded by that same cooldown,
+            // so it never waits past the point the tracker would
+            // auto-reset anyway, matching "wait before the 15/20 min
+            // interval elapses, not indefinitely beyond it."
             if (!this.ollamaHealthTracker.isAvailable()) {
                 final Duration wait = this.ollamaHealthTracker.remainingCooldown();
                 if (!wait.isZero()) {
@@ -316,8 +408,23 @@ public class AiEnrichmentService {
             final URI uri = URI.create(String.format("http://%s:%d/api/generate", this.ollamaHost, this.ollamaPort));
             final Map<String, Object> request = Map.of(
                     "model", this.ollamaModel,
-                    "prompt", instruction + "\n\nMaterial:\n" + material,
-                    "stream", false
+                    "prompt", instruction + "\n\nMaterial:\n" + truncateMaterial(material),
+                    "stream", false,
+                    // enrichment.ollama.model (qwen3.5:4b) is a reasoning
+                    // model - by default it spends its whole num_predict
+                    // budget on a separate "thinking" field before ever
+                    // starting the actual "response" (confirmed directly
+                    // against the real server: response came back "" with
+                    // done_reason "length" and 200 tokens of thinking that
+                    // hadn't even finished one bullet point). This task is
+                    // plain structured extraction, not something that
+                    // needs deep reasoning - skip thinking entirely rather
+                    // than just raising num_predict to cover it.
+                    "think", false,
+                    // A compact JSON object needs far fewer tokens than
+                    // the old "prose paragraph + trailing JSON" combined
+                    // response did.
+                    "options", Map.of("num_predict", 200)
             );
             final Map<String, Object> response;
             try {
@@ -332,5 +439,16 @@ public class AiEnrichmentService {
         } finally {
             this.ollamaGate.release();
         }
+    }
+
+    // Cuts at the last sentence boundary (. ! ?) at or before the limit,
+    // rather than mid-sentence, when one exists reasonably close to it -
+    // a clean-ish first few paragraphs, not a word chopped in half.
+    private static String truncateMaterial(String material) {
+        if (material.length() <= MAX_MATERIAL_CHARS) return material;
+        final String window = material.substring(0, MAX_MATERIAL_CHARS);
+        final int lastSentenceEnd = Math.max(window.lastIndexOf('.'),
+                Math.max(window.lastIndexOf('!'), window.lastIndexOf('?')));
+        return lastSentenceEnd > MAX_MATERIAL_CHARS / 2 ? window.substring(0, lastSentenceEnd + 1) : window;
     }
 }

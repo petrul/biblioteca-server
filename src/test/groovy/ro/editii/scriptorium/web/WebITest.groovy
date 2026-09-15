@@ -76,11 +76,13 @@ import static ro.editii.scriptorium.TestUtils.TEI_ELEM
         // The auto-build-on-startup thread would otherwise race this
         // class's own explicit imports/incremental reindexing.
         "lucene.autoindex.enabled=false",
-        // This class is the one place that wants the real
-        // SearXNG/Wikipedia/Ollama integration exercised (see
-        // aiEnrichmentEventuallyFillsInARealAuthorBioAndOpusSummary) -
-        // overrides application-ci.properties's default of false.
-        "enrichment.enabled=true",
+        // Inherits application-ci.properties's enrichment.enabled=false -
+        // this class's many reimports (relocationWorks,
+        // destroyAllExistingAndReimportAllTeis, @AfterEach's own
+        // full-corpus recovery reimport, etc.) would otherwise each fire
+        // real Ollama/SearXNG enrichment calls as an untested side effect.
+        // AiEnrichmentITest is the one test in the whole suite that
+        // exercises that real integration, in its own isolated context.
 ])
 @SpringBootTest(
         webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT,
@@ -384,42 +386,8 @@ class WebITest {
         assert creanga.nativeLanguage == ro.editii.scriptorium.model.Languages.RO
     }
 
-    @Test
-    void aiEnrichmentEventuallyFillsInARealAuthorBioAndOpusSummary() {
-        // Real SearXNG + Ollama calls, kicked off asynchronously by
-        // beforeAll()'s own corpus import (postImportHooks) - this test
-        // just waits for them to land rather than triggering anything
-        // itself. Same "this class already depends on the real zmeu
-        // Ollama instance" reasoning as the vector-embedding config
-        // logged at startup - not a new category of external dependency.
-        final creanga = pollUntilNotNull(240_000) {
-            final a = this.authorRepository.findByStrId('creanga').first()
-            a.bio != null ? a : null
-        }
-        assert creanga != null : "author bio enrichment did not complete within the timeout"
-        assert !creanga.bio.isBlank()
-        assert creanga.bioSourceUrl != null && creanga.bioSourceUrl.startsWith('http')
-
-        final povesti = pollUntilNotNull(240_000) {
-            final opus = this.teiDivRepository.getOperaForTeiFileId(
-                    this.teiFileRepository.getByFilename('/ro/Creanga-Amintiri_din_copilarie.xml').get().id)
-                    .find { it.completePath == 'creanga/povesti' }
-            opus?.summary != null ? opus : null
-        }
-        assert povesti != null : "opus summary enrichment did not complete within the timeout"
-        assert !povesti.summary.isBlank()
-        assert povesti.summarySourceUrl != null && povesti.summarySourceUrl.startsWith('http')
-    }
-
-    static <T> T pollUntilNotNull(long timeoutMs, Closure<T> check) {
-        final deadline = System.currentTimeMillis() + timeoutMs
-        while (System.currentTimeMillis() < deadline) {
-            final result = check.call()
-            if (result != null) return result
-            Thread.sleep(1000)
-        }
-        return null
-    }
+    // aiEnrichmentEventuallyFillsInARealAuthorBioAndOpusSummary() moved to
+    // AiEnrichmentITest - see that class's doc comment for why.
 
     @Test
     void exportedOpenApiYamlIsValidAndInternallyConsistent() {
