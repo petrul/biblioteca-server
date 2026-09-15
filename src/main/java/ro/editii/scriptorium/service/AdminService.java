@@ -6,6 +6,7 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 import ro.editii.scriptorium.Globals;
 import ro.editii.scriptorium.Util;
+import ro.editii.scriptorium.dao.TeiDivRepository;
 import ro.editii.scriptorium.dao.TeiFileRepository;
 import ro.editii.scriptorium.model.TeiFile;
 import ro.editii.scriptorium.search.lucene.LuceneIndexService;
@@ -24,9 +25,34 @@ public class AdminService {
 
     final TeiRepo teiRepo;
     final TeiFileRepository teiFileRepository;
+    final TeiDivRepository teiDivRepository;
     final TeiFileDbService teiFileDbService;
     final JdbcTemplate jdbcTemplate;
     final LuceneIndexService luceneIndexService;
+
+    /**
+     * Incrementally reindexes just the opus/opera this one TeiFile just
+     * (re)imported - see LuceneIndexService.reindexOpus for why this is
+     * cheap and doesn't block search or contend with a full rebuild.
+     * Called after every successful importTeiFile(), not just a manual
+     * full reindex - a re-imported book's stale Lucene entries would
+     * otherwise linger (wrong content, or content for divs that no
+     * longer exist) until someone remembers to trigger one by hand.
+     */
+    private void reindexLuceneForImportedFile(String filename) {
+        try {
+            this.teiFileRepository.getByFilename(filename).ifPresent(teiFile ->
+                    this.teiDivRepository.getOperaForTeiFileId(teiFile.getId())
+                            .forEach(this.luceneIndexService::reindexOpus));
+        } catch (RuntimeException e) {
+            // A Lucene hiccup must never abort or roll back the DB
+            // import itself - same reasoning as one bad paragraph not
+            // aborting a full rebuild (LuceneIndexService.rebuildIndex).
+            // Worst case, this file's Lucene entries stay stale until
+            // the next full reindex.
+            log.error("Failed to incrementally reindex Lucene for {} - the TEI import itself still succeeded", filename, e);
+        }
+    }
 
     /**
      * Full rebuild - see LuceneIndexService for why this isn't incremental.
@@ -60,6 +86,7 @@ public class AdminService {
                         log.info("will import {} ", filename);
                         writeLn(logActivity, "will delete existing import for " + filename);
                         this.teiFileDbService.importTeiFile(filename, true);
+                        this.reindexLuceneForImportedFile(filename);
                     } catch (TeiFileAlreadyImportedException e) {
                         log.error(e.getMessage(), e);
                     } catch (RuntimeException e) {
@@ -86,6 +113,7 @@ public class AdminService {
                 log.info("will import {} ", filename);
                 writeLn(logActivity, "will import " + filename);
                 this.teiFileDbService.importTeiFile(filename, true);
+                this.reindexLuceneForImportedFile(filename);
             } catch (TeiFileAlreadyImportedException e) {
                 log.error(e.getMessage(), e);
             }
@@ -116,6 +144,7 @@ public class AdminService {
                         log.info("will import {} ", filename);
                         writeLn(logActivity, "will delete existing import for " + filename);
                         this.teiFileDbService.importTeiFile(filename, true);
+                        this.reindexLuceneForImportedFile(filename);
                     } catch (TeiFileAlreadyImportedException e) {
                         log.error(e.getMessage(), e);
                     }

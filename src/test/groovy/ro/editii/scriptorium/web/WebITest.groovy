@@ -67,6 +67,15 @@ import static ro.editii.scriptorium.TestUtils.TEI_ELEM
         "spring.jpa.database-platform=org.hibernate.dialect.H2Dialect",
         "spring.main.allow-bean-definition-overriding=true",
         "spring.jpa.hibernate.ddl-auto=create",
+        // Isolated from the real dev/int/prod Lucene index at
+        // ~/.textbase/cache/lucene-index (lucene.index.dir's own default
+        // otherwise) - without this, these tests shared a single-writer
+        // Lucene lock with whatever's actually running on this machine,
+        // and could block on (or corrupt) a real, unrelated index.
+        "lucene.index.dir=\${java.io.tmpdir}/webitest-lucene-index",
+        // The auto-build-on-startup thread would otherwise race this
+        // class's own explicit imports/incremental reindexing.
+        "lucene.autoindex.enabled=false",
 ])
 @SpringBootTest(
         webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT,
@@ -315,6 +324,50 @@ class WebITest {
         final noUaResponse = client.send(noUaRequest, java.net.http.HttpResponse.BodyHandlers.ofString())
         assert noUaResponse.statusCode() == 200
         assert noUaResponse.body().contains('<html')
+    }
+
+    List<Map> luceneSearchFor(String q) {
+        final client = java.net.http.HttpClient.newHttpClient()
+        final request = java.net.http.HttpRequest.newBuilder(
+                URI.create("http://localhost:${port}/api/search/lucene?q=" + java.net.URLEncoder.encode(q, 'UTF-8')))
+                .GET().build()
+        final response = client.send(request, java.net.http.HttpResponse.BodyHandlers.ofString())
+        assert response.statusCode() == 200
+        (List<Map>) new groovy.json.JsonSlurper().parseText(response.body())
+    }
+
+    @Test
+    void theLuceneIndexIsIncrementallyBuiltByTheOrdinaryImportPathWithNoManualReindexNeeded() {
+        // beforeAll() already imported the fixture corpus via
+        // reimportAllTeis() - nothing in this test class ever calls
+        // POST /api/admin/lucene/reindex (AdminService.reindexLucene),
+        // yet a real, known term from that corpus is already searchable,
+        // because AdminService.reindexLuceneForImportedFile now runs as
+        // a side effect of every successful TEI import.
+        final hits = luceneSearchFor('cetitoriu')
+        assert hits.size() > 0
+        assert hits.any { it.url.toString().startsWith('creanga/povesti') }
+    }
+
+    @Test
+    void reimportingASingleTeiFileReindexesOnlyItsOwnOperaWithoutDuplicatingEntries() {
+        final before = luceneSearchFor('cetitoriu').findAll { it.url.toString().startsWith('creanga/povesti') }
+        assert before.size() > 0
+
+        this.adminService.reimportFile('/ro/Creanga-Amintiri_din_copilarie.xml', new NullWriter())
+
+        final after = luceneSearchFor('cetitoriu').findAll { it.url.toString().startsWith('creanga/povesti') }
+        // Same URLs, same count - not doubled by the reimport, and not
+        // wiped either (LuceneIndexService.reindexOpus's delete-then-add
+        // targets exactly this opus's own documents).
+        assert after.size() == before.size()
+        assert after.collect { it.url }.sort() == before.collect { it.url }.sort()
+
+        // A DIFFERENT opus's entries must be completely untouched by that
+        // single-file reimport - the whole point of doing this per-opus
+        // rather than a full rebuild.
+        final otherOpusHits = luceneSearchFor('Negri').findAll { it.url.toString().startsWith('alecsandri/legende/dumbrava_rosie') }
+        assert otherOpusHits.size() > 0
     }
 
     @Test
