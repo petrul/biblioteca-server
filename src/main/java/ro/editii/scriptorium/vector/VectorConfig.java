@@ -3,13 +3,16 @@ package ro.editii.scriptorium.vector;
 import io.milvus.client.MilvusServiceClient;
 import io.milvus.param.ConnectParam;
 import lombok.extern.log4j.Log4j2;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.context.annotation.Primary;
+import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.web.client.RestTemplate;
 import ro.editii.scriptorium.client.TextbaseClient;
+import ro.editii.scriptorium.health.OllamaHealthTracker;
 import ro.editii.scriptorium.search.content.UrlContentResolver;
 
 @Configuration
@@ -73,9 +76,10 @@ public class VectorConfig {
     @Primary
     public Embedder bgeM3Embedder(
             @Value("${embedder.address}") String embedderAddress,
-            RestTemplate restTemplate
+            @Qualifier("ollamaRestTemplate") RestTemplate ollamaRestTemplate,
+            OllamaHealthTracker ollamaHealthTracker
     ) {
-        final Embedder embedder = new OllamaEmbedder(hostOf(embedderAddress), portOf(embedderAddress), "bge-m3", "BGE_M3", MilvusCollection.DIM_1024, restTemplate);
+        final Embedder embedder = new OllamaEmbedder(hostOf(embedderAddress), portOf(embedderAddress), "bge-m3", "BGE_M3", MilvusCollection.DIM_1024, ollamaRestTemplate, ollamaHealthTracker);
         log.info(embedder.toString());
         return embedder;
     }
@@ -83,9 +87,10 @@ public class VectorConfig {
     @Bean
     public Embedder qwen3EmbeddingEmbedder(
             @Value("${embedder.address}") String embedderAddress,
-            RestTemplate restTemplate
+            @Qualifier("ollamaRestTemplate") RestTemplate ollamaRestTemplate,
+            OllamaHealthTracker ollamaHealthTracker
     ) {
-        final Embedder embedder = new OllamaEmbedder(hostOf(embedderAddress), portOf(embedderAddress), "qwen3-embedding:4b", "QWEN3_EMBEDDING_4B", MilvusCollection.DIM_2560, restTemplate);
+        final Embedder embedder = new OllamaEmbedder(hostOf(embedderAddress), portOf(embedderAddress), "qwen3-embedding:4b", "QWEN3_EMBEDDING_4B", MilvusCollection.DIM_2560, ollamaRestTemplate, ollamaHealthTracker);
         log.info(embedder.toString());
         return embedder;
     }
@@ -93,9 +98,10 @@ public class VectorConfig {
     @Bean
     public Embedder nomicEmbedder(
             @Value("${embedder.address}") String embedderAddress,
-            RestTemplate restTemplate
+            @Qualifier("ollamaRestTemplate") RestTemplate ollamaRestTemplate,
+            OllamaHealthTracker ollamaHealthTracker
     ) {
-        final Embedder embedder = new OllamaEmbedder(hostOf(embedderAddress), portOf(embedderAddress), "nomic-embed-text:v1.5", "NOMIC_EMBED_TEXT", MilvusCollection.DIM_768, restTemplate);
+        final Embedder embedder = new OllamaEmbedder(hostOf(embedderAddress), portOf(embedderAddress), "nomic-embed-text:v1.5", "NOMIC_EMBED_TEXT", MilvusCollection.DIM_768, ollamaRestTemplate, ollamaHealthTracker);
         log.info(embedder.toString());
         return embedder;
     }
@@ -128,6 +134,26 @@ public class VectorConfig {
     @Bean
     public RestTemplate restTemplate() {
         return new RestTemplate();
+    }
+
+    // The plain restTemplate() above has NO connect/read timeout at all
+    // (SimpleClientHttpRequestFactory defaults to "wait forever") - fine
+    // for most callers, but a real problem for Ollama specifically: a
+    // reachable-but-GPU-contended instance can otherwise block a request
+    // thread indefinitely rather than ever throwing, which means neither
+    // Util.runWithTimeout's own bound (MilvusTextSearchService,
+    // SearchRestController) NOR OllamaHealthTracker's markUnavailable()
+    // ever actually fires - the blocked thread just never gets back to
+    // either. A bounded read timeout here is what makes both of those
+    // mechanisms actually work for a genuine hang, not just a fast
+    // connection-refused. 30s is generous for a real (non-hung) generate
+    // call under normal load, per this session's own observed latencies.
+    @Bean
+    public RestTemplate ollamaRestTemplate() {
+        final SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();
+        factory.setConnectTimeout(5_000);
+        factory.setReadTimeout(30_000);
+        return new RestTemplate(factory);
     }
 
 }

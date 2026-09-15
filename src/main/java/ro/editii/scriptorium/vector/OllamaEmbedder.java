@@ -3,6 +3,7 @@ package ro.editii.scriptorium.vector;
 import lombok.Getter;
 import lombok.ToString;
 import org.springframework.web.client.RestTemplate;
+import ro.editii.scriptorium.health.OllamaHealthTracker;
 
 import java.util.List;
 import java.util.Map;
@@ -22,6 +23,7 @@ import java.util.Map;
 public class OllamaEmbedder implements Embedder {
 
     private final RestTemplate restTemplate;
+    private final OllamaHealthTracker healthTracker;
     @Getter
     @ToString.Include
     private final String host;
@@ -36,13 +38,15 @@ public class OllamaEmbedder implements Embedder {
     @ToString.Include
     private final int vectorDimension;
 
-    public OllamaEmbedder(String host, int port, String model, String modelName, int vectorDimension, RestTemplate restTemplate) {
+    public OllamaEmbedder(String host, int port, String model, String modelName, int vectorDimension,
+                           RestTemplate restTemplate, OllamaHealthTracker healthTracker) {
         this.host = host;
         this.port = port;
         this.model = model;
         this.modelName = modelName;
         this.vectorDimension = vectorDimension;
         this.restTemplate = restTemplate;
+        this.healthTracker = healthTracker;
     }
 
     @Override
@@ -62,13 +66,31 @@ public class OllamaEmbedder implements Embedder {
 
     @Override
     public float[][] encode(String[] texts) {
+        // Fails immediately, no network attempt at all, while Ollama's
+        // known stuck - callers (MilvusTextSearchService,
+        // SearchRestController's /api/search/ann) already bound the
+        // actual attempt with their own timeout, but skipping it
+        // entirely turns a guaranteed ~15s wait into an instant one for
+        // every request until the cooldown elapses.
+        if (!this.healthTracker.isAvailable())
+            throw new IllegalStateException("Ollama at " + this.host + ":" + this.port + " is marked unavailable (cooling down)");
+
         final Map<String, Object> request = Map.of(
                 "model", this.model,
                 "input", List.of(texts)
         );
-        final EmbedResponse resp = this.restTemplate.postForObject(getUrl("/api/embed"), request, EmbedResponse.class);
-        if (resp == null || resp.embeddings() == null)
+        final EmbedResponse resp;
+        try {
+            resp = this.restTemplate.postForObject(getUrl("/api/embed"), request, EmbedResponse.class);
+        } catch (Exception e) {
+            this.healthTracker.markUnavailable();
+            throw e;
+        }
+        if (resp == null || resp.embeddings() == null) {
+            this.healthTracker.markUnavailable();
             throw new IllegalStateException("Ollama /api/embed returned no embeddings for model '" + this.model + "'");
+        }
+        this.healthTracker.markAvailable();
 
         final List<List<Double>> embeddings = resp.embeddings();
         final float[][] out = new float[embeddings.size()][];

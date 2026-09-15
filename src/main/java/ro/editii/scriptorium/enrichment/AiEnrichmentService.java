@@ -2,6 +2,7 @@ package ro.editii.scriptorium.enrichment;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
@@ -11,6 +12,7 @@ import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriComponentsBuilder;
 import ro.editii.scriptorium.dao.AuthorRepository;
 import ro.editii.scriptorium.dao.TeiDivRepository;
+import ro.editii.scriptorium.health.OllamaHealthTracker;
 import ro.editii.scriptorium.model.Author;
 import ro.editii.scriptorium.model.Languages;
 import ro.editii.scriptorium.model.TeiDiv;
@@ -18,6 +20,7 @@ import ro.editii.scriptorium.model.TeiDiv;
 import java.net.URI;
 import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
+import java.time.Duration;
 import java.util.List;
 import java.util.Map;
 import java.util.regex.Matcher;
@@ -61,6 +64,8 @@ public class AiEnrichmentService {
             "TextbaseServer-AiEnrichment/1.0 (https://textbase.scriptorium.ro; self-hosted TEI library)";
 
     final RestTemplate restTemplate;
+    @Qualifier("ollamaRestTemplate") final RestTemplate ollamaRestTemplate;
+    final OllamaHealthTracker ollamaHealthTracker;
     final AuthorRepository authorRepository;
     final TeiDivRepository teiDivRepository;
 
@@ -69,6 +74,12 @@ public class AiEnrichmentService {
     @Value("${enrichment.ollama.model}") String ollamaModel;
     @Value("${ollama.host}") String ollamaHost;
     @Value("${ollama.port}") int ollamaPort;
+    // Off by default under the ci profile (application-ci.properties) -
+    // every test class that imports the fixture corpus would otherwise
+    // also fire real SearXNG/Wikipedia/Ollama calls per author/opus, on
+    // every single test run. WebITest re-enables this explicitly for its
+    // own dedicated enrichment test.
+    @Value("${enrichment.enabled:true}") boolean enrichmentEnabled;
 
     /**
      * Most authors write in exactly one language - backfills
@@ -89,7 +100,7 @@ public class AiEnrichmentService {
     }
 
     public void enrichAuthorAsync(Author author, List<String> workTitles, Languages language) {
-        if (author.getBio() != null) return;
+        if (!this.enrichmentEnabled || author.getBio() != null) return;
         final Long authorId = author.getId();
         final String query = author.getVisualName()
                 + (workTitles.isEmpty() ? "" : ", author of " + String.join(", ", workTitles));
@@ -120,7 +131,7 @@ public class AiEnrichmentService {
     }
 
     public void enrichOpusAsync(TeiDiv opus) {
-        if (opus.getSummary() != null) return;
+        if (!this.enrichmentEnabled || opus.getSummary() != null) return;
         final Long opusId = opus.getId();
         final String title = opus.getHead();
         if (title == null || title.isBlank()) return;
@@ -283,13 +294,39 @@ public class AiEnrichmentService {
     private String summarize(String material, String instruction) throws InterruptedException {
         this.ollamaGate.acquire();
         try {
+            // Background enrichment only ever gets ONE shot per author/opus
+            // (see AdminService's null-gating) - bailing out the instant
+            // Ollama is flagged unavailable would permanently skip that
+            // author/opus's enrichment for a merely transient outage. This
+            // waits out the tracker's own remaining cooldown instead (a
+            // virtual thread, already serialized by ollamaGate, so idle
+            // waiting here is free) - bounded by that same cooldown, so it
+            // never waits past the point the tracker would auto-reset
+            // anyway, matching "wait before the 15/20 min interval
+            // elapses, not indefinitely beyond it."
+            if (!this.ollamaHealthTracker.isAvailable()) {
+                final Duration wait = this.ollamaHealthTracker.remainingCooldown();
+                if (!wait.isZero()) {
+                    log.info("Ollama currently marked unavailable - waiting up to {} for it to recover before giving up on this enrichment.", wait);
+                    Thread.sleep(wait.toMillis());
+                }
+                if (!this.ollamaHealthTracker.isAvailable()) return null;
+            }
+
             final URI uri = URI.create(String.format("http://%s:%d/api/generate", this.ollamaHost, this.ollamaPort));
             final Map<String, Object> request = Map.of(
                     "model", this.ollamaModel,
                     "prompt", instruction + "\n\nMaterial:\n" + material,
                     "stream", false
             );
-            final Map<String, Object> response = this.restTemplate.postForObject(uri, request, Map.class);
+            final Map<String, Object> response;
+            try {
+                response = this.ollamaRestTemplate.postForObject(uri, request, Map.class);
+            } catch (Exception e) {
+                this.ollamaHealthTracker.markUnavailable();
+                throw e;
+            }
+            this.ollamaHealthTracker.markAvailable();
             final Object text = response == null ? null : response.get("response");
             return text instanceof String && !((String) text).isBlank() ? ((String) text).trim() : null;
         } finally {
