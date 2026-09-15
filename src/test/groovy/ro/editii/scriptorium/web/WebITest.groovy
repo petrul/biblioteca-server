@@ -76,6 +76,11 @@ import static ro.editii.scriptorium.TestUtils.TEI_ELEM
         // The auto-build-on-startup thread would otherwise race this
         // class's own explicit imports/incremental reindexing.
         "lucene.autoindex.enabled=false",
+        // This class is the one place that wants the real
+        // SearXNG/Wikipedia/Ollama integration exercised (see
+        // aiEnrichmentEventuallyFillsInARealAuthorBioAndOpusSummary) -
+        // overrides application-ci.properties's default of false.
+        "enrichment.enabled=true",
 ])
 @SpringBootTest(
         webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT,
