@@ -371,6 +371,52 @@ class WebITest {
     }
 
     @Test
+    void authorNativeLanguageIsBackfilledFromTheImportedOpusLanguage() {
+        // Purely synchronous DB state, set right during postImportHooks -
+        // no need to wait for anything async here (unlike the bio/summary
+        // enrichment itself, covered separately below).
+        final creanga = this.authorRepository.findByStrId('creanga').first()
+        assert creanga.nativeLanguage == ro.editii.scriptorium.model.Languages.RO
+    }
+
+    @Test
+    void aiEnrichmentEventuallyFillsInARealAuthorBioAndOpusSummary() {
+        // Real SearXNG + Ollama calls, kicked off asynchronously by
+        // beforeAll()'s own corpus import (postImportHooks) - this test
+        // just waits for them to land rather than triggering anything
+        // itself. Same "this class already depends on the real zmeu
+        // Ollama instance" reasoning as the vector-embedding config
+        // logged at startup - not a new category of external dependency.
+        final creanga = pollUntilNotNull(240_000) {
+            final a = this.authorRepository.findByStrId('creanga').first()
+            a.bio != null ? a : null
+        }
+        assert creanga != null : "author bio enrichment did not complete within the timeout"
+        assert !creanga.bio.isBlank()
+        assert creanga.bioSourceUrl != null && creanga.bioSourceUrl.startsWith('http')
+
+        final povesti = pollUntilNotNull(240_000) {
+            final opus = this.teiDivRepository.getOperaForTeiFileId(
+                    this.teiFileRepository.getByFilename('/ro/Creanga-Amintiri_din_copilarie.xml').get().id)
+                    .find { it.completePath == 'creanga/povesti' }
+            opus?.summary != null ? opus : null
+        }
+        assert povesti != null : "opus summary enrichment did not complete within the timeout"
+        assert !povesti.summary.isBlank()
+        assert povesti.summarySourceUrl != null && povesti.summarySourceUrl.startsWith('http')
+    }
+
+    static <T> T pollUntilNotNull(long timeoutMs, Closure<T> check) {
+        final deadline = System.currentTimeMillis() + timeoutMs
+        while (System.currentTimeMillis() < deadline) {
+            final result = check.call()
+            if (result != null) return result
+            Thread.sleep(1000)
+        }
+        return null
+    }
+
+    @Test
     void exportedOpenApiYamlIsValidAndInternallyConsistent() {
         final request = java.net.http.HttpRequest.newBuilder(
                 URI.create("http://localhost:${port}/api/docs.yaml"))

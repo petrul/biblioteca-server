@@ -4,6 +4,7 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 import jakarta.persistence.Column;
 import jakarta.persistence.DiscriminatorValue;
 import jakarta.persistence.Entity;
+import jakarta.persistence.Lob;
 import jakarta.validation.constraints.Size;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
@@ -30,6 +31,18 @@ public class TeiDiv extends TeiElem {
     @Size(max=MAX_HEAD_SIZE) @Column(length = MAX_HEAD_SIZE)
     @EqualsAndHashCode.Include
     String head;
+
+    // Auto-generated (AiEnrichmentService, async after import) - only
+    // ever meaningful on an opus (root) div, same reasoning as
+    // Author.bio: a trusted source (Wikipedia's summary API) when this
+    // work has a page there, else the search engine's own snippets.
+    // Null until enrichment has run once; a later reimport never
+    // overwrites an existing value.
+    @Lob @ToString.Exclude
+    String summary;
+
+    @Column(length = 500)
+    String summarySourceUrl;
 
     @Override
     public TeiElemDto toDto(UriComponentsBuilder uriComponentsBuilder) {

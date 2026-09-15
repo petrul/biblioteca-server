@@ -8,6 +8,9 @@ import ro.editii.scriptorium.Globals;
 import ro.editii.scriptorium.Util;
 import ro.editii.scriptorium.dao.TeiDivRepository;
 import ro.editii.scriptorium.dao.TeiFileRepository;
+import ro.editii.scriptorium.enrichment.AiEnrichmentService;
+import ro.editii.scriptorium.model.Author;
+import ro.editii.scriptorium.model.TeiDiv;
 import ro.editii.scriptorium.model.TeiFile;
 import ro.editii.scriptorium.search.lucene.LuceneIndexService;
 import ro.editii.scriptorium.tei.TeiFileAlreadyImportedException;
@@ -29,28 +32,55 @@ public class AdminService {
     final TeiFileDbService teiFileDbService;
     final JdbcTemplate jdbcTemplate;
     final LuceneIndexService luceneIndexService;
+    final AiEnrichmentService aiEnrichmentService;
 
     /**
-     * Incrementally reindexes just the opus/opera this one TeiFile just
-     * (re)imported - see LuceneIndexService.reindexOpus for why this is
-     * cheap and doesn't block search or contend with a full rebuild.
-     * Called after every successful importTeiFile(), not just a manual
-     * full reindex - a re-imported book's stale Lucene entries would
-     * otherwise linger (wrong content, or content for divs that no
-     * longer exist) until someone remembers to trigger one by hand.
+     * Everything that should happen right after one TeiFile is
+     * successfully (re)imported, besides the DB import itself - called
+     * from all three reimport entry points below, never just a manual
+     * full reindex:
+     *
+     * - Incrementally reindexes just the opus/opera this file contains
+     *   (LuceneIndexService.reindexOpus) - a re-imported book's stale
+     *   Lucene entries would otherwise linger (wrong content, or content
+     *   for divs that no longer exist) until someone remembers to
+     *   trigger a full rebuild by hand.
+     * - Kicks off best-effort author bio / opus summary enrichment
+     *   (AiEnrichmentService) - a no-op once either already has one, so
+     *   this only ever actually does anything the first time a given
+     *   author/opus is seen.
+     *
+     * Both are wrapped so a hiccup in either NEVER aborts or rolls back
+     * the DB import itself - same reasoning as one bad paragraph not
+     * aborting a full Lucene rebuild.
      */
-    private void reindexLuceneForImportedFile(String filename) {
+    private void postImportHooks(String filename) {
+        final Optional<TeiFile> optionalTeiFile = this.teiFileRepository.getByFilename(filename);
+        if (optionalTeiFile.isEmpty()) return;
+        final TeiFile teiFile = optionalTeiFile.get();
+
+        final List<TeiDiv> opera = this.teiDivRepository.getOperaForTeiFileId(teiFile.getId());
+        for (TeiDiv opus : opera) {
+            try {
+                this.luceneIndexService.reindexOpus(opus);
+            } catch (RuntimeException e) {
+                log.error("Failed to incrementally reindex Lucene for opus {} ({}) - the TEI import itself still succeeded",
+                        opus.getCompletePath(), filename, e);
+            }
+        }
+
         try {
-            this.teiFileRepository.getByFilename(filename).ifPresent(teiFile ->
-                    this.teiDivRepository.getOperaForTeiFileId(teiFile.getId())
-                            .forEach(this.luceneIndexService::reindexOpus));
+            final List<Author> authors = teiFile.getAuthors();
+            final List<String> workTitles = opera.stream().map(TeiDiv::getHead).filter(h -> h != null && !h.isBlank()).toList();
+            for (Author author : authors) {
+                this.aiEnrichmentService.backfillNativeLanguageIfMissing(author, teiFile.getLanguage());
+                this.aiEnrichmentService.enrichAuthorAsync(author, workTitles, teiFile.getLanguage());
+            }
+            for (TeiDiv opus : opera) {
+                this.aiEnrichmentService.enrichOpusAsync(opus);
+            }
         } catch (RuntimeException e) {
-            // A Lucene hiccup must never abort or roll back the DB
-            // import itself - same reasoning as one bad paragraph not
-            // aborting a full rebuild (LuceneIndexService.rebuildIndex).
-            // Worst case, this file's Lucene entries stay stale until
-            // the next full reindex.
-            log.error("Failed to incrementally reindex Lucene for {} - the TEI import itself still succeeded", filename, e);
+            log.error("Failed to kick off AI enrichment for {} - the TEI import itself still succeeded", filename, e);
         }
     }
 
@@ -86,7 +116,7 @@ public class AdminService {
                         log.info("will import {} ", filename);
                         writeLn(logActivity, "will delete existing import for " + filename);
                         this.teiFileDbService.importTeiFile(filename, true);
-                        this.reindexLuceneForImportedFile(filename);
+                        this.postImportHooks(filename);
                     } catch (TeiFileAlreadyImportedException e) {
                         log.error(e.getMessage(), e);
                     } catch (RuntimeException e) {
@@ -113,7 +143,7 @@ public class AdminService {
                 log.info("will import {} ", filename);
                 writeLn(logActivity, "will import " + filename);
                 this.teiFileDbService.importTeiFile(filename, true);
-                this.reindexLuceneForImportedFile(filename);
+                this.postImportHooks(filename);
             } catch (TeiFileAlreadyImportedException e) {
                 log.error(e.getMessage(), e);
             }
@@ -144,7 +174,7 @@ public class AdminService {
                         log.info("will import {} ", filename);
                         writeLn(logActivity, "will delete existing import for " + filename);
                         this.teiFileDbService.importTeiFile(filename, true);
-                        this.reindexLuceneForImportedFile(filename);
+                        this.postImportHooks(filename);
                     } catch (TeiFileAlreadyImportedException e) {
                         log.error(e.getMessage(), e);
                     }

@@ -84,6 +84,32 @@ public class Author implements Comparable<Author>, Serializable {
     @Lob @ToString.Exclude
     Blob avatar;
 
+    // Auto-generated (AiEnrichmentService, async after import) - a short
+    // biography synthesized from a trusted source (Wikipedia's own REST
+    // summary API when this author has a page there, else the search
+    // engine's own snippets as a fallback - see enrichAuthorAsync). Null
+    // until enrichment has actually run once; never overwritten by a
+    // later reimport once set, so a manual edit here survives.
+    @Lob @ToString.Exclude
+    String bio;
+
+    // The page bio was derived from (a Wikipedia article, or whatever
+    // search result was used as the fallback source) - shown alongside
+    // bio as attribution/further reading, not just internal provenance.
+    @Column(length = 500)
+    String bioSourceUrl;
+
+    // Most authors write in exactly one language - backfilled
+    // opportunistically (AiEnrichmentService) from whichever opus of
+    // theirs happens to get imported/enriched first, since nothing
+    // detects this independently yet. Drives which language the
+    // enrichment search itself runs in (a native-language query finds
+    // much better source material than an English one - see the
+    // Skala Eresou/Eminescu Greek-vs-English search comparison this was
+    // based on).
+    @Enumerated(EnumType.STRING)
+    Languages nativeLanguage;
+
 
     /**
      * how to parse an originalNameInTeiFile : e.g. Alecsandri,Vasile.
