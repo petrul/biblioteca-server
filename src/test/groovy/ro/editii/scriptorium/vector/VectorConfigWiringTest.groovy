@@ -2,6 +2,7 @@ package ro.editii.scriptorium.vector
 
 import org.junit.jupiter.api.Test
 import org.springframework.web.client.RestTemplate
+import ro.editii.scriptorium.health.OllamaHealthTracker
 
 import static org.mockito.Mockito.mock
 
@@ -11,7 +12,7 @@ class VectorConfigWiringTest {
     @Test
     void semanticSearchUsesTheBgeM3CollectionPair() {
         final config = new VectorConfig()
-        final embedder = config.bgeM3Embedder("unused.invalid:11434", mock(RestTemplate.class))
+        final embedder = config.bgeM3Embedder("unused.invalid:11434", mock(RestTemplate.class), new OllamaHealthTracker())
         final collection = config.prodCollection(mock(MilvusService.class), "int_tb_paras_bge_m3")
 
         assert embedder.modelName() == "BGE_M3"

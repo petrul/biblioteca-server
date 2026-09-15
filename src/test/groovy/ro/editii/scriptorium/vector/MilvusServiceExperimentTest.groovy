@@ -12,7 +12,7 @@ import ro.editii.scriptorium.TestUtils
 import static ro.editii.scriptorium.GTestUtil.p
 
 @SpringBootTest(
-        classes = [ VectorConfig.class, MilvusService.class, VectorSearchAvailability.class, MilvusTextSearchService.class],
+        classes = [ VectorConfig.class, MilvusService.class, VectorSearchAvailability.class, MilvusTextSearchService.class, ro.editii.scriptorium.health.OllamaHealthTracker.class],
         properties = [
                 "milvus.address=zmeu.local:20112",
                 "embedder.address=zmeu.local:11434",

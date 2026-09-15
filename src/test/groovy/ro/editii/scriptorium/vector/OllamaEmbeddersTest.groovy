@@ -12,7 +12,7 @@ import org.springframework.boot.test.context.SpringBootTest
  */
 @Tag("external")
 @SpringBootTest(
-        classes = [VectorConfig.class, MilvusService.class],
+        classes = [VectorConfig.class, MilvusService.class, ro.editii.scriptorium.health.OllamaHealthTracker.class],
         properties = [
             "embedder.address=zmeu.local:11434",
             "milvus.address=zmeu.local:20112",
