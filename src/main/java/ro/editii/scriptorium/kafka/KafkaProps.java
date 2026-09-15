@@ -11,12 +11,8 @@ public class KafkaProps {
     // Never actually overridden anywhere in real config - plain defaults
     // rather than Spring properties nobody sets (not final: tests
     // construct a KafkaProps directly and override these for isolation).
-    String newOpusImportedTopicName = "textbase_newOpusImportedTopic";
-    String opusReimportedTopicName = "textbase_opusReimportedTopic";
-    // "biblioteca_" prefix, not "textbase_" like the two above - all the
-    // textbase-* projects are getting renamed to Biblioteca eventually
-    // (not done yet), but new topics/resources should use the new name
-    // from here on rather than adding more to rename later.
+    String newOpusImportedTopicName = "biblioteca_newOpusImportedTopic";
+    String opusReimportedTopicName = "biblioteca_opusReimportedTopic";
     String loginTopicName = "biblioteca_loginTopic";
 
     // No inline default here on purpose, unlike before - it used to be
