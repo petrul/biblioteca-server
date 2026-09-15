@@ -1,0 +1,219 @@
+asyncapi: '3.0.0'
+info:
+  title: Textbase Kafka events
+  version: '1.0.0'
+  description: |
+    The async/event-driven half of textbase-server's API surface - see
+    README.md and the live REST OpenAPI spec (/api/docs.yaml) for the
+    synchronous half.
+
+    textbase-server is the sole producer of every topic here
+    (ro.editii.scriptorium.kafka.KafkaTextbaseEventsPublisher). Topic
+    names are not configurable in real deployments (KafkaProps.java's own
+    comment: "never actually overridden anywhere") - they're the literal
+    values below. Downstream services should treat this document, not
+    guesswork or copied constants, as the source of truth for topic
+    names and payload shapes.
+
+    Kept intentionally close to what's actually wired up today, not what
+    could theoretically be built - a channel with no consumer is
+    documented as such rather than implied to be consumed by something.
+servers:
+  int:
+    host: 'mini.local:20106'
+    protocol: kafka
+    description: Shared int-environment Kafka broker.
+  prod:
+    host: 'srv2.local:9092'
+    protocol: kafka
+    description: Shared prod Kafka broker (one of the three KRaft nodes - mini/srv2/zmeu).
+
+channels:
+  newOpusImportedTopic:
+    address: biblioteca_newOpusImportedTopic
+    description: |
+      Published once per opus, right after a brand-new TEI file is
+      imported for the very first time (ro.editii.scriptorium.tei.TeifileParser,
+      on successful parse). Reimports of an already-known file do NOT
+      publish here (see the reimport paths in AdminService, which never
+      call signalNewOpusImported).
+    messages:
+      teiDivEvent:
+        $ref: '#/components/messages/teiDivEvent'
+
+  opusReimportedTopic:
+    address: biblioteca_opusReimportedTopic
+    description: |
+      Declared and wired on the producer side (KafkaTextbaseEventsPublisher
+      .signalOpusReimported) but not currently called from anywhere in
+      textbase-server - reimport paths only ever trigger Lucene
+      reindexing, not this event. Documented as a reserved/future
+      channel rather than omitted, since the producer contract already
+      exists and could start firing without a textbase-server release
+      being obviously "new event added." No known consumer today.
+    messages:
+      teiDivEvent:
+        $ref: '#/components/messages/teiDivEvent'
+
+  loginTopic:
+    address: biblioteca_loginTopic
+    description: |
+      Published on every successful Google OAuth login
+      (ro.editii.scriptorium.web.GoogleAuthController). Actively
+      produced today, but no known consumer yet - a natural fit for a
+      future notification/audit service (see monitor-greg-pipeline.js
+      in the scripts repo for an existing, unrelated example of the
+      notification-sender pattern this could eventually feed).
+    messages:
+      userLoggedInEvent:
+        $ref: '#/components/messages/userLoggedInEvent'
+
+operations:
+  publishNewOpusImported:
+    action: send
+    channel:
+      $ref: '#/channels/newOpusImportedTopic'
+  publishOpusReimported:
+    action: send
+    channel:
+      $ref: '#/channels/opusReimportedTopic'
+  publishUserLoggedIn:
+    action: send
+    channel:
+      $ref: '#/channels/loginTopic'
+  # textbase-nestjs's only current Kafka consumption - see its own
+  # src/services/kafka/listener.service.ts. Documented from the
+  # consumer's side here since this is the shared cross-service
+  # contract; textbase-nestjs's own README links back to this file
+  # rather than duplicating it.
+  vectorizeOnNewOpusImported:
+    action: receive
+    channel:
+      $ref: '#/channels/newOpusImportedTopic'
+    description: |
+      textbase-nestjs (KafkaListenerService) is the one consumer of this
+      topic today - on each message, re-fetches the opus by path (in
+      case the event's own id/fields are stale by the time it's
+      processed), then embeds and stores its paragraphs in Milvus.
+
+components:
+  messages:
+    teiDivEvent:
+      name: TeiDivEvent
+      title: A TeiDiv (opus) as it looked at publish time
+      contentType: application/json
+      payload:
+        $ref: '#/components/schemas/TeiDivDto'
+    userLoggedInEvent:
+      name: UserLoggedInEvent
+      title: A successful login
+      contentType: application/json
+      payload:
+        $ref: '#/components/schemas/UserLoggedInDto'
+
+  schemas:
+    # Mirrors ro.editii.scriptorium.dto.TeiElemDto +
+    # ro.editii.scriptorium.dto.TeiDivDto exactly (TeiDivDto extends
+    # TeiElemDto) - fields are Jackson NON_NULL, so any of these may be
+    # absent from a real message, not just null.
+    TeiDivDto:
+      type: object
+      description: A single opus (root-level TEI div) - see TeiDivDto.fromTeiDiv for how this gets built.
+      properties:
+        id:
+          type: integer
+          format: int64
+        parent:
+          $ref: '#/components/schemas/TeiElemDto'
+          description: Null for an opus (root-level by definition) - present in the type for symmetry with non-root TeiElemDtos elsewhere in the REST API, effectively unused here.
+        name:
+          type: string
+          description: 'TEI element name without the tei: prefix, e.g. "div".'
+        path:
+          type: string
+          description: Complete textbase URL path, e.g. "creanga/povesti".
+        xpath:
+          type: string
+        urlFragment:
+          type: string
+        url:
+          type: string
+          format: uri
+        text:
+          type: string
+        text_sha256:
+          type: string
+        language:
+          type: string
+          description: ISO 639-1 code (e.g. "en", "ro") of the parent TeiFile's detected language, if detected.
+        size:
+          type: integer
+        wordSize:
+          type: integer
+        head:
+          type: string
+          description: The opus's title/heading.
+        depth:
+          type: integer
+        children:
+          type: array
+          items:
+            $ref: '#/components/schemas/TeiDivDto'
+        author:
+          $ref: '#/components/schemas/AuthorDto'
+        leaf:
+          type: boolean
+          description: True if this div has no children.
+        opus:
+          type: boolean
+          description: True if this is a root-level work - always true for a div published on this topic.
+      required:
+        - id
+        - path
+        - opus
+
+    TeiElemDto:
+      type: object
+      description: Base shape shared with non-opus TEI elements elsewhere in the REST API - included here only because TeiDivDto.parent references it.
+      properties:
+        id:
+          type: integer
+          format: int64
+        name:
+          type: string
+        path:
+          type: string
+
+    AuthorDto:
+      type: object
+      properties:
+        strId:
+          type: string
+          description: e.g. "creanga" - all-lowercase, no-accent.
+        lastName:
+          type: string
+        firstName:
+          type: string
+        displayName:
+          type: string
+      required:
+        - strId
+
+    # Mirrors ro.editii.scriptorium.dto.UserLoggedInDto exactly.
+    UserLoggedInDto:
+      type: object
+      properties:
+        userId:
+          type: integer
+          format: int64
+        username:
+          type: string
+        provider:
+          type: string
+          description: e.g. "google" - currently the only real value, GoogleAuthController is the only publisher.
+        loginAt:
+          type: string
+          format: date-time
+      required:
+        - userId
+        - loginAt

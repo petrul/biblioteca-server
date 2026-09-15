@@ -270,6 +270,19 @@ lose text.
 Caffeine + on-disk (`cache.dir`) cache layer (`.cache`). `.kafka` handles
 scheduled/async work (`.scheduled`) — notably notifying `textbase-nestjs`
 (a separate repo) of new/reimported opera so it can vectorize them.
+`KafkaProps.java` has the real topic names (`biblioteca_*` prefix); this
+service is the sole producer of every one of them.
+
+The async/event-driven counterpart to the REST OpenAPI spec above is
+`asyncapi.yml` (checked into this repo's root) - documents each Kafka
+topic's real message schema and, per topic, which service(s) actually
+produce/consume it today (not aspirational - `opusReimportedTopic` and
+`loginTopic` are both documented as currently having no consumer, since
+that's the truth right now). Validate it with
+`npx @asyncapi/cli validate asyncapi.yml`, or view it rendered at
+[studio.asyncapi.com](https://studio.asyncapi.com) (paste the file's
+contents in, or point it at this file's raw URL once this repo's readable
+from wherever that's opened).
 
 ### Frontend
 
