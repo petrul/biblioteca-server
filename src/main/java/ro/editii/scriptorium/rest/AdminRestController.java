@@ -85,6 +85,11 @@ public class AdminRestController {
         this.adminService.destroyAllExistingAndReimportAllTeis(new NoWriter(), true);
     }
 
+    @PostMapping("/teirepos/pruneRemoved")
+    public void teiReposPruneRemoved() {
+        this.adminService.pruneRemovedTeis(new NoWriter());
+    }
+
     @PostMapping("/lucene/reindex")
     @ResponseBody
     public Map<String, Integer> reindexLucene() {

@@ -1,5 +1,6 @@
 package ro.editii.scriptorium.kafka;
 
+import ro.editii.scriptorium.dto.OpusRemovedDto;
 import ro.editii.scriptorium.dto.TeiDivDto;
 import ro.editii.scriptorium.dto.UserLoggedInDto;
 import ro.editii.scriptorium.model.TeiDiv;
@@ -12,6 +13,8 @@ public interface TextbaseEventsPublisher {
     void signalNewOpusImported(TeiDivDto div);
 
     void signalOpusReimported(TeiDivDto div);
+
+    void signalOpusRemoved(OpusRemovedDto event);
 
     void signalUserLoggedIn(UserLoggedInDto event);
 }

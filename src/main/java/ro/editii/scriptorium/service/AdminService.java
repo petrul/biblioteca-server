@@ -8,7 +8,9 @@ import ro.editii.scriptorium.Globals;
 import ro.editii.scriptorium.Util;
 import ro.editii.scriptorium.dao.TeiDivRepository;
 import ro.editii.scriptorium.dao.TeiFileRepository;
+import ro.editii.scriptorium.dto.OpusRemovedDto;
 import ro.editii.scriptorium.enrichment.AiEnrichmentService;
+import ro.editii.scriptorium.kafka.TextbaseEventsPublisher;
 import ro.editii.scriptorium.model.Author;
 import ro.editii.scriptorium.model.TeiDiv;
 import ro.editii.scriptorium.model.TeiFile;
@@ -19,8 +21,10 @@ import ro.editii.scriptorium.tei.TeiRepo;
 import java.io.File;
 import java.io.IOException;
 import java.io.Writer;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 
 @Service @Log4j2
 @RequiredArgsConstructor
@@ -33,6 +37,7 @@ public class AdminService {
     final JdbcTemplate jdbcTemplate;
     final LuceneIndexService luceneIndexService;
     final AiEnrichmentService aiEnrichmentService;
+    final TextbaseEventsPublisher textbaseEventsPublisher;
 
     /**
      * Everything that should happen right after one TeiFile is
@@ -177,6 +182,60 @@ public class AdminService {
                         this.postImportHooks(filename);
                     } catch (TeiFileAlreadyImportedException e) {
                         log.error(e.getMessage(), e);
+                    }
+                }
+            }
+        }
+    }
+
+    /**
+     * Detects TeiFiles whose source file no longer exists in any configured
+     * repo (removed from scriptorium-masters since it was last imported) -
+     * something none of the reimport methods above ever check, since they
+     * only ever walk files currently present in teiRepo.list() - and purges
+     * everything derived from it: the DB rows themselves
+     * (teiFileDbService.deleteTeiFile, which also drops now-orphaned
+     * authors), this file's opera from the Lucene index
+     * (LuceneIndexService.removeOpus), and a signalOpusRemoved event per
+     * removed opus so textbase-nestjs can drop its matching Milvus vectors
+     * too - the same "textbase-server is the sole source of truth, nothing
+     * downstream keeps its own opinion" pattern signalNewOpusImported
+     * already uses.
+     *
+     * Never runs as a side effect of a normal reimport - deliberately its
+     * own entry point, called from TeiImportScheduler alongside
+     * reimportFresherTeis (autoimport profile) and exposed for manual use
+     * at POST /api/admin/teirepos/pruneRemoved.
+     */
+    public void pruneRemovedTeis(Writer logActivity) {
+        synchronized (Globals.IMPORT_TEIS_WORKING) {
+            final Set<String> filesOnDisk = new HashSet<>(this.teiRepo.list());
+            final List<TeiFile> allTeiFiles = this.teiFileRepository.findAll();
+
+            for (TeiFile teiFile : allTeiFiles) {
+                if (filesOnDisk.contains(teiFile.getFilename())) {
+                    continue;
+                }
+
+                final List<TeiDiv> opera = this.teiDivRepository.getOperaForTeiFileId(teiFile.getId());
+                final List<String> opusPaths = opera.stream().map(TeiDiv::getCompletePath).toList();
+
+                log.info("will prune removed TeiFile {} ({} opera)", teiFile.getFilename(), opusPaths.size());
+                writeLn(logActivity, "will prune removed TeiFile " + teiFile.getFilename());
+
+                this.teiFileDbService.deleteTeiFile(teiFile.getFilename());
+
+                for (String opusPath : opusPaths) {
+                    try {
+                        this.luceneIndexService.removeOpus(opusPath);
+                    } catch (RuntimeException e) {
+                        log.error("Failed to remove opus {} from the Lucene index after pruning {} - the DB "
+                                + "prune itself still succeeded", opusPath, teiFile.getFilename(), e);
+                    }
+                    try {
+                        this.textbaseEventsPublisher.signalOpusRemoved(OpusRemovedDto.builder().path(opusPath).build());
+                    } catch (RuntimeException e) {
+                        log.error("Failed to signal removal of opus {} - Milvus vectors for it may linger", opusPath, e);
                     }
                 }
             }

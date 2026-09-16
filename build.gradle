@@ -233,6 +233,16 @@ dependencies {
     testImplementation('org.springframework.boot:spring-boot-starter-restclient-test')
     testImplementation('org.springframework.boot:spring-boot-starter-webmvc-test')
     testImplementation group: 'com.h2database', name: 'h2', version: '2.1.214'
+    // Validates real serialized Kafka event DTOs against asyncapi.yml's
+    // own schemas (AsyncApiContractTest) - the same "does the checked-in
+    // spec actually match what we produce" check
+    // exportedOpenApiYamlIsValidAndInternallyConsistent already does for
+    // the REST side, just for the hand-maintained async side instead of
+    // a live-generated one.
+    // Pinned to the 1.x line deliberately - 3.x is a from-scratch API
+    // rewrite (Schema/Validator instead of JsonSchema/JsonSchemaFactory)
+    // that isn't worth chasing here.
+    testImplementation 'com.networknt:json-schema-validator:1.5.9'
 
 
 //    swaggerCodegen 'io.swagger:swagger-codegen-cli:2.4.34'             // Swagger Codegen V2

@@ -78,6 +78,7 @@ public class ConfigRestController {
                 .kafka(SharedConfigDto.Kafka.builder()
                         .newOpusImportedTopic(this.kafkaProps.getNewOpusImportedTopicName())
                         .opusReimportedTopic(this.kafkaProps.getOpusReimportedTopicName())
+                        .opusRemovedTopic(this.kafkaProps.getOpusRemovedTopicName())
                         .build())
                 .milvus(milvusInfo)
                 .embedder(embedderInfo)

@@ -17,6 +17,7 @@ import org.springframework.web.client.RestTemplate;
 import ro.editii.scriptorium.cache.CacheConf;
 import ro.editii.scriptorium.cache.DiskCache;
 import ro.editii.scriptorium.client.TextbaseClient;
+import ro.editii.scriptorium.dto.OpusRemovedDto;
 import ro.editii.scriptorium.dto.TeiDivDto;
 import ro.editii.scriptorium.dto.UserLoggedInDto;
 import ro.editii.scriptorium.kafka.TextbaseEventsPublisher;
@@ -111,6 +112,7 @@ public class TestConfig {
 
         final List<TeiDivDto> newOpus = new ArrayList<>();
         final List<TeiDivDto> reimportedOpus = new ArrayList<>();
+        final List<OpusRemovedDto> removedOpus = new ArrayList<>();
         final List<UserLoggedInDto> logins = new ArrayList<>();
 
         @Override
@@ -121,6 +123,11 @@ public class TestConfig {
         @Override
         public void signalOpusReimported(TeiDivDto div) {
             this.reimportedOpus.add(div);
+        }
+
+        @Override
+        public void signalOpusRemoved(OpusRemovedDto event) {
+            this.removedOpus.add(event);
         }
 
         @Override

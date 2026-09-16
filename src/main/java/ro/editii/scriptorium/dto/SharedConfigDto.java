@@ -15,6 +15,7 @@ public class SharedConfigDto {
     public static class Kafka {
         String newOpusImportedTopic;
         String opusReimportedTopic;
+        String opusRemovedTopic;
     }
 
     @Data @AllArgsConstructor @Builder

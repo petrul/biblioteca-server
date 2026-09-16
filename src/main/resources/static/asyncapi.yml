@@ -55,6 +55,24 @@ channels:
       teiDivEvent:
         $ref: '#/components/messages/teiDivEvent'
 
+  opusRemovedTopic:
+    address: biblioteca_opusRemovedTopic
+    description: |
+      Published once per opus, right after its source TEI file is found
+      to no longer exist in any configured repo
+      (ro.editii.scriptorium.service.AdminService.pruneRemovedTeis, run
+      on the same schedule as reimportFresherTeis under the autoimport
+      profile, and exposed manually at POST /api/admin/teirepos/pruneRemoved).
+      By the time this fires the opus's DB row is already gone - the
+      payload carries only the path a consumer needs to purge its own
+      copy by (Lucene: LuceneIndexService.removeOpus; Milvus:
+      textbase-nestjs's KafkaListenerService, see the receive operation
+      below), not a full TeiDivDto the way newOpusImportedTopic/
+      opusReimportedTopic do.
+    messages:
+      opusRemovedEvent:
+        $ref: '#/components/messages/opusRemovedEvent'
+
   loginTopic:
     address: biblioteca_loginTopic
     description: |
@@ -77,6 +95,10 @@ operations:
     action: send
     channel:
       $ref: '#/channels/opusReimportedTopic'
+  publishOpusRemoved:
+    action: send
+    channel:
+      $ref: '#/channels/opusRemovedTopic'
   publishUserLoggedIn:
     action: send
     channel:
@@ -95,6 +117,18 @@ operations:
       topic today - on each message, re-fetches the opus by path (in
       case the event's own id/fields are stale by the time it's
       processed), then embeds and stores its paragraphs in Milvus.
+  removeVectorsOnOpusRemoved:
+    action: receive
+    channel:
+      $ref: '#/channels/opusRemovedTopic'
+    description: |
+      textbase-nestjs's other consumer (same KafkaListenerService,
+      subscribed to both topics on one consumer/group) - on each
+      message, deletes every vector whose url is the removed opus's
+      path or a descendant under it (VectorizerService.removeOpus ->
+      MilvusCollection.deleteByUrlPrefix). No re-fetch from
+      textbase-server here, unlike vectorizeOnNewOpusImported: the
+      opus's DB row is already gone by the time this fires.
 
 components:
   messages:
@@ -110,6 +144,12 @@ components:
       contentType: application/json
       payload:
         $ref: '#/components/schemas/UserLoggedInDto'
+    opusRemovedEvent:
+      name: OpusRemovedEvent
+      title: An opus whose source file no longer exists
+      contentType: application/json
+      payload:
+        $ref: '#/components/schemas/OpusRemovedDto'
 
   schemas:
     # Mirrors ro.editii.scriptorium.dto.TeiElemDto +
@@ -217,3 +257,18 @@ components:
       required:
         - userId
         - loginAt
+
+    # Mirrors ro.editii.scriptorium.dto.OpusRemovedDto exactly.
+    OpusRemovedDto:
+      type: object
+      description: |
+        Deliberately not a TeiDivDto - by the time this is published the
+        opus's DB row is already gone, so there's no real entity left to
+        describe beyond the path consumers need to purge their own
+        copies (Lucene, Milvus) by.
+      properties:
+        path:
+          type: string
+          description: TeiDiv.completePath of the removed opus, e.g. "creanga/povesti".
+      required:
+        - path

@@ -51,7 +51,12 @@ public interface TeiDivRepository extends JpaRepository<TeiDiv, Long> {
     Page<TeiDiv> findByHeadContainingIgnoreCase(String excerpt, Pageable page);
     Page<TeiDiv> findByLang(Languages lang, Pageable pageable);
 
-    @Query("select div from TeiDiv div where div.parent is null")
+    // Explicit order (not just "whatever MySQL happens to return") - both
+    // LuceneIndexService's resumable rebuild and GrepSearchService page
+    // through this without any filter, and rely on page boundaries staying
+    // stable across separate query executions (e.g. resuming a rebuild
+    // after a restart) to never skip or duplicate an opus.
+    @Query("select div from TeiDiv div where div.parent is null order by div.id")
     Page<TeiDiv> findOpera(Pageable pageable);
 
     @Query("select div from TeiDiv div where div.parent is null")

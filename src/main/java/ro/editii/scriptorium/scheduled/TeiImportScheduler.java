@@ -30,6 +30,7 @@ public class TeiImportScheduler {
     public void importTeis() {
         synchronized (Globals.IMPORT_TEIS_WORKING) {
             adminService.reimportFresherTeis(new NoWriter());
+            adminService.pruneRemovedTeis(new NoWriter());
         }
     }
 }

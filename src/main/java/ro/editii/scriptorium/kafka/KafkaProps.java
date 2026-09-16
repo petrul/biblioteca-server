@@ -13,6 +13,7 @@ public class KafkaProps {
     // construct a KafkaProps directly and override these for isolation).
     String newOpusImportedTopicName = "biblioteca_newOpusImportedTopic";
     String opusReimportedTopicName = "biblioteca_opusReimportedTopic";
+    String opusRemovedTopicName = "biblioteca_opusRemovedTopic";
     String loginTopicName = "biblioteca_loginTopic";
 
     // No inline default here on purpose, unlike before - it used to be

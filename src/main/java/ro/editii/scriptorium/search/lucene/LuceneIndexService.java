@@ -9,8 +9,10 @@ import org.apache.lucene.document.Field;
 import org.apache.lucene.document.StringField;
 import org.apache.lucene.document.TextField;
 import org.apache.lucene.index.DirectoryReader;
+import org.apache.lucene.index.IndexNotFoundException;
 import org.apache.lucene.index.IndexWriter;
 import org.apache.lucene.index.IndexWriterConfig;
+import org.apache.lucene.index.SegmentInfos;
 import org.apache.lucene.index.Term;
 import org.apache.lucene.queryparser.classic.MultiFieldQueryParser;
 import org.apache.lucene.queryparser.classic.ParseException;
@@ -60,27 +62,30 @@ import java.util.stream.Stream;
  * resolves content separately at query time via ContentResolver), Lucene
  * stores the text itself, so a search hit needs no second resolution step.
  *
- * A full rebuild is a full recreate (IndexWriterConfig.OpenMode.CREATE),
- * not an incremental update - simplest correct model for the "index
- * doesn't exist yet, or is being fully rebuilt from scratch" case, at
- * the cost of re-deriving text for the whole corpus. Readers keep
- * working against the previous index contents while a rebuild is in
- * progress (Lucene's normal point-in-time-reader guarantee); the
- * searcherManager refresh below only swaps them over to the new
- * segments once the rebuild has committed.
+ * A full rebuild (rebuildIndex(), CREATE mode) still re-derives text for
+ * the whole corpus - that part's unavoidable - but is no longer all-or-
+ * nothing: buildIndex() commits (and refreshes the searcher) after every
+ * page of opera rather than once at the end, so the index fills in
+ * progressively as it builds instead of staying empty until 100% done,
+ * and a commit's user data records exactly which page comes next
+ * (COMMIT_DATA_NEXT_PAGE/COMMIT_DATA_REBUILD_COMPLETE). If the process is
+ * killed mid-build, autoBuildIndexOnStartup reads that back and resumes
+ * with resumeIndex() (CREATE_OR_APPEND) from wherever it left off, instead
+ * of redoing the whole corpus from page 0 every time - see buildIndex's
+ * own doc comment for why re-walking the in-flight page after a crash can
+ * never duplicate documents.
  *
  * A single opus, though, gets a genuinely incremental update - see
- * reindexOpus(), called after every TEI (re)import (AdminService). Its
- * slow part (deriving each paragraph's text) happens in a throwaway
- * temp Directory/IndexWriter that never touches the main index at all;
- * only the fast part (delete this opus's old docs, addIndexes() the
- * freshly-built segments in) briefly opens the main index, so a big
- * full rebuild and a stream of small per-opus updates from ongoing
- * imports don't contend with each other or block search availability
- * for anything.
+ * reindexOpus(), called after every TEI (re)import (AdminService), and
+ * removeOpus(), called after a source file disappears from the repo
+ * (AdminService.pruneRemovedTeis). Both keep their slow/fast parts split
+ * the same way reindexOpus always has (see its own doc comment) so a big
+ * rebuild and a stream of small per-opus updates from ongoing imports
+ * don't contend with each other or block search availability for
+ * anything.
  *
- * The index also now builds itself automatically on startup if it
- * doesn't exist yet (autoBuildIndexOnStartup, lucene.autoindex.enabled) -
+ * The index also now builds itself automatically on startup if it isn't
+ * fully built yet (autoBuildIndexOnStartup, lucene.autoindex.enabled) -
  * on a background, minimum-priority thread so a slow first build never
  * blocks app startup or competes hard with the actual application, e.g.
  * on a dev machine.
@@ -93,9 +98,20 @@ public class LuceneIndexService {
     public static final String FIELD_CONTENT = "content";
     public static final String FIELD_HEAD = "head";
 
-    private static final int OPERA_PAGE_SIZE = 20;
+    static final int OPERA_PAGE_SIZE = 20; // package-private: LuceneIndexServiceResumeTest references it
     private static final int SEARCH_CONTENT_BOOST = 1;
     private static final int SEARCH_HEAD_BOOST = 3;
+
+    // Lucene commit user-data keys (IndexWriter.setLiveCommitData /
+    // SegmentInfos.readLatestCommit().getUserData()) - how buildIndex
+    // checkpoints rebuild progress durably, so autoBuildIndexOnStartup can
+    // tell "never built", "interrupted partway through, resume at page N"
+    // and "fully built, nothing to do" apart. Carried forward unchanged by
+    // reindexOpus's/removeOpus's own commits (Lucene defaults a commit's
+    // user data to the previous commit's unless explicitly overwritten),
+    // so neither touches or needs to know about these.
+    static final String COMMIT_DATA_NEXT_PAGE = "lucene-rebuild-next-page"; // package-private: referenced by tests
+    static final String COMMIT_DATA_REBUILD_COMPLETE = "lucene-rebuild-complete"; // package-private: referenced by tests
 
     private final Path indexDir;
     private final Directory directory;
@@ -144,13 +160,15 @@ public class LuceneIndexService {
     }
 
     /**
-     * Kicks off a full build in the background right after startup if no
-     * index exists yet - runs on its own minimum-priority thread so a
-     * slow first build (deriving text for the whole corpus) never blocks
-     * app startup or competes hard with the actual application for CPU,
-     * which matters most on a dev machine. Disabled entirely via
-     * lucene.autoindex.enabled for anyone who'd rather trigger it
-     * manually (POST /api/admin/lucene/reindex) on their own schedule.
+     * Kicks off a build in the background right after startup if the index
+     * isn't fully built yet - either missing entirely (first run) or left
+     * incomplete by a rebuild that got interrupted before finishing (see
+     * COMMIT_DATA_REBUILD_COMPLETE) - runs on its own minimum-priority
+     * thread so a slow build never blocks app startup or competes hard with
+     * the actual application for CPU, which matters most on a dev machine.
+     * Disabled entirely via lucene.autoindex.enabled for anyone who'd
+     * rather trigger it manually (POST /api/admin/lucene/reindex) on their
+     * own schedule.
      */
     @EventListener(ApplicationReadyEvent.class)
     public void autoBuildIndexOnStartup() {
@@ -158,16 +176,25 @@ public class LuceneIndexService {
             log.info("Lucene lucene.autoindex.enabled=false - not auto-building the index on startup.");
             return;
         }
-        if (this.isAvailable()) {
+        final Map<String, String> commitData = readCommitData();
+        if (Boolean.parseBoolean(commitData.getOrDefault(COMMIT_DATA_REBUILD_COMPLETE, "false"))) {
             return;
         }
+        final int resumeFromPage = Integer.parseInt(commitData.getOrDefault(COMMIT_DATA_NEXT_PAGE, "0"));
+
         final Thread thread = new Thread(() -> {
-            log.info("Lucene index missing - auto-building it now in the background (low priority).");
             try {
-                this.rebuildIndex();
+                if (resumeFromPage == 0) {
+                    log.info("Lucene index missing - auto-building it now in the background (low priority).");
+                    this.rebuildIndex();
+                } else {
+                    log.info("Lucene index build was interrupted at page {} - resuming in the background "
+                            + "(low priority) instead of starting over.", resumeFromPage);
+                    this.resumeIndex(resumeFromPage);
+                }
             } catch (Exception e) {
-                log.error("Background auto-build of the Lucene index failed - /api/search/lucene stays "
-                        + "empty until POST /api/admin/lucene/reindex is tried manually.", e);
+                log.error("Background (re)build of the Lucene index failed - /api/search/lucene stays "
+                        + "incomplete until POST /api/admin/lucene/reindex is tried manually.", e);
             }
         }, "lucene-autoindex");
         thread.setDaemon(true);
@@ -180,14 +207,48 @@ public class LuceneIndexService {
     }
 
     /**
-     * Walks every opus (root TeiDiv, see TeiDivRepository.findOpera) and
-     * indexes each of its paragraphs (DivService.getParagraphs already
-     * walks the whole work's Toc, sub-chapters included). One bad paragraph
-     * (e.g. an XSLT transform failure) is logged and skipped rather than
-     * aborting the whole rebuild - same reasoning as the per-message
-     * isolation used elsewhere for batch/streaming work.
+     * Full rebuild, always starting completely fresh (OpenMode.CREATE) -
+     * the manual "I want every paragraph re-derived from scratch" entry
+     * point (POST /api/admin/lucene/reindex), and what a genuinely first-
+     * ever build (no index at all yet) also uses. See buildIndex for what
+     * actually makes this resumable if interrupted.
      */
     public int rebuildIndex() {
+        return this.buildIndex(0, IndexWriterConfig.OpenMode.CREATE);
+    }
+
+    /**
+     * Continues an interrupted rebuildIndex() from wherever its last
+     * periodic checkpoint commit left off, instead of redoing the whole
+     * corpus - see autoBuildIndexOnStartup, the only caller. Uses
+     * CREATE_OR_APPEND (never CREATE) since the whole point is to build on
+     * top of what's already durably committed, not wipe it.
+     */
+    int resumeIndex(int fromPage) { // package-private: LuceneIndexServiceResumeTest calls this directly to test resumption without spinning a background thread
+        return this.buildIndex(fromPage, IndexWriterConfig.OpenMode.CREATE_OR_APPEND);
+    }
+
+    /**
+     * Walks every opus (root TeiDiv, see TeiDivRepository.findOpera) from
+     * startPage onward and indexes each of its paragraphs
+     * (DivService.getParagraphs already walks the whole work's Toc,
+     * sub-chapters included). One bad paragraph (e.g. an XSLT transform
+     * failure) is logged and skipped rather than aborting the whole build -
+     * same reasoning as the per-message isolation used elsewhere for
+     * batch/streaming work.
+     *
+     * Commits (and refreshes the searcher) after every page rather than
+     * once at the very end, for two reasons: the index becomes
+     * progressively searchable as pages land instead of staying empty
+     * until 100% done, and an interruption (container restart, OOM) loses
+     * at most one page's worth of re-derivation - the commit's user data
+     * (COMMIT_DATA_NEXT_PAGE/COMMIT_DATA_REBUILD_COMPLETE) records exactly
+     * where to resume, read back by autoBuildIndexOnStartup. A page's own
+     * adds are never durable until its commit() call, so re-walking the
+     * same page after a crash (nothing since the last commit survives a
+     * hard kill) can never duplicate documents.
+     */
+    private int buildIndex(int startPage, IndexWriterConfig.OpenMode openMode) {
         synchronized (this.rebuildLock) {
             final StopWatch watch = new StopWatch();
             watch.start();
@@ -195,9 +256,9 @@ public class LuceneIndexService {
             int skipped = 0;
 
             try (IndexWriter writer = new IndexWriter(this.directory,
-                    new IndexWriterConfig(this.analyzer).setOpenMode(IndexWriterConfig.OpenMode.CREATE))) {
+                    new IndexWriterConfig(this.analyzer).setOpenMode(openMode))) {
 
-                int pageNr = 0;
+                int pageNr = startPage;
                 Page<TeiDiv> opera;
                 do {
                     opera = this.teiDivRepository.findOpera(PageRequest.of(pageNr, OPERA_PAGE_SIZE));
@@ -217,26 +278,84 @@ public class LuceneIndexService {
                         }
                     }
                     pageNr++;
+
+                    writer.setLiveCommitData(Map.of(
+                            COMMIT_DATA_NEXT_PAGE, String.valueOf(pageNr),
+                            COMMIT_DATA_REBUILD_COMPLETE, "false"
+                    ).entrySet());
+                    writer.commit();
+                    this.refreshSearcherAfterCommit();
                 } while (opera.hasNext());
 
+                writer.setLiveCommitData(Map.of(
+                        COMMIT_DATA_NEXT_PAGE, "0",
+                        COMMIT_DATA_REBUILD_COMPLETE, "true"
+                ).entrySet());
                 writer.commit();
             } catch (IOException e) {
-                throw new RuntimeException("Failed to rebuild the Lucene index at " + this.indexDir, e);
+                throw new RuntimeException("Failed to build the Lucene index at " + this.indexDir, e);
+            }
+
+            this.refreshSearcherAfterCommit();
+
+            watch.stop();
+            log.info("Built Lucene index from page {}: {} paragraphs indexed, {} skipped, took {}",
+                    startPage, indexed, skipped, watch);
+            return indexed;
+        }
+    }
+
+    private void refreshSearcherAfterCommit() {
+        try {
+            if (this.searcherManager == null) {
+                this.searcherManager = new SearcherManager(this.directory, null);
+            } else {
+                this.searcherManager.maybeRefreshBlocking();
+            }
+        } catch (IOException e) {
+            throw new RuntimeException("Lucene index committed but failed to open/refresh a searcher for it", e);
+        }
+    }
+
+    /** Empty (not missing keys) if the directory has no commit at all yet - a genuinely fresh index. */
+    Map<String, String> readCommitData() { // package-private: LuceneIndexServiceResumeTest asserts on this directly
+        try {
+            return SegmentInfos.readLatestCommit(this.directory).getUserData();
+        } catch (IndexNotFoundException e) {
+            return Map.of();
+        } catch (IOException e) {
+            throw new RuntimeException("Failed to read the Lucene index's commit metadata at " + this.indexDir, e);
+        }
+    }
+
+    /**
+     * Purges just this one opus's documents (exact root match plus every
+     * descendant div beneath it, same URL-prefix matching as reindexOpus's
+     * own delete step) - called from AdminService.pruneRemovedTeis once a
+     * source file has disappeared from the repo and there's no fresh
+     * content to add back, unlike reindexOpus which always follows its
+     * delete with an addIndexes() of freshly-derived documents.
+     */
+    public void removeOpus(String opusPath) {
+        synchronized (this.rebuildLock) {
+            try (IndexWriter writer = new IndexWriter(this.directory,
+                    new IndexWriterConfig(this.analyzer).setOpenMode(IndexWriterConfig.OpenMode.CREATE_OR_APPEND))) {
+                writer.deleteDocuments(
+                        new TermQuery(new Term(FIELD_URL, opusPath)),
+                        new PrefixQuery(new Term(FIELD_URL, opusPath + "/")));
+                writer.commit();
+            } catch (IOException e) {
+                throw new RuntimeException("Failed to remove opus " + opusPath + " from the Lucene index", e);
             }
 
             try {
-                if (this.searcherManager == null) {
-                    this.searcherManager = new SearcherManager(this.directory, null);
-                } else {
+                if (this.searcherManager != null) {
                     this.searcherManager.maybeRefreshBlocking();
                 }
             } catch (IOException e) {
-                throw new RuntimeException("Lucene index rebuilt but failed to open/refresh a searcher for it", e);
+                throw new RuntimeException("Removed opus " + opusPath + " but failed to refresh the Lucene searcher", e);
             }
-
-            watch.stop();
-            log.info("Rebuilt Lucene index: {} paragraphs indexed, {} skipped, took {}", indexed, skipped, watch);
-            return indexed;
+            log.info("Removed opus {} from the Lucene index", opusPath);
         }
     }
 
