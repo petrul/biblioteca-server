@@ -13,7 +13,7 @@ import org.springframework.scheduling.annotation.EnableScheduling;
 @EnableCaching
 @PropertySource("classpath:version.properties")
 @OpenAPIDefinition(servers = {
-	@Server(url = "/", description = "Textbase Server")}
+	@Server(url = "/", description = "Biblioteca Server")}
 )
 
 public class TextbaseServer {

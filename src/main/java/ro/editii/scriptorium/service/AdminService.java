@@ -3,6 +3,7 @@ package ro.editii.scriptorium.service;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import ro.editii.scriptorium.Globals;
 import ro.editii.scriptorium.Util;
@@ -39,6 +40,9 @@ public class AdminService {
     final AiEnrichmentService aiEnrichmentService;
     final TextbaseEventsPublisher textbaseEventsPublisher;
 
+    @Value("${lucene.incremental.enabled:true}")
+    boolean incrementalLuceneEnabled = true;
+
     /**
      * Everything that should happen right after one TeiFile is
      * successfully (re)imported, besides the DB import itself - called
@@ -65,6 +69,7 @@ public class AdminService {
         final TeiFile teiFile = optionalTeiFile.get();
 
         final List<TeiDiv> opera = this.teiDivRepository.getOperaForTeiFileId(teiFile.getId());
+        if (this.incrementalLuceneEnabled) {
         for (TeiDiv opus : opera) {
             try {
                 this.luceneIndexService.reindexOpus(opus);
@@ -72,6 +77,7 @@ public class AdminService {
                 log.error("Failed to incrementally reindex Lucene for opus {} ({}) - the TEI import itself still succeeded",
                         opus.getCompletePath(), filename, e);
             }
+        }
         }
 
         try {
@@ -198,7 +204,7 @@ public class AdminService {
      * authors), this file's opera from the Lucene index
      * (LuceneIndexService.removeOpus), and a signalOpusRemoved event per
      * removed opus so textbase-nestjs can drop its matching Milvus vectors
-     * too - the same "textbase-server is the sole source of truth, nothing
+     * too - the same "biblioteca-server is the sole source of truth, nothing
      * downstream keeps its own opinion" pattern signalNewOpusImported
      * already uses.
      *

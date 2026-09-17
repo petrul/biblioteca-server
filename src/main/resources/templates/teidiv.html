@@ -8,8 +8,8 @@
     <title th:text="${author.visualName + ' — ' + op.head + ' — ' + div.head }">Vasile Alecsandri — Scrieri — Scrieri</title>
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no" />
 
-    <link th:if=${prev} rel="prev" th:href="@{|/${prev.completePath}|}" href="prev_url" />
-    <link th:if=${next} rel="next" th:href="@{|/${next.completePath}|}" href="next_url" />
+    <link th:if=${prev} rel="prev" th:href="@{|/${prev.completePath}|(noredirect=${noredirect})}" href="prev_url" />
+    <link th:if=${next} rel="next" th:href="@{|/${next.completePath}|(noredirect=${noredirect})}" href="next_url" />
 
     <script th:replace="~{fragments/google-analytics}" ></script>
     <div th:replace="~{fragments/google-one-tap}"></div>
@@ -56,12 +56,12 @@
 <body>
 
     <div id="navbar" class="navbar">
-        <a th:href="@{/}" href="#">TEXT&nbsp;❖&nbsp;BASE</a>
+        <a th:href="@{/(noredirect=${noredirect})}" href="#">TEXT&nbsp;❖&nbsp;BASE</a>
         <!-- <input type="text" placeholder="Search..."> -->
         <a
                 class="title"
                 th:text="${author.visualName + ' — ' + op.head}"
-                th:href="@{|/${author.strId}/${op.urlFragment}|}"
+                th:href="@{|/${author.strId}/${op.urlFragment}|(noredirect=${noredirect})}"
                 href="#"
         >Numele Autorului — Titlul cărții care poate fi destul de lung, adică de fapt nu știm cât de lung</a>
     </div>
@@ -72,10 +72,10 @@
 
         <div class="wrapper">
             <ul class="breadcrumbs">
-              <li class="first"><a href="/" th:href=@{/} class="icon-home"></a></li>
+              <li class="first"><a href="/" th:href="@{/(noredirect=${noredirect})}" class="icon-home"></a></li>
 
-              <li><a href="#" th:href=@{|/${author.strId}|} th:text="${author.visualName}">Vasile Veselovschii</a></li>
-              <li th:each="b: ${breadcrumb}"><a href="#" th:href="@{|/${b.completePath}|}" th:text="${b.visualLabel}">Opus or div head</a></li>
+              <li><a href="#" th:href="@{|/${author.strId}|(noredirect=${noredirect})}" th:text="${author.visualName}">Vasile Veselovschii</a></li>
+              <li th:each="b: ${breadcrumb}"><a href="#" th:href="@{|/${b.completePath}|(noredirect=${noredirect})}" th:text="${b.visualLabel}">Opus or div head</a></li>
               <li th:if="false"><a href="#">Chapter 1</a></li>
               <li class="last active" th:if="false"><a href="#">Chapter 1.1</a></li>
 
@@ -154,7 +154,7 @@
 
             <li th:each="child: ${children}">
                 <a 
-                    th:href="@{|${requestUri}/${child.urlFragment}|}"
+                    th:href="@{|${requestUri}/${child.urlFragment}|(noredirect=${noredirect})}"
                     href="#">
                     <span th:text="${child.head}">First subchapter</span>
                 </a>
@@ -183,9 +183,9 @@
         </div>
 
         <div id="navbuttons">
-            <a th:if="${prev}"  th:href="@{|/${prev.completePath}|}" href="#"><span><img title="Previous chapter (press left key)" th:src="@{/img/Next_Arrow.svg}" src="../static/img/Next_Arrow.svg" class="navbutton rotate-180" /></span></a>
-            <a th:if="${up}"    th:href="@{|/${up.completePath}|}"   href="#"><span><img  th:src="@{/img/Next_Arrow.svg}" src="../static/img/Next_Arrow.svg" class="navbutton rotate-270" /></span></a>
-            <a th:if="${next}"  th:href="@{|/${next.completePath}|}" href="#"><span><img title="Next chapter (press right key)" th:src="@{/img/Next_Arrow.svg}" src="../static/img/Next_Arrow.svg" class="navbutton" /></span></a>
+            <a th:if="${prev}"  th:href="@{|/${prev.completePath}|(noredirect=${noredirect})}" href="#"><span><img title="Previous chapter (press left key)" th:src="@{/img/Next_Arrow.svg}" src="../static/img/Next_Arrow.svg" class="navbutton rotate-180" /></span></a>
+            <a th:if="${up}"    th:href="@{|/${up.completePath}|(noredirect=${noredirect})}"   href="#"><span><img  th:src="@{/img/Next_Arrow.svg}" src="../static/img/Next_Arrow.svg" class="navbutton rotate-270" /></span></a>
+            <a th:if="${next}"  th:href="@{|/${next.completePath}|(noredirect=${noredirect})}" href="#"><span><img title="Next chapter (press right key)" th:src="@{/img/Next_Arrow.svg}" src="../static/img/Next_Arrow.svg" class="navbutton" /></span></a>
         </div>
 
         <div class="meta" th:if="${license}">

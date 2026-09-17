@@ -119,11 +119,14 @@ public class DivController {
 
     @GetMapping("/")
     @Transactional
-    public String index(Model model, @RequestHeader(value = HttpHeaders.USER_AGENT, required = false) String userAgent) {
+    public String index(Model model,
+                        @RequestHeader(value = HttpHeaders.USER_AGENT, required = false) String userAgent,
+                        @RequestParam(value = "noredirect", required = false) String noRedirect) {
         // Modern browsers get the reader SPA; anything else (curl, text
         // browsers, bots, ancient/non-JS browsers) keeps getting the
-        // server-rendered index page below, unchanged.
-        if (isModernJsCapableBrowser(userAgent)) {
+        // server-rendered index page below, unchanged. The noredirect switch makes
+        // that choice explicit for modern browsers too.
+        if (noRedirect == null && isModernJsCapableBrowser(userAgent)) {
             return "redirect:/app";
         }
 

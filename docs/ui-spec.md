@@ -2,7 +2,7 @@
 
 ## What this document is
 
-A **behavior specification** for a new textbase-server client, deployable as both a web app and a mobile app. It defines what the app must let a person do, and what data/state each screen depends on — not how anything should look. No visual design, layout, navigation chrome, component choice, color, or framework/tech-stack decision is made here; all of that is deliberately left open. Every requirement below is phrased as a capability ("the user can…") or a constraint ("the app must…"), not a mockup.
+A **behavior specification** for a new biblioteca-server client, deployable as both a web app and a mobile app. It defines what the app must let a person do, and what data/state each screen depends on — not how anything should look. No visual design, layout, navigation chrome, component choice, color, or framework/tech-stack decision is made here; all of that is deliberately left open. Every requirement below is phrased as a capability ("the user can…") or a constraint ("the app must…"), not a mockup.
 
 It takes inspiration from, but does not copy, the existing Ionic UI at `textbase-ionic-ui`. Its real purpose is different: that UI wires up a small fraction of what the server already does (author browsing, three of five search modes, no auth, no collections). This spec is written directly against the server's actual capabilities (verified against the current codebase, not the old UI), specifically to put the *unused* ones — search modes, quotations, personal and system collections, auth, admin operations — to work.
 

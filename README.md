@@ -1,4 +1,4 @@
-# Textbase Server
+# Biblioteca Server
 
 A structured digital library that serves classical and philosophical texts
 — encoded in TEI P5 XML — as an addressable text database, not a pile of
@@ -39,22 +39,73 @@ clean, shareable "quote card" with no site chrome, ready to embed in an
 
 ## Quickstart
 
-Prerequisites: Java 25, a reachable MySQL instance, and a directory of TEI
-XML source files (or ODT originals piped through the fodt→TEI pipeline —
-see [TEI processing](#tei-processing)). Milvus, Ollama/sentence-transformers,
-and Kafka are needed for the full feature set (vector search, async
-vectorization) but aren't required just to boot and browse the corpus —
-see [Search](#search) for what degrades gracefully without them.
+Prerequisites: Java 25, a reachable MySQL instance, and at least one
+configured local or Git-backed repository containing TEI XML (or source
+documents such as Markdown or FODT for a later conversion step — see
+[TEI processing](#tei-processing)). Milvus, Ollama/sentence-transformers, and
+Kafka are needed for the full feature set (vector search, async vectorization)
+but aren't required just to boot and browse the corpus — see [Search](#search)
+for what degrades gracefully without them.
+
+Repositories are configured in one list, `REPO_TEI_REPOS`, with
+comma-separated entries in the form `url|basepath|filespec`:
+
+```bash
+REPO_TEI_REPOS=/corpus/tei,/corpus/other,https://github.com/petrul/universal-literature-tei/
+```
+
+Plain paths and `file:` URLs are local repositories; SSH, Git, HTTP, and
+HTTPS URLs are cloned read-only with the system `git` command. Git checkouts
+are persistent under `WORK_DIR/git-repos/<sha256-of-url>` and retain their
+work area for future on-demand Markdown-to-TEI conversion.
+An entry containing only a URL means the repository root and defaults to
+`**/*.tei.xml`; `url|basepath` supplies only a subpath, and
+`url|basepath|filespec` supplies both.
+
+For example, these entries all use the same repository interface:
+
+```bash
+# Local repository; default recursive TEI XML selection.
+/corpus/tei
+
+# Git repository at its root; default recursive **/*.tei.xml selection.
+https://github.com/petrul/universal-literature-tei/
+
+# Git repository, restricted to a subdirectory and Markdown sources.
+https://github.com/petrul/romcorpus|md|**/*.md
+```
+
+`WORK_DIR` is the persistent application work area. Its `cache/` subdirectory
+stores the normal application caches, while Git checkouts are kept separately
+under `git-repos/<sha256-of-url>`. On startup an existing checkout is updated
+with `git pull --ff-only`; a missing checkout is created with `git clone`.
+The Git command must be installed and usable non-interactively by the server
+process. Repository discovery feeds the normal import/indexing pipeline, so
+local and Git-backed sources are treated uniformly after checkout.
 
 ```bash
 git clone <this repo>
-cd textbase-server
+cd biblioteca-server
 cp .env.example .env.dev   # then fill in your MySQL/TEI-repo/etc values
 ./gradlew bootRun -x test  # -Pdev is the default profile; add -Pci/-Pprod for others
 ```
 
+To run the development profile against the integration dependencies while
+testing a Git-backed repository:
+
+```bash
+WORK_DIR=~/.biblioteca-work \
+REPO_TEI_REPOS=https://github.com/petrul/universal-literature-tei/ \
+./gradlew -Pdev bootRun -x test
+```
+
 Open `http://localhost:8080` — the site itself is server-rendered and
 crawlable. The REST API is documented at `http://localhost:8080/api/docs.html`.
+Modern browsers are sent to the reader app automatically; append `?noredirect` to
+the root URL to explicitly serve the older Spring MVC/Thymeleaf index instead:
+`http://localhost:8080/?noredirect`. Server-rendered navigation links preserve
+this parameter, including the TEXTBASE title link and book navigation, so the
+legacy UI can be inspected without being redirected to the reader app.
 
 Config is layered as Spring profiles (`application-<profile>.properties` in
 `src/main/resources/`, selected via `-Pdev`/`-Pci`/`-Pprod`/`-Pair`/`-Pint`
@@ -84,7 +135,7 @@ environment variables, which always take precedence over `.env.<profile>`
 ## Docker
 
 ```bash
-./gradlew docker            # build editii/textbase-server:<version> locally
+./gradlew docker            # build editii/biblioteca-server:<version> locally
 ./gradlew docker-publish    # also push to the mini.local:5000 registry
 ```
 

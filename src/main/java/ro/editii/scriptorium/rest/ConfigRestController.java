@@ -17,7 +17,7 @@ import ro.editii.scriptorium.vector.OllamaEmbedder;
  * spec (its other endpoints are internal/dangerous ops not meant for
  * public API docs), but this endpoint specifically needs to be visible so
  * textbase-nestjs's generated API client (see its gen-tb-api.sh) actually
- * picks it up -- textbase-nestjs is a dependent part of textbase-server,
+ * picks it up -- textbase-nestjs is a dependent part of biblioteca-server,
  * not a peer, so it talks to it the same way any other API consumer does.
  */
 @RestController
@@ -42,7 +42,7 @@ public class ConfigRestController {
      * service (textbase-nestjs) must use to interoperate with this one:
      * Kafka topics, the Milvus collection paragraphs get vectorized into,
      * and which embedding model produced (and must be used to query) those
-     * vectors. textbase-server is the source of truth for all three --
+     * vectors. biblioteca-server is the source of truth for all three --
      * textbase-nestjs has no independent configuration of its own for any
      * of this, it fetches it from here at startup instead (see
      * TextbaseClient.getConfig() there). Deliberately excludes network

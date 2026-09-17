@@ -5,6 +5,7 @@ import org.springframework.security.authentication.AnonymousAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ModelAttribute;
+import jakarta.servlet.http.HttpServletRequest;
 
 /**
  * Attributes every Thymeleaf-rendered page needs regardless of which
@@ -29,5 +30,10 @@ public class GlobalModelAttributes {
         if (authentication == null || authentication instanceof AnonymousAuthenticationToken)
             return null;
         return authentication.getName();
+    }
+
+    @ModelAttribute("noredirect")
+    public String noRedirect(HttpServletRequest request) {
+        return request.getParameter("noredirect");
     }
 }

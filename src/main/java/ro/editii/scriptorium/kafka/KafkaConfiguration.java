@@ -78,4 +78,10 @@ public class KafkaConfiguration {
     public NewTopic reimportOpus() {
         return TopicBuilder.name(this.kafkaProps.getOpusReimportedTopicName()).build();
     }
+
+
+    @Bean
+    public NewTopic removeOpus() {
+        return TopicBuilder.name(this.kafkaProps.getOpusRemovedTopicName()).build();
+    }
 }

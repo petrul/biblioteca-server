@@ -51,7 +51,7 @@
     <nav
         class="navbar navbar-expand-sm navbar-dark bg-dark">
         <!-- <a  href="#">Navbar</a> -->
-        <a th:href="@{/}" class="navbar-brand" href="#">ETEXT&nbsp;&bull;&nbsp;STORE&nbsp;&nbsp;❖</a>
+        <a th:href="@{/(noredirect=${noredirect})}" class="navbar-brand" href="#">ETEXT&nbsp;&bull;&nbsp;STORE&nbsp;&nbsp;❖</a>
 
         <!-- <a href="#" class="left d-sm-inline"><span></span></a>-->
         <!-- <span class="navbar-text" style="color:black;"></span>  -->
@@ -60,7 +60,7 @@
         <a
                 class="navbar-text px-2"
                 th:text="${author.visualName + ' — ' + op.head}"
-                th:href="@{|/${author.strId}/${op.urlFragment}|}"
+                th:href="@{|/${author.strId}/${op.urlFragment}|(noredirect=${noredirect})}"
                 href="#"
         >Numele autorului — Titlul nu stiu cui </a>
 

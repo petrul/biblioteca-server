@@ -2,7 +2,7 @@
 
 Only uses endpoints that are actually live in production today. The newer
 /api/divs/{id}/toc and /api/collections/system/by-language/{lang} endpoints
-exist in the textbase-server source but returned 404 against both prod and
+exist in the biblioteca-server source but returned 404 against both prod and
 the int deployment when checked (2026-09-03) - the running builds predate
 them. So:
 

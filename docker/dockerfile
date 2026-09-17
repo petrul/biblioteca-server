@@ -1,5 +1,5 @@
 FROM eclipse-temurin:25-jre
-COPY build/libs/textbase-server-*-application.jar /textbase-server.jar
+COPY build/libs/biblioteca-server-*-application.jar /biblioteca-server.jar
 
 ENV MYSQL_HOST undefined
 ENV MYSQL_DB undefined
@@ -13,4 +13,4 @@ RUN useradd dockerapp -u 10001
 USER 10001
 
 EXPOSE 8080
-ENTRYPOINT ["java", "-Xmx4g", "-Xss20m", "-jar", "/textbase-server.jar"]
+ENTRYPOINT ["java", "-Xmx4g", "-Xss20m", "-jar", "/biblioteca-server.jar"]

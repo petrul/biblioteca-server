@@ -1,4 +1,6 @@
 import java.util.regex.Matcher
+import java.net.URLEncoder
+import java.nio.charset.StandardCharsets
 
 buildscript {
     dependencies {
@@ -65,6 +67,7 @@ tasks.register('unittest', Test) {
     useJUnitPlatform {
         excludeTags 'external'
     }
+    systemProperty 'vector.search.availability-check.enabled', 'false'
 }
 
 tasks.register('integrationTest', Test) {
@@ -327,7 +330,7 @@ def runShellCommand(String cmd) {
     }
 }
 
-final imagelabel="editii/textbase-server:$version"
+final imagelabel="editii/biblioteca-server:$version"
 tasks.register("docker") {
     dependsOn 'build'
     doLast {
@@ -432,6 +435,35 @@ tasks.withType(ProcessForkOptions).configureEach { task ->
                             val.toString().replaceFirst('^~', System.getProperty('user.home')))
                     fallbackCount++
                 }
+            }
+
+            final addFallback = { String key, String value ->
+                if (value != null && !value.isBlank() &&
+                        System.getenv(key) == null && props.getProperty(key) == null) {
+                    task.environment(key, value)
+                    props.setProperty(key, value)
+                    fallbackCount++
+                }
+            }
+            final addressFrom = { String hostKey, String portKey ->
+                final host = props.getProperty(hostKey)
+                final port = props.getProperty(portKey)
+                host == null ? null : (port == null || host.contains(':') ? host : "${host}:${port}")
+            }
+            addFallback('MILVUS_ADDRESS', addressFrom('MILVUS_HOST', 'MILVUS_PORT'))
+            addFallback('EMBEDDER_ADDRESS', addressFrom('EMBEDDER_HOST', 'EMBEDDER_PORT'))
+
+            final mysqlHost = addressFrom('MYSQL_HOST', 'MYSQL_PORT')
+            final mysqlDb = props.getProperty('MYSQL_DB')
+            final mysqlUser = props.getProperty('MYSQL_USER')
+            final mysqlPassword = props.getProperty('MYSQL_PASSWORD')
+            if ([mysqlHost, mysqlDb, mysqlUser, mysqlPassword].every { it != null }) {
+                final encode = { String value -> URLEncoder.encode(value, StandardCharsets.UTF_8) }
+                addFallback('MYSQL_JDBC_URL',
+                        "jdbc:mysql://${mysqlHost}/${mysqlDb}" +
+                        "?user=${encode(mysqlUser)}&password=${encode(mysqlPassword)}" +
+                        '&autoReconnect=true&useSSL=false&noAccessToProcedureBodies=true' +
+                        '&serverTimezone=Europe/Bucharest&useTimezone=false&allowPublicKeyRetrieval=true')
             }
             println "> Applied ${fallbackCount} local fallback value(s) from ${envFile.name} to task '${task.name}'"
         }
