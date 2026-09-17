@@ -452,6 +452,10 @@ tasks.withType(ProcessForkOptions).configureEach { task ->
             }
             addFallback('MILVUS_ADDRESS', addressFrom('MILVUS_HOST', 'MILVUS_PORT'))
             addFallback('EMBEDDER_ADDRESS', addressFrom('EMBEDDER_HOST', 'EMBEDDER_PORT'))
+            if (System.getenv('REPO_TEI_REPOS') == null) {
+                final legacyRepo = System.getenv('REPO_TEI_DIRS') ?: props.getProperty('REPO_TEI_DIRS')
+                addFallback('REPO_TEI_REPOS', legacyRepo)
+            }
 
             final mysqlHost = addressFrom('MYSQL_HOST', 'MYSQL_PORT')
             final mysqlDb = props.getProperty('MYSQL_DB')
@@ -471,7 +475,7 @@ tasks.withType(ProcessForkOptions).configureEach { task ->
         if (task.name != 'unittest') {
             final requiredKeys = [
                     "MILVUS_ADDRESS", "EMBEDDER_ADDRESS",
-                    "REPO_TEI_DIRS", "CACHE_DIR", "KAFKA_BROKERS",
+                    "REPO_TEI_REPOS", "KAFKA_BROKERS",
                     "MYSQL_JDBC_URL"
             ]
             final missingKeys = requiredKeys.findAll {
