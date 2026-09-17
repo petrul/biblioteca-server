@@ -333,6 +333,23 @@ class WebITest {
         assert noUaResponse.body().contains('<html')
     }
 
+    @Test
+    void noredirectQueryParameterServesTheMvcIndexToModernBrowsers() {
+        final client = java.net.http.HttpClient.newBuilder()
+                .followRedirects(java.net.http.HttpClient.Redirect.NEVER)
+                .build()
+        final request = java.net.http.HttpRequest.newBuilder(
+                URI.create("http://localhost:${port}/?noredirect"))
+                .header('User-Agent',
+                        'Mozilla/5.0 Chrome/128.0.0.0 Safari/537.36')
+                .GET().build()
+
+        final response = client.send(request, java.net.http.HttpResponse.BodyHandlers.ofString())
+
+        assert response.statusCode() == 200
+        assert response.body().contains('<html')
+    }
+
     List<Map> luceneSearchFor(String q) {
         final client = java.net.http.HttpClient.newHttpClient()
         final request = java.net.http.HttpRequest.newBuilder(

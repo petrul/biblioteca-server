@@ -45,7 +45,7 @@ uv run find_neighbors.py --top-k 10 --full   # full chapter text instead of a pr
 
 ## Why HTML-scraping instead of the TOC API
 
-`/api/divs/{id}/toc` and `/api/collections/system/by-language/{lang}` exist in textbase-server's
+`/api/divs/{id}/toc` and `/api/collections/system/by-language/{lang}` exist in biblioteca-server's
 current source but returned 404 against both prod and the int deployment when checked (2026-09-03) -
 the running builds predate them. `textbase_client.py` works around this using only what's actually
 live: `/util/random`, `/api/search/divHeads`, and the decorated HTML reading-view pages' own child

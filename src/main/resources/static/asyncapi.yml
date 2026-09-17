@@ -1,13 +1,13 @@
 asyncapi: '3.0.0'
 info:
-  title: Textbase Kafka events
+  title: Biblioteca Kafka events
   version: '1.0.0'
   description: |
-    The async/event-driven half of textbase-server's API surface - see
+    The async/event-driven half of biblioteca-server's API surface - see
     README.md and the live REST OpenAPI spec (/api/docs.yaml) for the
     synchronous half.
 
-    textbase-server is the sole producer of every topic here
+    biblioteca-server is the sole producer of every topic here
     (ro.editii.scriptorium.kafka.KafkaTextbaseEventsPublisher). Topic
     names are not configurable in real deployments (KafkaProps.java's own
     comment: "never actually overridden anywhere") - they're the literal
@@ -46,10 +46,10 @@ channels:
     description: |
       Declared and wired on the producer side (KafkaTextbaseEventsPublisher
       .signalOpusReimported) but not currently called from anywhere in
-      textbase-server - reimport paths only ever trigger Lucene
+      biblioteca-server - reimport paths only ever trigger Lucene
       reindexing, not this event. Documented as a reserved/future
       channel rather than omitted, since the producer contract already
-      exists and could start firing without a textbase-server release
+      exists and could start firing without a biblioteca-server release
       being obviously "new event added." No known consumer today.
     messages:
       teiDivEvent:
@@ -127,7 +127,7 @@ operations:
       message, deletes every vector whose url is the removed opus's
       path or a descendant under it (VectorizerService.removeOpus ->
       MilvusCollection.deleteByUrlPrefix). No re-fetch from
-      textbase-server here, unlike vectorizeOnNewOpusImported: the
+      biblioteca-server here, unlike vectorizeOnNewOpusImported: the
       opus's DB row is already gone by the time this fires.
 
 components:

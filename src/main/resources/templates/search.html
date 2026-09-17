@@ -17,7 +17,7 @@
 <body>
 
 <div id="navbar" class="navbar">
-    <a th:href="@{/}" href="#">TEXT&nbsp;❖&nbsp;BASE</a>
+    <a th:href="@{/(noredirect=${noredirect})}" href="#">TEXT&nbsp;❖&nbsp;BASE</a>
     <a
             class="title"
             th:text="${''}"
@@ -74,12 +74,12 @@
     <div id="results">
         <div id="authors" th:if="${authors}">
             <ul th:each="a: ${authors}">
-                <li><a th:href="${a.strId}" th:text="${a.visualName}"></a></li>
+                <li><a th:href="@{|/${a.strId}|(noredirect=${noredirect})}" th:text="${a.visualName}"></a></li>
             </ul>
         </div>
         <div id="divs" th:if="${divs}">
             <ul th:each="d: ${divs}">
-                <li><a th:href="@{|/${d.completePath}|}"><span th:text="${d.author.visualName}"></span> — <span th:text="${d.head}"></span></a></li>
+                <li><a th:href="@{|/${d.completePath}|(noredirect=${noredirect})}"><span th:text="${d.author.visualName}"></span> — <span th:text="${d.head}"></span></a></li>
             </ul>
         </div>
     </div>

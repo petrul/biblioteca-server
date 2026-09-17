@@ -39,11 +39,11 @@
     <div th:replace="~{fragments/google-one-tap}"></div>
 
     <div id="navbar" class="navbar">
-        <a th:href="@{/}" href="#">TEXT&nbsp;❖&nbsp;BASE</a>
+        <a th:href="@{/(noredirect=${noredirect})}" href="#">TEXT&nbsp;❖&nbsp;BASE</a>
         <a
                 class="title"
                 th:text="${author.visualName}"
-                th:href="@{|/${author.strId}|}"
+                th:href="@{|/${author.strId}|(noredirect=${noredirect})}"
                 href="#"
         >Numele Autorului</a>
     </div>
@@ -61,7 +61,7 @@
     </div>
 
     <ul th:each="d: ${rootDivs}" id="opuses-list">
-        <a th:href="@{|${requestUri}/${d.urlFragment}|}" th:title="${d}"><li th:text="${d.head}" /></a>
+        <a th:href="@{|${requestUri}/${d.urlFragment}|(noredirect=${noredirect})}" th:title="${d}"><li th:text="${d.head}" /></a>
     </ul>
 
 
@@ -77,4 +77,3 @@
 
 </body>
 </html>
-

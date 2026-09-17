@@ -8,7 +8,7 @@ GRADLE = "./gradlew"
 profile = ENV['PROFILE'] || (Rake.application.top_level_tasks.include?('ci') ? 'ci' : 'dev')
 puts "profile: #{profile}"
 
-IMAGE_NAME    = "editii/textbase-server"
+IMAGE_NAME    = "editii/biblioteca-server"
 
 version = File.read("build.gradle")[/^\s*version\s*=\s*['"]([^'"]+)['"]/, 1]
 

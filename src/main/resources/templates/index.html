@@ -22,7 +22,7 @@
 <body>
 
 <div id="navbar" class="navbar">
-    <a th:href="@{/}" href="#">TEXT&nbsp;❖&nbsp;BASE</a>
+    <a th:href="@{/(noredirect=${noredirect})}" href="#">TEXT&nbsp;❖&nbsp;BASE</a>
     <a
             class="title"
             th:text="${''}"
@@ -82,12 +82,12 @@
     <div id="featured">
         <ul>
             <li th:each="author: ${authors}">
-                <a th:href="${author.strId}" href="alecsandri">
+                <a th:href="@{|/${author.strId}|(noredirect=${noredirect})}" href="alecsandri">
                     <span th:text="${author.visualName}">Vasile Alecsandri</span>
                 </a>
             </li>
             <li th:if="false">
-                <a th:href="${author.strId}" href="balecsandri">
+                <a th:href="@{|/${author.strId}|(noredirect=${noredirect})}" href="balecsandri">
                     <span th:text="${author.visualName}">Basile Balecsandri</span>
                 </a>
             </li>

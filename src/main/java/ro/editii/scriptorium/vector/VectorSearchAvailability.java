@@ -2,6 +2,7 @@ package ro.editii.scriptorium.vector;
 
 import lombok.extern.log4j.Log4j2;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;
 import ro.editii.scriptorium.Util;
@@ -12,7 +13,7 @@ import ro.editii.scriptorium.Util;
  * search for the rest of this run if not, instead of every subsequent
  * search request failing with a raw gRPC exception.
  *
- * Deliberately does NOT also ping the embedder: textbase-server itself
+ * Deliberately does NOT also ping the embedder: biblioteca-server itself
  * essentially never embeds text at request time (that's batch work,
  * delegated to textbase-nestjs) - the only embedder call left on this
  * request path is none at all, so pinging Ollama here would just be an
@@ -44,6 +45,9 @@ public class VectorSearchAvailability {
     private final MilvusCollection milvusCollection;
     private final Embedder embedder;
 
+    @Value("${vector.search.availability-check.enabled:true}")
+    private boolean availabilityCheckEnabled;
+
     private volatile boolean available = false;
 
     public VectorSearchAvailability(MilvusService milvusService, MilvusCollection milvusCollection, Embedder embedder) {
@@ -54,6 +58,11 @@ public class VectorSearchAvailability {
 
     @EventListener(ApplicationReadyEvent.class)
     public void checkAvailability() {
+        if (!this.availabilityCheckEnabled) {
+            log.info("Vector similarity search availability check disabled.");
+            this.available = false;
+            return;
+        }
         this.available = checkMilvus();
 
         if (this.available) {

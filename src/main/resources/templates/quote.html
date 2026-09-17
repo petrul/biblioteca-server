@@ -24,9 +24,9 @@
             <p th:each="paragraph : ${paragraphs}" th:text="${paragraph}">Quoted text.</p>
         </blockquote>
         <div class="quote-citation">
-            <a th:href="@{${sourceUrl}}" th:text="${author.visualName}">Author Name</a>
+            <a th:href="@{${sourceUrl}(noredirect=${noredirect})}" th:text="${author.visualName}">Author Name</a>
             <span class="quote-citation-sep">&mdash;</span>
-            <a th:href="@{${sourceUrl}}" th:text="${opus.head}">Work Title</a>
+            <a th:href="@{${sourceUrl}(noredirect=${noredirect})}" th:text="${opus.head}">Work Title</a>
         </div>
     </div>
 </body>
