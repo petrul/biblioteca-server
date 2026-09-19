@@ -8,6 +8,10 @@ import ro.editii.scriptorium.media.DivMediaAssociation;
 @RepositoryRestResource(exported = false)
 @Repository
 public interface DivMediaAssociationRepository extends JpaRepository<DivMediaAssociation, Long> {
+    boolean existsByDivPathAndMediaRefRole(String divPath, String role);
+
+    boolean existsByDivPathAndMediaRefUrl(String divPath, String url);
+
     @RestResource(exported = false)
     @Override
     <S extends DivMediaAssociation> S save(S entity);

@@ -11,29 +11,24 @@ import org.springframework.test.annotation.DirtiesContext
 import org.springframework.test.context.TestPropertySource
 import ro.editii.scriptorium.TestConfig
 import ro.editii.scriptorium.dao.AuthorRepository
+import ro.editii.scriptorium.dao.AuthorMediaAssociationRepository
 import ro.editii.scriptorium.enrichment.AiEnrichmentService
 import ro.editii.scriptorium.model.Author
 import ro.editii.scriptorium.model.Languages
 
 /**
- * The ONE test in this whole suite that makes a real network call to
- * Ollama or SearXNG - every other Ollama-touching test (OllamaEmbeddersTest,
- * and any future test of the AuthorFacts JSON parsing) mocks its HTTP
- * transport instead. Deliberately calls the real pipeline exactly ONCE -
+ * The ONE test in this whole suite that makes real network calls to
+ * SearXNG, Wikipedia, and Wikidata. Deliberately calls the pipeline ONCE -
  * one author, one enrichAuthorAsync call - not "import a whole TEI file
  * and let postImportHooks fan out to every author/opus it contains": that
  * fanout (9 opus threads + 1 author thread for Creanga's own file alone)
  * is exactly what used to make this test flaky/slow for reasons that had
- * nothing to do with whether the Ollama/SearXNG integration itself
+ * nothing to do with whether the search/reference integration itself
  * actually works.
  *
- * bio text no longer needs Ollama at all (see AiEnrichmentService's class
- * doc comment - it's the search material itself, truncated); the one real
- * Ollama call left is extractAuthorFacts. One call is enough to
- * demonstrate the whole pipeline (search -> prefer a trusted-domain
- * source -> Wikipedia's own REST extract -> Ollama extracts the
- * structured facts JSON -> persist) genuinely works end-to-end; every
- * other scenario belongs in a mocked test instead.
+ * The call demonstrates search -> trusted Wikipedia material -> Wikidata
+ * facts -> persistence. The exact image is deliberately not asserted
+ * because external search rankings change; only URL-only persistence is.
  *
  * Calls AiEnrichmentService.enrichAuthorAsync() directly against a
  * hand-built Author, bypassing AdminService/TeiRepo/Lucene entirely -
@@ -61,6 +56,7 @@ class AiEnrichmentITest {
 
     @Autowired AiEnrichmentService aiEnrichmentService
     @Autowired AuthorRepository authorRepository
+    @Autowired AuthorMediaAssociationRepository authorMediaAssociationRepository
 
     @Test
     void aiEnrichmentEventuallyFillsInARealAuthorBioAndFacts() {
@@ -68,7 +64,7 @@ class AiEnrichmentITest {
         author.strId = 'ai-enrichment-itest-creanga'
         this.authorRepository.save(author)
 
-        // The one real call this whole suite makes to Ollama/SearXNG -
+        // The one real call this whole suite makes to the enrichment sources -
         // everything else about this feature should be tested with mocks.
         this.aiEnrichmentService.enrichAuthorAsync(author, [], Languages.RO)
 
@@ -79,19 +75,22 @@ class AiEnrichmentITest {
         assert enriched != null: "author bio enrichment did not complete within the timeout"
         assert !enriched.bio.isBlank()
         assert enriched.bioSourceUrl != null && enriched.bioSourceUrl.startsWith('http')
+        final images = pollUntilNotNull(30_000) {
+            final refs = this.authorMediaAssociationRepository.findAllByAuthorPath('ai-enrichment-itest-creanga')
+            refs ? refs : null
+        }
+        assert images != null
+        assert images.every { it.mediaRef.role == 'enrichment' }
+        assert images.every { it.mediaRef.url.startsWith('http') }
+        assert images.size() <= 3
 
-        // Deliberately NOT asserting specific AuthorFacts field values
+        // Deliberately NOT asserting specific structured field values
         // (birthDate, birthPlace, etc.) here - confirmed live that a
         // real, valid JSON response can legitimately come back with most
         // fields null (Wikipedia's short lead extract often doesn't
         // restate vital-stats that live in the infobox instead), and
-        // that's the model correctly declining to guess rather than a
-        // bug. Asserting on real LLM content quality would make this
-        // test flaky for reasons that have nothing to do with whether
-        // the pipeline itself works - that's what bio/bioSourceUrl above
-        // (the deterministic, Ollama-free part) already verify. Facts
-        // extraction's own JSON-shape correctness belongs in a mocked
-        // unit test with a canned Ollama response, not here.
+        // absent from a particular Wikidata record. Asserting changing
+        // external reference data would make this integration test flaky.
     }
 
     static <T> T pollUntilNotNull(long timeoutMs, Closure<T> check) {
