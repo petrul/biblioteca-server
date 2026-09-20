@@ -1,10 +1,17 @@
 FROM eclipse-temurin:25-jre
-COPY build/libs/biblioteca-server-*-application.jar /biblioteca-server.jar
 
-ENV MYSQL_HOST undefined
-ENV MYSQL_DB undefined
-ENV MYSQL_USER undefined
-ENV MYSQL_PASSWORD undefined
+# git is required at runtime by GitTeiRepoImpl (repo.tei.repos entries that
+# are git@/ssh://git://http(s):// URLs get cloned/pulled by shelling out to
+# the system git, not a Java git library).
+RUN apt-get update && apt-get install -y --no-install-recommends git \
+    && rm -rf /var/lib/apt/lists/*
+# Fail fast on any unexpected credential prompt (e.g. a private repo added
+# to repo.tei.repos without an auth setup) instead of hanging forever with
+# no TTY to answer it - public repos, the only kind in use today, clone
+# anonymously and are unaffected.
+ENV GIT_TERMINAL_PROMPT=0
+
+COPY build/libs/biblioteca-server-*-application.jar /biblioteca-server.jar
 
 VOLUME /scriptorium-masters
 VOLUME /cache

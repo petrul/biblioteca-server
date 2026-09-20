@@ -319,13 +319,14 @@ lose text.
 
 `.dao`, `.model`, `.dto` — Spring Data JPA over MySQL, with a local
 Caffeine + on-disk (`cache.dir`) cache layer (`.cache`). `.kafka` handles
-scheduled/async work (`.scheduled`) — notably notifying `textbase-nestjs`
+scheduled/async work (`.scheduled`) — notably notifying `biblioteca-nestjs`
 (a separate repo) of new/reimported opera so it can vectorize them.
 `KafkaProps.java` has the real topic names (`biblioteca_*` prefix); this
 service is the sole producer of every one of them.
 
 The async/event-driven counterpart to the REST OpenAPI spec above is
-`asyncapi.yml` (checked into this repo's root) - documents each Kafka
+`src/main/resources/static/asyncapi.yml` (served with this service and
+checked into this repo) - documents each Kafka
 topic's real message schema and, per topic, which service(s) actually
 produce/consume it today (not aspirational - `opusReimportedTopic` and
 `loginTopic` are both documented as currently having no consumer, since

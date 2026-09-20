@@ -66,7 +66,7 @@ channels:
       By the time this fires the opus's DB row is already gone - the
       payload carries only the path a consumer needs to purge its own
       copy by (Lucene: LuceneIndexService.removeOpus; Milvus:
-      textbase-nestjs's KafkaListenerService, see the receive operation
+      biblioteca-nestjs's KafkaListenerService, see the receive operation
       below), not a full TeiDivDto the way newOpusImportedTopic/
       opusReimportedTopic do.
     messages:
@@ -103,17 +103,17 @@ operations:
     action: send
     channel:
       $ref: '#/channels/loginTopic'
-  # textbase-nestjs's only current Kafka consumption - see its own
+  # biblioteca-nestjs's current Kafka consumption - see its own
   # src/services/kafka/listener.service.ts. Documented from the
   # consumer's side here since this is the shared cross-service
-  # contract; textbase-nestjs's own README links back to this file
+  # contract; biblioteca-nestjs's own README links back to this file
   # rather than duplicating it.
   vectorizeOnNewOpusImported:
     action: receive
     channel:
       $ref: '#/channels/newOpusImportedTopic'
     description: |
-      textbase-nestjs (KafkaListenerService) is the one consumer of this
+      biblioteca-nestjs (KafkaListenerService) is the one consumer of this
       topic today - on each message, re-fetches the opus by path (in
       case the event's own id/fields are stale by the time it's
       processed), then embeds and stores its paragraphs in Milvus.
@@ -122,7 +122,7 @@ operations:
     channel:
       $ref: '#/channels/opusRemovedTopic'
     description: |
-      textbase-nestjs's other consumer (same KafkaListenerService,
+      biblioteca-nestjs's other consumer (same KafkaListenerService,
       subscribed to both topics on one consumer/group) - on each
       message, deletes every vector whose url is the removed opus's
       path or a descendant under it (VectorizerService.removeOpus ->
