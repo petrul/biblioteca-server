@@ -17,6 +17,18 @@ plugins {
     id 'idea'
     id "maven-publish"
     id 'org.hidetake.swagger.generator' version  '2.19.2'
+    // Not invoked by any normal build/CI task yet (`nativeCompile`/
+    // `nativeBuild` must be run explicitly) - added so a GraalVM native
+    // image build is available to try against a release branch, without
+    // adding native-image build time (several minutes+) to every
+    // SNAPSHOT build. Spring Boot's own AOT processing kicks in
+    // automatically once this plugin is present; no separate AOT plugin
+    // id is needed on Boot 3+/4.x. Milvus SDK's gRPC/Netty stack is the
+    // dependency most likely to need extra reachability-metadata hints
+    // (graalvmNative { binaries { main { ... } } }) the first time this
+    // is actually tried - not added preemptively, since guessed hints
+    // are worse than none.
+    id 'org.graalvm.buildtools.native' version '1.1.11'
 }
 
 idea {
