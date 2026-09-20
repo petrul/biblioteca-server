@@ -27,18 +27,78 @@ public class GitTeiRepoImpl implements TeiRepo {
     private final Path root;
     private final String fileSpec;
     private final boolean defaultFileSpec;
+    private final String basePathForErrorMessage;
+    // The initial clone (and every subsequent pull - see syncCheckout) can take
+    // minutes for a large repo; doing it inline here would block this bean's
+    // construction, which blocks the whole application context from
+    // finishing startup, which blocks Tomcat from accepting any request at
+    // all - including for content this repo has nothing to do with. Runs on
+    // its own low-priority daemon thread instead (same reasoning/pattern as
+    // LuceneIndexService.autoBuildIndexOnStartup): list()/has() report this
+    // repo as empty until the first sync completes, rather than the whole
+    // server refusing connections until a multi-GB clone finishes.
+    private volatile boolean ready = false;
+    private final java.util.concurrent.CountDownLatch initialSyncDone = new java.util.concurrent.CountDownLatch(1);
 
     public GitTeiRepoImpl(String url, String workDir, String basePath, String fileSpec) {
+        this(url, workDir, basePath, fileSpec, true);
+    }
+
+    /**
+     * @param autoStart false skips starting the background sync thread from
+     *                  the constructor - only for tests that need to assert
+     *                  the pre-ready (empty/false) state deterministically,
+     *                  without racing a real background thread. Call
+     *                  {@link #startSync()} when ready to let it run.
+     */
+    GitTeiRepoImpl(String url, String workDir, String basePath, String fileSpec, boolean autoStart) {
         this.url = Objects.requireNonNull(url, "git URL");
         this.defaultFileSpec = fileSpec == null || fileSpec.isBlank();
         this.fileSpec = defaultFileSpec ? "**/*.tei.xml" : fileSpec;
         this.checkout = Path.of(workDir).resolve("git-repos").resolve(hash(url));
         this.root = checkout.resolve(normalizeBasePath(basePath));
-        syncCheckout();
-        if (!Files.isDirectory(root)) {
-            throw new IllegalArgumentException("Git repo base path is not a directory: " + basePath);
+        this.basePathForErrorMessage = basePath;
+        if (autoStart) {
+            startSync();
         }
-        log.info("Git TEI repo [{}] @ [{}]", url, root);
+    }
+
+    /** Starts the background initial-sync thread. Idempotent-by-convention only
+     *  in that production always calls it exactly once (from the constructor);
+     *  tests using the autoStart=false constructor call it exactly once too,
+     *  whenever they're ready to let the sync proceed. */
+    void startSync() {
+        final Thread thread = new Thread(() -> {
+            try {
+                syncCheckout();
+                if (!Files.isDirectory(root)) {
+                    throw new IllegalArgumentException(
+                            "Git repo base path is not a directory: " + basePathForErrorMessage);
+                }
+                ready = true;
+                log.info("Git TEI repo [{}] @ [{}] ready.", url, root);
+            } catch (Exception e) {
+                log.error("Initial sync of Git TEI repo [{}] failed - it will report as empty "
+                        + "until the app is restarted (no automatic retry).", url, e);
+            } finally {
+                initialSyncDone.countDown();
+            }
+        }, "git-tei-sync-" + hash(url).substring(0, 8));
+        thread.setDaemon(true);
+        thread.setPriority(Thread.MIN_PRIORITY);
+        thread.start();
+    }
+
+    /**
+     * Blocks until the initial clone/pull finishes (successfully or not) or
+     * the timeout elapses. Production code never needs this - list()/has()
+     * already degrade to empty/false on their own - it's for tests and any
+     * future readiness/health check that needs a deterministic answer
+     * instead of racing the background sync thread.
+     */
+    public boolean awaitReady(long timeoutMillis) throws InterruptedException {
+        initialSyncDone.await(timeoutMillis, TimeUnit.MILLISECONDS);
+        return ready;
     }
 
     @Override
@@ -48,6 +108,9 @@ public class GitTeiRepoImpl implements TeiRepo {
 
     @Override
     public InputStream getStreamForName(String resName) {
+        if (!ready) {
+            throw new IllegalStateException("Git TEI repo " + url + " has not finished its initial sync yet");
+        }
         try {
             return Files.newInputStream(resolveResource(resName), StandardOpenOption.READ);
         } catch (IOException e) {
@@ -57,17 +120,26 @@ public class GitTeiRepoImpl implements TeiRepo {
 
     @Override
     public boolean has(String resName) {
+        if (!ready) {
+            return false;
+        }
         Path file = resolveResource(resName);
         return Files.isRegularFile(file) && matches(file);
     }
 
     @Override
     public File getFile(String resName) {
+        if (!ready) {
+            throw new IllegalStateException("Git TEI repo " + url + " has not finished its initial sync yet");
+        }
         return resolveResource(resName).toFile();
     }
 
     @Override
     public List<String> list() {
+        if (!ready) {
+            return List.of();
+        }
         try (var paths = Files.walk(root)) {
             List<String> files = paths
                     .filter(Files::isRegularFile)
