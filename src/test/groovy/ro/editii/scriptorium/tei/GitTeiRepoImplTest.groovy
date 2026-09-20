@@ -92,6 +92,28 @@ class GitTeiRepoImplTest {
         assert repo.has("ro/author/book.xml")
     }
 
+    @Test
+    void failedSyncDoesNotLeaveABrokenCheckoutBehindForTheNextAttempt() {
+        // Regression test for the 2026-09-20 prod incident: a killed/interrupted
+        // clone/pull used to leave a half-populated .git in place, so the next
+        // attempt saw ".git exists" and tried "pull" against it instead of
+        // cloning fresh - never completing, and compounding across restarts
+        // until a single repo's checkout dir had grown to 35GB. A failed sync
+        // must clean up after itself so the next attempt starts clean.
+        File cache = new File(GTestUtil.tmpDir())
+        cache.deleteOnExit()
+        // A URL that git can resolve as a request but that no repo answers -
+        // fails fast without needing network access or a real timeout.
+        def repo = new GitTeiRepoImpl("file:///nonexistent/" + UUID.randomUUID(), cache.absolutePath, "", null, false)
+
+        repo.startSync()
+        assert !repo.awaitReady(5000)
+        assert !repo.list()
+
+        File checkoutDir = new File(cache, "git-repos")
+        assert checkoutDir.listFiles() == null || checkoutDir.listFiles().length == 0
+    }
+
     private static void run(File directory, String... command) {
         def process = new ProcessBuilder(command).directory(directory).redirectErrorStream(true).start()
         assert process.waitFor() == 0: process.inputStream.text

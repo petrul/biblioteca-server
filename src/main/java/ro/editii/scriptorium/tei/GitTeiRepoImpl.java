@@ -197,10 +197,44 @@ public class GitTeiRepoImpl implements TeiRepo {
             if (Files.isDirectory(checkout.resolve(".git"))) {
                 runGit(checkout, "pull", "--ff-only");
             } else {
-                runGit(checkout.getParent(), "clone", url, checkout.toString());
+                // Shallow: this repo is only ever read for its current file
+                // contents (see list()/has()/getStreamForName()), never for
+                // history, and it's fetched read-only (never pushed to) - so
+                // there's no reason to pull every past revision of every file
+                // ever committed, which is exactly what made a nominally ~1GB
+                // repo balloon to tens of GB on disk.
+                runGit(checkout.getParent(), "clone", "--depth", "1", url, checkout.toString());
             }
         } catch (IOException e) {
+            // A killed/interrupted clone or pull (see the timeout below) can leave
+            // a half-populated .git behind. Left in place, the next attempt sees
+            // ".git exists" and tries "pull" against that broken checkout instead
+            // of cloning fresh - which can itself fail without ever completing,
+            // compounding across restarts. (This is what produced a 35GB checkout
+            // for what GitHub reports as a ~1GB repo: ~100 crash-loop restarts,
+            // each adding to the same never-valid clone. See onboarding notes /
+            // incident writeup for 2026-09-20.) Wipe it so the next attempt always
+            // starts from a clean slate.
+            deleteRecursively(checkout);
             throw new IllegalStateException("Cannot prepare Git repo " + url, e);
+        }
+    }
+
+    private static void deleteRecursively(Path path) {
+        if (!Files.exists(path)) {
+            return;
+        }
+        try (var walk = Files.walk(path)) {
+            walk.sorted(java.util.Comparator.reverseOrder()).forEach(p -> {
+                try {
+                    Files.delete(p);
+                } catch (IOException ignored) {
+                    // best-effort cleanup; a leftover file here just means the
+                    // next sync attempt falls back to "pull" on it as before
+                }
+            });
+        } catch (IOException ignored) {
+            // best-effort cleanup, see above
         }
     }
 
@@ -213,7 +247,11 @@ public class GitTeiRepoImpl implements TeiRepo {
                 .redirectErrorStream(true)
                 .start();
         try {
-            if (!process.waitFor(120, TimeUnit.SECONDS)) {
+            // Generous timeout: this always runs on the background sync thread
+            // (see startSync()), never blocking app startup, so there's no
+            // pressure to keep this short - a real multi-GB corpus deserves the
+            // time to actually finish instead of getting killed mid-transfer.
+            if (!process.waitFor(600, TimeUnit.SECONDS)) {
                 process.destroyForcibly();
                 throw new IOException("git command timed out: " + String.join(" ", command));
             }
