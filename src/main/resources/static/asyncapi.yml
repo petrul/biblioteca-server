@@ -20,7 +20,7 @@ info:
     documented as such rather than implied to be consumed by something.
 servers:
   int:
-    host: 'mini.local:20106'
+    host: 'srv2.local:20106'
     protocol: kafka
     description: Shared int-environment Kafka broker.
   prod:
