@@ -1,14 +1,73 @@
-FROM eclipse-temurin:25-jre
+# syntax=docker/dockerfile:1.7
 
-# git is required at runtime by GitTeiRepoImpl (repo.tei.repos entries that
-# are git@/ssh://git://http(s):// URLs get cloned/pulled by shelling out to
-# the system git, not a Java git library).
-RUN apt-get update && apt-get install -y --no-install-recommends git \
+# Stage 1: a full document-conversion toolbox - TEI XSL Stylesheets
+# (petrul/tei-stylesheets on GitHub), Ant, Pandoc, LibreOffice, Calibre,
+# OCR, EPUB, XML, and PDF tools. Self-contained in this Dockerfile
+# (not pulled from a separately published image) so biblioteca-server
+# doesn't depend on any other project's continued existence - kept here
+# so any future biblioteca-server feature can shell out to one of these
+# tools without the image needing to change shape again.
+FROM eclipse-temurin:25-jdk-noble AS converters
+
+ARG DEBIAN_FRONTEND=noninteractive
+ARG TEI_STYLESHEETS_REPOSITORY=https://github.com/petrul/tei-stylesheets.git
+ARG TEI_STYLESHEETS_REF=dev
+
+RUN apt-get update \
+    && apt-get install --yes --no-install-recommends \
+        ant antiword calibre ca-certificates catdoc curl djvulibre-bin \
+        docx2txt epub-utils epubcheck exiftool file html2text \
+        fonts-dejavu-core fonts-liberation fonts-noto-core fop ghostscript git \
+        imagemagick jing less libreoffice librsvg2-bin libxml2-utils \
+        libsaxonhe-java make mediainfo mupdf-tools ocrmypdf odt2txt pandoc perl \
+        poppler-utils qpdf tesseract-ocr tidy trang unrtf unzip wv \
+        xmlstarlet xsltproc zip \
     && rm -rf /var/lib/apt/lists/*
-# Fail fast on any unexpected credential prompt (e.g. a private repo added
-# to repo.tei.repos without an auth setup) instead of hanging forever with
-# no TTY to answer it - public repos, the only kind in use today, clone
-# anonymously and are unaffected.
+
+# Ubuntu Noble exposes epubcheck.jar as /usr/bin/epubcheck without a launcher,
+# which the kernel cannot execute directly. Install a small Java wrapper.
+COPY docker/epubcheck /usr/local/bin/epubcheck
+RUN chmod +x /usr/local/bin/epubcheck \
+    && ln -s /usr/bin/einfo /usr/local/bin/epubinfo
+
+RUN git init /opt/tei-stylesheets \
+    && git -C /opt/tei-stylesheets remote add origin "${TEI_STYLESHEETS_REPOSITORY}" \
+    && git -C /opt/tei-stylesheets fetch --depth 1 origin "${TEI_STYLESHEETS_REF}" \
+    && git -C /opt/tei-stylesheets checkout --detach FETCH_HEAD \
+    && rm -rf /opt/tei-stylesheets/.git \
+    && chmod +x /opt/tei-stylesheets/bin/* \
+    && for tool in /opt/tei-stylesheets/bin/*to*; do \
+         ln -s "$tool" "/usr/local/bin/$(basename "$tool")"; \
+       done \
+    && ln -s /opt/tei-stylesheets/bin/transformtei /usr/local/bin/transformtei
+
+ENV TEI_STYLESHEETS_HOME=/opt/tei-stylesheets \
+    XML_CATALOG_FILES=/opt/tei-stylesheets/catalog.xml \
+    JAVA_TOOL_OPTIONS=-Djava.awt.headless=true \
+    PATH=/opt/tei-stylesheets/bin:$PATH
+
+# Stage 2: biblioteca-server itself, layered directly on top of the
+# toolbox stage (FROM converters, not a slim COPY --from=converters of a
+# few binaries) - most of stage 1's tools are apt packages with large,
+# easy-to-miss shared-library dependency trees (LibreOffice and Calibre
+# especially), so copying out individual binaries would silently break at
+# runtime once they can't find their libraries. git (previously installed
+# here on its own for GitTeiRepoImpl) already comes from stage 1.
+FROM converters AS runtime
+
+# Reset the inherited WORKDIR (stage 1 has none set beyond the base
+# image's own) is a no-op here, but CMD is not: without this, a stage
+# that defines no CMD of its own inherits the previous stage's - there is
+# none set above, so this is just explicit rather than relying on that
+# staying true.
+CMD []
+
+# GitTeiRepoImpl (repo.tei.repos entries that are git@/ssh://git://http(s)://
+# URLs) shells out to the system git rather than using a Java git library -
+# fail fast on any unexpected credential prompt (e.g. a private repo added
+# without an auth setup) instead of hanging forever with no TTY to answer
+# it - public repos, the only kind in use today, clone anonymously and are
+# unaffected.
 ENV GIT_TERMINAL_PROMPT=0
 
 COPY build/libs/biblioteca-server-*-application.jar /biblioteca-server.jar

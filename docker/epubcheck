@@ -1,0 +1,7 @@
+#!/bin/sh
+# Ubuntu Noble's epubcheck package installs /usr/bin/epubcheck as a symlink
+# to /usr/share/java/epubcheck.jar (see `dpkg -L epubcheck`) - a JAR, which
+# the kernel cannot exec directly despite the executable-looking path. This
+# wrapper is what actually gets installed at /usr/local/bin/epubcheck,
+# shadowing the broken symlink via PATH order.
+exec java -jar /usr/share/java/epubcheck.jar "$@"
