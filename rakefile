@@ -10,6 +10,9 @@ profile = ENV['PROFILE'] || (Rake.application.top_level_tasks.include?('ci') ? '
 puts "profile: #{profile}"
 
 def load_profile_env(task_profile)
+  $biblioteca_loaded_profiles ||= {}
+  return if $biblioteca_loaded_profiles[task_profile]
+
   loader = ENV.fetch('PASSWORD_STORE_DIR', File.expand_path('~/.password-store')) + '/load-env.sh'
   unless File.file?(loader)
     raise "Password-store environment loader not found: #{loader}"
@@ -20,6 +23,7 @@ def load_profile_env(task_profile)
     key, value = entry.split('=', 2)
     ENV[key] = value if key && value
   end
+  $biblioteca_loaded_profiles[task_profile] = true
   puts "> Loaded biblioteca/#{task_profile} from #{loader}"
 end
 
@@ -46,6 +50,7 @@ task :default => [:clean, :build, :publish, "docker:publish"]
 
 desc "Run the complete CI pipeline: clean, test, build, build the Docker image, and publish it"
 task :ci => [:clean] do
+  Rake::Task[:'check-env'].invoke('ci')
   Rake::Task[:test].invoke
   Rake::Task[:itest].invoke
   Rake::Task[:build].invoke('ci')
