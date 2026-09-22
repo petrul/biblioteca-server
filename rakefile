@@ -31,8 +31,8 @@ task :ci => [:load_pass_secrets, :clean] do
   Rake::Task['docker:publish'].invoke
 end
 
-# Injects biblioteca-server/ci/* from the local `pass` store as real
-# process env vars, BEFORE gradle runs - build.gradle's own fallback logic
+# Injects biblioteca/ci/* from the local `pass` store as real process
+# env vars, BEFORE gradle runs - build.gradle's own fallback logic
 # already prefers System.getenv(key) over .env.ci, so this alone is enough
 # to make CI secret-complete without TeamCity needing to know about any of
 # them itself. Never overwrites a value already present in ENV (e.g. a
@@ -40,10 +40,15 @@ end
 # the prod compose stack's load-env.sh: *.gpg entries are real secrets
 # (via `pass show`), everything else alongside them is non-secret,
 # environment-specific plaintext config - both load the same way.
-desc "Load biblioteca-server/ci/* secrets and config from the local pass store into the environment"
+#
+# biblioteca/ci is shared across every app in the Biblioteca family
+# (this repo, textbase-reader, biblioteca-nestjs) - one flat section,
+# not a per-repo subtree (was biblioteca-server/ci until this was
+# consolidated; see the pass store's own README.md).
+desc "Load biblioteca/ci/* secrets and config from the local pass store into the environment"
 task :load_pass_secrets do
   store_dir = ENV['PASSWORD_STORE_DIR'] || File.expand_path('~/.password-store')
-  ci_dir = File.join(store_dir, 'biblioteca-server', 'ci')
+  ci_dir = File.join(store_dir, 'biblioteca', 'ci')
 
   unless Dir.exist?(ci_dir)
     puts "> No pass store found at #{ci_dir} - relying entirely on .env.ci"
@@ -56,12 +61,12 @@ task :load_pass_secrets do
     key = File.basename(entry, is_secret ? '.gpg' : '')
     next unless ENV[key].nil? || ENV[key].empty?
 
-    value = is_secret ? `pass show biblioteca-server/ci/#{key}`.chomp : File.read(entry).chomp
+    value = is_secret ? `pass show biblioteca/ci/#{key}`.chomp : File.read(entry).chomp
     if is_secret ? ($?.success? && !value.empty?) : !value.empty?
       ENV[key] = value
       loaded += 1
     else
-      warn "> pass show biblioteca-server/ci/#{key} failed or returned nothing"
+      warn "> pass show biblioteca/ci/#{key} failed or returned nothing"
     end
   end
   puts "> Loaded #{loaded} secret(s)/config value(s) from pass (#{ci_dir})"
