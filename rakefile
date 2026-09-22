@@ -2,15 +2,35 @@ require 'rake'
 require 'fileutils'
 require 'shellwords'
 require 'tmpdir'
+require 'open3'
 
 GRADLE = "./gradlew"
 
 profile = ENV['PROFILE'] || (Rake.application.top_level_tasks.include?('ci') ? 'ci' : 'dev')
 puts "profile: #{profile}"
 
+def load_profile_env(task_profile)
+  loader = ENV.fetch('PASSWORD_STORE_DIR', File.expand_path('~/.password-store')) + '/load-env.sh'
+  unless File.file?(loader)
+    raise "Password-store environment loader not found: #{loader}"
+  end
+  output, status = Open3.capture2('bash', '-c', "source #{Shellwords.escape(loader)} #{Shellwords.escape(task_profile)} && env -0")
+  raise "Could not load biblioteca/#{task_profile} from pass store" unless status.success?
+  output.split("\0").each do |entry|
+    key, value = entry.split('=', 2)
+    ENV[key] = value if key && value
+  end
+  puts "> Loaded biblioteca/#{task_profile} from #{loader}"
+end
+
 IMAGE_NAME    = "editii/biblioteca-server"
 
 version = File.read("build.gradle")[/^\s*version\s*=\s*['"]([^'"]+)['"]/, 1]
+
+desc "Print the project version from build.gradle"
+task :version do
+  puts version
+end
 
 GV0 = '/media/gv0'
 REPO = "#{GV0}/repo"
@@ -25,10 +45,54 @@ puts "Profile: #{profile}, version: #{version}"
 task :default => [:clean, :build, :publish, "docker:publish"]
 
 desc "Run the complete CI pipeline: clean, test, build, build the Docker image, and publish it"
-task :ci => [:load_pass_secrets, :clean] do
+task :ci => [:clean] do
   Rake::Task[:test].invoke
+  Rake::Task[:itest].invoke
   Rake::Task[:build].invoke('ci')
   Rake::Task['docker:publish'].invoke
+end
+
+desc "Run integration-test tagged tests against the integration dependencies"
+task :itest, [:task_profile] do |_task, args|
+  task_profile = args[:task_profile] || profile
+  load_profile_env(task_profile)
+  puts "Running integration tests..."
+  sh "#{GRADLE} -P#{task_profile} integrationTest"
+end
+
+desc "Verify required environment variables are available from the pass store"
+task :'check-env', [:task_profile] do |_task, args|
+  task_profile = args[:task_profile] || 'dev'
+  load_profile_env(task_profile)
+
+  required = {
+    'dev' => %w[MILVUS_URL EMBEDDER_URL TEI_REPOS KAFKA_BROKERS MYSQL_URL WORK_DIR
+                BIBLIOTECA_EXTERNAL_URL],
+    'ci' => [
+      %w[MILVUS_URL MILVUS_ADDRESS],
+      %w[EMBEDDER_URL EMBEDDER_ADDRESS],
+      %w[TEI_REPOS REPO_TEI_REPOS],
+      %w[KAFKA_BROKERS KAFKA_SERVERS],
+      %w[MYSQL_URL MYSQL_JDBC_URL]
+    ],
+    'prod' => %w[MILVUS_URL EMBEDDER_URL TEI_REPOS KAFKA_BROKERS MYSQL_URL]
+  }
+  expected = required.fetch(task_profile) { raise "Unknown profile '#{task_profile}' (expected dev, ci, or prod)" }
+  missing = expected.reject do |entry|
+    keys = entry.is_a?(Array) ? entry : [entry]
+    keys.any? { |key| ENV[key] && !ENV[key].strip.empty? }
+  end
+  unless missing.empty?
+    labels = missing.map { |entry| entry.is_a?(Array) ? entry.join(' or ') : entry }
+    raise "Missing required #{task_profile} environment value(s) from pass store: #{labels.join(', ')}"
+  end
+  stage_dir = File.join(ENV.fetch('PASSWORD_STORE_DIR', File.expand_path('~/.password-store')), 'biblioteca', task_profile)
+  stored_keys = Dir.glob(File.join(stage_dir, '*')).select { |path| File.file?(path) }
+                  .map { |path| File.basename(path).sub(/\.gpg\z/, '') }
+  expected_keys = expected.flatten
+  extras = stored_keys - expected_keys
+  warn "> Warning: unused #{task_profile} pass-store value(s): #{extras.sort.join(', ')}" unless extras.empty?
+  puts "> #{task_profile} environment is complete (#{expected.length} required value(s) present)"
 end
 
 # Injects biblioteca/ci/* from the local `pass` store as real process
@@ -72,14 +136,18 @@ task :load_pass_secrets do
   puts "> Loaded #{loaded} secret(s)/config value(s) from pass (#{ci_dir})"
 end
 
-task :test do
+task :test, [:task_profile] do |_task, args|
+    task_profile = args[:task_profile] || profile
+    load_profile_env(task_profile)
     puts "Running unit and integration tests..."
-    sh "#{GRADLE} test"
+    sh "#{GRADLE} -P#{task_profile} test"
 end
 
-task :run do
+task :run, [:task_profile] do |_task, args|
+    run_profile = args[:task_profile] || profile
+    load_profile_env(run_profile)
     puts "Running application..."
-    sh "#{GRADLE} -P#{profile} bootRun"
+    sh "#{GRADLE} -P#{run_profile} bootRun"
 end
 
 task :build, [:task_profile] do |_task, args|

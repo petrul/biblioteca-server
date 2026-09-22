@@ -10,6 +10,7 @@ public interface TeiRepo {
     String PROP_KEY_FILTER = "filter";
 
     String getName();
+    default boolean isEnabled() { return true; }
     InputStream getStreamForName(String resName);
     boolean has(String resName);
     File getFile(String resName);

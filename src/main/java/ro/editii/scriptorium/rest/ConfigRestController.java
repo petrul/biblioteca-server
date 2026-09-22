@@ -27,7 +27,7 @@ public class ConfigRestController {
 
     final KafkaProps kafkaProps;
     // ObjectProvider, not a plain MilvusCollection/Embedder field: those
-    // beans (see VectorConfig) require ${milvus.address}/${ollama.host} etc.
+    // beans (see VectorConfig) require ${milvus.url}/${ollama.host} etc.
     // to actually resolve, which not every profile that boots this
     // controller (e.g. test profiles with no Milvus configured at all)
     // provides. A plain constructor dependency here would force their

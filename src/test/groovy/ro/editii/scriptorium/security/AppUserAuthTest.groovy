@@ -28,7 +28,7 @@ import ro.editii.scriptorium.vector.NetworkFreeVectorTestConfig
         "spring.jpa.database-platform=org.hibernate.dialect.H2Dialect",
         "spring.main.allow-bean-definition-overriding=true",
         "spring.jpa.hibernate.ddl-auto=create",
-        "milvus.address=mini.local:20112",
+        "milvus.url=http://mini.local:20112",
         "milvus.collection=test_tb_paras_qwen3_embedding_4b_authtest_unused",
         "embeddings.host=mini.local",
         "embeddings.port=11200",

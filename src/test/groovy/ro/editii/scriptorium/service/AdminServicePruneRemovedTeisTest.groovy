@@ -6,7 +6,7 @@ import org.mockito.Mockito
 import ro.editii.scriptorium.dao.TeiDivRepository
 import ro.editii.scriptorium.dao.TeiFileRepository
 import ro.editii.scriptorium.dto.OpusRemovedDto
-import ro.editii.scriptorium.enrichment.AiEnrichmentService
+import ro.editii.scriptorium.enrichment.EnrichmentService
 import ro.editii.scriptorium.kafka.TextbaseEventsPublisher
 import ro.editii.scriptorium.model.TeiDiv
 import ro.editii.scriptorium.model.TeiFile
@@ -35,11 +35,11 @@ class AdminServicePruneRemovedTeisTest {
     final TeiFileDbService teiFileDbService = Mockito.mock(TeiFileDbService)
     final JdbcTemplate jdbcTemplate = Mockito.mock(JdbcTemplate)
     final LuceneIndexService luceneIndexService = Mockito.mock(LuceneIndexService)
-    final AiEnrichmentService aiEnrichmentService = Mockito.mock(AiEnrichmentService)
+    final EnrichmentService enrichmentService = Mockito.mock(EnrichmentService)
     final TextbaseEventsPublisher eventsPublisher = Mockito.mock(TextbaseEventsPublisher)
 
     final AdminService adminService = new AdminService(teiRepo, teiFileRepository, teiDivRepository,
-            teiFileDbService, jdbcTemplate, luceneIndexService, aiEnrichmentService, eventsPublisher)
+            teiFileDbService, jdbcTemplate, luceneIndexService, enrichmentService, eventsPublisher)
 
     static TeiFile teiFile(long id, String filename) {
         final tf = new TeiFile()

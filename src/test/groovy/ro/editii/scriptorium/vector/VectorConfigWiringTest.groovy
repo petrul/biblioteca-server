@@ -12,7 +12,9 @@ class VectorConfigWiringTest {
     @Test
     void semanticSearchUsesTheBgeM3CollectionPair() {
         final config = new VectorConfig()
-        final embedder = config.bgeM3Embedder("unused.invalid:11434", mock(RestTemplate.class), new OllamaHealthTracker())
+        // VectorConfig now parses a URI, so the scheme is part of the
+        // contract (the application value is EMBEDDER_URL).
+        final embedder = config.bgeM3Embedder("http://unused.invalid:11434", mock(RestTemplate.class), new OllamaHealthTracker())
         final collection = config.prodCollection(mock(MilvusService.class), "int_tb_paras_bge_m3")
 
         assert embedder.modelName() == "BGE_M3"

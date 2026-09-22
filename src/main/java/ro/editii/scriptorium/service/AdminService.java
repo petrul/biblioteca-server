@@ -10,7 +10,7 @@ import ro.editii.scriptorium.Util;
 import ro.editii.scriptorium.dao.TeiDivRepository;
 import ro.editii.scriptorium.dao.TeiFileRepository;
 import ro.editii.scriptorium.dto.OpusRemovedDto;
-import ro.editii.scriptorium.enrichment.AiEnrichmentService;
+import ro.editii.scriptorium.enrichment.EnrichmentService;
 import ro.editii.scriptorium.kafka.TextbaseEventsPublisher;
 import ro.editii.scriptorium.model.Author;
 import ro.editii.scriptorium.model.TeiDiv;
@@ -37,7 +37,7 @@ public class AdminService {
     final TeiFileDbService teiFileDbService;
     final JdbcTemplate jdbcTemplate;
     final LuceneIndexService luceneIndexService;
-    final AiEnrichmentService aiEnrichmentService;
+    final EnrichmentService enrichmentService;
     final TextbaseEventsPublisher textbaseEventsPublisher;
 
     @Value("${lucene.incremental.enabled:true}")
@@ -55,7 +55,7 @@ public class AdminService {
      *   for divs that no longer exist) until someone remembers to
      *   trigger a full rebuild by hand.
      * - Kicks off best-effort author bio / opus summary enrichment
-     *   (AiEnrichmentService) - a no-op once either already has one, so
+     *   (EnrichmentService) - a no-op once either already has one, so
      *   this only ever actually does anything the first time a given
      *   author/opus is seen.
      *
@@ -84,11 +84,11 @@ public class AdminService {
             final List<Author> authors = teiFile.getAuthors();
             final List<String> workTitles = opera.stream().map(TeiDiv::getHead).filter(h -> h != null && !h.isBlank()).toList();
             for (Author author : authors) {
-                this.aiEnrichmentService.backfillNativeLanguageIfMissing(author, teiFile.getLanguage());
-                this.aiEnrichmentService.enrichAuthorAsync(author, workTitles, teiFile.getLanguage());
+                this.enrichmentService.backfillNativeLanguageIfMissing(author, teiFile.getLanguage());
+                this.enrichmentService.enrichAuthorAsync(author, workTitles, teiFile.getLanguage());
             }
             for (TeiDiv opus : opera) {
-                this.aiEnrichmentService.enrichOpusAsync(opus);
+                this.enrichmentService.enrichOpusAsync(opus);
             }
         } catch (RuntimeException e) {
             log.error("Failed to kick off AI enrichment for {} - the TEI import itself still succeeded", filename, e);

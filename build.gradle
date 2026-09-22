@@ -1,7 +1,4 @@
 import java.util.regex.Matcher
-import java.net.URLEncoder
-import java.nio.charset.StandardCharsets
-
 buildscript {
     dependencies {
         classpath('io.swagger:swagger-codegen:2.4.14')
@@ -17,18 +14,14 @@ plugins {
     id 'idea'
     id "maven-publish"
     id 'org.hidetake.swagger.generator' version  '2.19.2'
-    // Not invoked by any normal build/CI task yet (`nativeCompile`/
-    // `nativeBuild` must be run explicitly) - added so a GraalVM native
-    // image build is available to try against a release branch, without
-    // adding native-image build time (several minutes+) to every
-    // SNAPSHOT build. Spring Boot's own AOT processing kicks in
-    // automatically once this plugin is present; no separate AOT plugin
-    // id is needed on Boot 3+/4.x. Milvus SDK's gRPC/Netty stack is the
-    // dependency most likely to need extra reachability-metadata hints
-    // (graalvmNative { binaries { main { ... } } }) the first time this
-    // is actually tried - not added preemptively, since guessed hints
-    // are worse than none.
-    id 'org.graalvm.buildtools.native' version '1.1.11'
+    // Optional measurement only. Applying this plugin enables Spring AOT
+    // configuration and native-image tasks, so keep it out of every normal
+    // build/test unless `-Pgraalvm` is explicitly requested.
+    id 'org.graalvm.buildtools.native' version '1.1.11' apply false
+}
+
+if (project.hasProperty('graalvm')) {
+    apply plugin: 'org.graalvm.buildtools.native'
 }
 
 idea {
@@ -61,13 +54,10 @@ repositories {
 }
 
 tasks.named('test') {
-    // The conventional test task is the complete suite: local tests plus
-    // tests that exercise integration-deps. Plain `gradlew test` therefore
-    // defaults to the CI profile and its integration-deps environment.
-    useJUnitPlatform()
-    if (!['dev', 'ci', 'prod'].any { project.hasProperty(it) } &&
-            System.getenv('SPRING_PROFILES_ACTIVE') == null) {
-        systemProperty 'spring.profiles.active', 'ci'
+    // Keep the conventional test task fast and deterministic. Tests tagged
+    // integration-test cases require the integration stack.
+    useJUnitPlatform {
+        excludeTags 'integration-test'
     }
 }
 
@@ -77,7 +67,7 @@ tasks.register('unittest', Test) {
     testClassesDirs = sourceSets.test.output.classesDirs
     classpath = sourceSets.test.runtimeClasspath
     useJUnitPlatform {
-        excludeTags 'external'
+        excludeTags 'integration-test'
     }
     systemProperty 'vector.search.availability-check.enabled', 'false'
 }
@@ -88,15 +78,14 @@ tasks.register('integrationTest', Test) {
     testClassesDirs = sourceSets.test.output.classesDirs
     classpath = sourceSets.test.runtimeClasspath
     useJUnitPlatform {
-        includeTags 'external'
+        includeTags 'integration-test'
     }
     shouldRunAfter tasks.named('unittest')
     jvmArgs '-Xss10m'
-    systemProperty 'spring.profiles.active', 'ci'
+    final integrationProfile = project.hasProperty('ci') ? 'ci' : (project.hasProperty('prod') ? 'prod' : 'dev')
+    systemProperty 'spring.profiles.active', integrationProfile
     doFirst {
-        if (profile != 'ci') {
-            throw new GradleException("integrationTest requires -Pci so it uses the CI/integration-deps configuration")
-        }
+        println "integrationTest: spring.profiles.active = " + integrationProfile
     }
 }
 
@@ -299,6 +288,9 @@ tasks.withType(Test).configureEach {
     if (project.hasProperty('dev')) systemProperty 'spring.profiles.active', 'dev'
     if (project.hasProperty('ci'))  systemProperty 'spring.profiles.active', 'ci'
     if (project.hasProperty('prod'))  systemProperty 'spring.profiles.active', 'prod'
+    systemProperty 'enrichment.enabled', 'false'
+    systemProperty 'lucene.autoindex.enabled', 'false'
+    systemProperty 'lucene.incremental.enabled', 'false'
     final resolvedProfile = systemProperties['spring.profiles.active'] ?: System.getenv('SPRING_PROFILES_ACTIVE') ?: '(none)'
     println "${name}: spring.profiles.active = " + resolvedProfile
 //    maxParallelForks = Runtime.runtime.availableProcessors().intdiv(2) ?: 1
@@ -449,6 +441,21 @@ tasks.withType(ProcessForkOptions).configureEach { task ->
                 }
             }
 
+            // The shared pass store may lag a configuration rename by one
+            // deployment. Accept the former names as process-local aliases
+            // so tests and builds remain runnable while the store migrates.
+            [
+                    "MILVUS_URL" : "MILVUS_ADDRESS",
+                    "EMBEDDER_URL" : "EMBEDDER_ADDRESS",
+                    "TEI_REPOS" : "REPO_TEI_REPOS",
+                    "MYSQL_URL" : "MYSQL_JDBC_URL"
+            ].each { modern, legacy ->
+                if (props.getProperty(modern) == null && System.getenv(legacy) != null) {
+                    props.setProperty(modern, System.getenv(legacy))
+                    task.environment(modern, System.getenv(legacy))
+                }
+            }
+
             final addFallback = { String key, String value ->
                 if (value != null && !value.isBlank() &&
                         System.getenv(key) == null && props.getProperty(key) == null) {
@@ -462,33 +469,14 @@ tasks.withType(ProcessForkOptions).configureEach { task ->
                 final port = props.getProperty(portKey)
                 host == null ? null : (port == null || host.contains(':') ? host : "${host}:${port}")
             }
-            addFallback('MILVUS_ADDRESS', addressFrom('MILVUS_HOST', 'MILVUS_PORT'))
-            addFallback('EMBEDDER_ADDRESS', addressFrom('EMBEDDER_HOST', 'EMBEDDER_PORT'))
-            if (System.getenv('REPO_TEI_REPOS') == null) {
-                final legacyRepo = System.getenv('REPO_TEI_DIRS') ?: props.getProperty('REPO_TEI_DIRS')
-                addFallback('REPO_TEI_REPOS', legacyRepo)
-            }
-
-            final mysqlHost = addressFrom('MYSQL_HOST', 'MYSQL_PORT')
-            final mysqlDb = props.getProperty('MYSQL_DB')
-            final mysqlUser = props.getProperty('MYSQL_USER')
-            final mysqlPassword = props.getProperty('MYSQL_PASSWORD')
-            if ([mysqlHost, mysqlDb, mysqlUser, mysqlPassword].every { it != null }) {
-                final encode = { String value -> URLEncoder.encode(value, StandardCharsets.UTF_8) }
-                addFallback('MYSQL_JDBC_URL',
-                        "jdbc:mysql://${mysqlHost}/${mysqlDb}" +
-                        "?user=${encode(mysqlUser)}&password=${encode(mysqlPassword)}" +
-                        '&autoReconnect=true&useSSL=false&noAccessToProcedureBodies=true' +
-                        '&serverTimezone=Europe/Bucharest&useTimezone=false&allowPublicKeyRetrieval=true')
-            }
             println "> Applied ${fallbackCount} local fallback value(s) from ${envFile.name} to task '${task.name}'"
         }
 
         if (task.name != 'unittest') {
             final requiredKeys = [
-                    "MILVUS_ADDRESS", "EMBEDDER_ADDRESS",
-                    "REPO_TEI_REPOS", "KAFKA_BROKERS",
-                    "MYSQL_JDBC_URL"
+                    "MILVUS_URL", "EMBEDDER_URL",
+                    "TEI_REPOS", "KAFKA_BROKERS",
+                    "MYSQL_URL"
             ]
             final missingKeys = requiredKeys.findAll {
                 System.getenv(it) == null && props.getProperty(it) == null

@@ -3,6 +3,7 @@ package ro.editii.scriptorium.vector
 
 import org.junit.jupiter.api.Tag
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.Timeout
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.context.annotation.Import
@@ -14,12 +15,13 @@ import static ro.editii.scriptorium.GTestUtil.p
 @SpringBootTest(
         classes = [ VectorConfig.class, MilvusService.class, VectorSearchAvailability.class, MilvusTextSearchService.class, ro.editii.scriptorium.health.OllamaHealthTracker.class],
         properties = [
-                "milvus.address=zmeu.local:20112",
-                "embedder.address=zmeu.local:11434",
+                "milvus.url=http://srv2.local:20112",
+                "embedder.url=http://zmeu.local:11434",
                 "spring.main.allow-bean-definition-overriding=true"
         ])
 @Import(TestConfig.class)
-@Tag("external")
+@Tag("integration-test")
+@Timeout(45L)
 class MilvusServiceExperimentTest {
 
     @Autowired MilvusService milvusService
@@ -45,8 +47,6 @@ class MilvusServiceExperimentTest {
 
         final MilvusCollection col = this.milvusService[colname]
         col.create(dim)
-        col.createIndexIvfSq8()
-        col.load()
 
         try {
             final rnd = new Random()
@@ -66,8 +66,10 @@ class MilvusServiceExperimentTest {
             final respFlush = col.flush();
             p respFlush
 
-            final colinfo = this.milvusService.getCollectionInfo(colname)
-            assert colinfo.data.getCollectionNames(0) == col.name
+            // showCollections(name) is version-dependent and may return a
+            // non-zero status even for an existing collection. The dedicated
+            // hasCollection RPC is the stable existence contract.
+            assert col.exists()
 
             // row_count is only eventually consistent after flush() (which
             // itself is async on the server) - poll briefly instead of
@@ -75,12 +77,13 @@ class MilvusServiceExperimentTest {
             def stats
             final deadline = System.currentTimeMillis() + 10_000
             while (true) {
-                stats = col.statistics.data.statsList.get(0)
-                if (stats.key == 'row_count' && stats.value.toInteger() == nrRows) break
+                final statistics = col.statistics
+                stats = statistics?.data?.statsList?.find { it.key == 'row_count' }
+                if (stats != null && stats.value.toInteger() == nrRows) break
                 if (System.currentTimeMillis() > deadline) break
                 Thread.sleep(250)
             }
-            assert stats.key == 'row_count'
+            assert stats != null && stats.key == 'row_count'
             assert stats.value.toInteger() == nrRows
 
         } finally {

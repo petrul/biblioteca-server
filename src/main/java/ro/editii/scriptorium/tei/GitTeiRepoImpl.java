@@ -22,6 +22,7 @@ import java.util.concurrent.TimeUnit;
 
 @Log4j2
 public class GitTeiRepoImpl implements TeiRepo {
+    static final int MAX_SYNC_ATTEMPTS = 3;
     private final String url;
     private final Path checkout;
     private final Path root;
@@ -38,6 +39,7 @@ public class GitTeiRepoImpl implements TeiRepo {
     // repo as empty until the first sync completes, rather than the whole
     // server refusing connections until a multi-GB clone finishes.
     private volatile boolean ready = false;
+    private volatile boolean enabled = true;
     private final java.util.concurrent.CountDownLatch initialSyncDone = new java.util.concurrent.CountDownLatch(1);
 
     public GitTeiRepoImpl(String url, String workDir, String basePath, String fileSpec) {
@@ -78,8 +80,9 @@ public class GitTeiRepoImpl implements TeiRepo {
                 ready = true;
                 log.info("Git TEI repo [{}] @ [{}] ready.", url, root);
             } catch (Exception e) {
-                log.error("Initial sync of Git TEI repo [{}] failed - it will report as empty "
-                        + "until the app is restarted (no automatic retry).", url, e);
+                enabled = false;
+                log.error("Initial sync of Git TEI repo [{}] failed; repo disabled after {} attempts.",
+                        url, MAX_SYNC_ATTEMPTS, e);
             } finally {
                 initialSyncDone.countDown();
             }
@@ -105,6 +108,9 @@ public class GitTeiRepoImpl implements TeiRepo {
     public String getName() {
         return "git:" + url + (root.equals(checkout) ? "" : "#" + checkout.relativize(root));
     }
+
+    @Override
+    public boolean isEnabled() { return enabled; }
 
     @Override
     public InputStream getStreamForName(String resName) {
@@ -192,20 +198,20 @@ public class GitTeiRepoImpl implements TeiRepo {
     }
 
     private void syncCheckout() {
-        try {
-            Files.createDirectories(checkout.getParent());
-            if (Files.isDirectory(checkout.resolve(".git"))) {
-                runGit(checkout, "pull", "--ff-only");
-            } else {
-                // Shallow: this repo is only ever read for its current file
-                // contents (see list()/has()/getStreamForName()), never for
-                // history, and it's fetched read-only (never pushed to) - so
-                // there's no reason to pull every past revision of every file
-                // ever committed, which is exactly what made a nominally ~1GB
-                // repo balloon to tens of GB on disk.
+        IOException last = null;
+        for (int attempt = 1; attempt <= MAX_SYNC_ATTEMPTS; attempt++) {
+            try {
+                Files.createDirectories(checkout.getParent());
+                deleteRecursively(checkout);
                 runGit(checkout.getParent(), "clone", "--depth", "1", url, checkout.toString());
+                return;
+            } catch (IOException e) {
+                last = e;
+                deleteRecursively(checkout);
+                log.warn("Git repo [{}] sync attempt {}/{} failed", url, attempt, MAX_SYNC_ATTEMPTS, e);
             }
-        } catch (IOException e) {
+        }
+        if (last != null) {
             // A killed/interrupted clone or pull (see the timeout below) can leave
             // a half-populated .git behind. Left in place, the next attempt sees
             // ".git exists" and tries "pull" against that broken checkout instead
@@ -216,7 +222,7 @@ public class GitTeiRepoImpl implements TeiRepo {
             // incident writeup for 2026-09-20.) Wipe it so the next attempt always
             // starts from a clean slate.
             deleteRecursively(checkout);
-            throw new IllegalStateException("Cannot prepare Git repo " + url, e);
+            throw new IllegalStateException("Cannot prepare Git repo " + url, last);
         }
     }
 

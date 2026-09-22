@@ -15,28 +15,28 @@ import ro.editii.scriptorium.client.TextbaseClient;
 import ro.editii.scriptorium.health.OllamaHealthTracker;
 import ro.editii.scriptorium.search.content.UrlContentResolver;
 
+import ro.editii.scriptorium.UrlUtil;
+import java.util.concurrent.TimeUnit;
+
 @Configuration
 @Log4j2
 public class VectorConfig {
 
     public static final String TEXTBASE_CLIENT = "textbaseClient";
 
-    // Host and port only ever travel together to address one service, so
-    // MILVUS_ADDRESS/EMBEDDER_ADDRESS are each a single "host:port" Vault
-    // secret rather than two - trivial to split back apart here.
-    private static String hostOf(String address) { return address.substring(0, address.lastIndexOf(':')); }
-    private static int portOf(String address) { return Integer.parseInt(address.substring(address.lastIndexOf(':') + 1)); }
-
     @Bean
-    public MilvusServiceClient milvusClient(@Value("${milvus.address}") String milvusAddress) {
-        final String milvusHost = hostOf(milvusAddress);
-        final int milvusPort = portOf(milvusAddress);
-        log.info(String.format("MilvusServiceClient: %s:%d", milvusHost, milvusPort));
-        return new MilvusServiceClient(ConnectParam.newBuilder()
-            .withHost(milvusHost)
-            .withPort(milvusPort)
+    public MilvusServiceClient milvusClient(@Value("${milvus.url}") String milvusUrl) {
+        final UrlUtil.Endpoint milvus = UrlUtil.endpoint(milvusUrl);
+        log.info(String.format("MilvusServiceClient: %s:%d", milvus.host(), milvus.port()));
+        final MilvusServiceClient client = new MilvusServiceClient(ConnectParam.newBuilder()
+            .withHost(milvus.host())
+            .withPort(milvus.port())
             .build()
         );
+        // Bound SDK retries so an unavailable endpoint cannot stall a test or
+        // health check indefinitely. Two retries still cover transient startup.
+        client.withRetry(2).withRetryInterval(1, TimeUnit.SECONDS);
+        return client;
     }
 
     final static String ALL_MINILM_L6_V2 = "all-MiniLM-L6-v2";
@@ -75,33 +75,36 @@ public class VectorConfig {
     @Bean
     @Primary
     public Embedder bgeM3Embedder(
-            @Value("${embedder.address}") String embedderAddress,
+            @Value("${embedder.url}") String embedderUrl,
             @Qualifier("ollamaRestTemplate") RestTemplate ollamaRestTemplate,
             OllamaHealthTracker ollamaHealthTracker
     ) {
-        final Embedder embedder = new OllamaEmbedder(hostOf(embedderAddress), portOf(embedderAddress), "bge-m3", "BGE_M3", MilvusCollection.DIM_1024, ollamaRestTemplate, ollamaHealthTracker);
+        final UrlUtil.Endpoint endpoint = UrlUtil.endpoint(embedderUrl);
+        final Embedder embedder = new OllamaEmbedder(endpoint.host(), endpoint.port(), "bge-m3", "BGE_M3", MilvusCollection.DIM_1024, ollamaRestTemplate, ollamaHealthTracker);
         log.info(embedder.toString());
         return embedder;
     }
 
     @Bean
     public Embedder qwen3EmbeddingEmbedder(
-            @Value("${embedder.address}") String embedderAddress,
+            @Value("${embedder.url}") String embedderUrl,
             @Qualifier("ollamaRestTemplate") RestTemplate ollamaRestTemplate,
             OllamaHealthTracker ollamaHealthTracker
     ) {
-        final Embedder embedder = new OllamaEmbedder(hostOf(embedderAddress), portOf(embedderAddress), "qwen3-embedding:4b", "QWEN3_EMBEDDING_4B", MilvusCollection.DIM_2560, ollamaRestTemplate, ollamaHealthTracker);
+        final UrlUtil.Endpoint endpoint = UrlUtil.endpoint(embedderUrl);
+        final Embedder embedder = new OllamaEmbedder(endpoint.host(), endpoint.port(), "qwen3-embedding:4b", "QWEN3_EMBEDDING_4B", MilvusCollection.DIM_2560, ollamaRestTemplate, ollamaHealthTracker);
         log.info(embedder.toString());
         return embedder;
     }
 
     @Bean
     public Embedder nomicEmbedder(
-            @Value("${embedder.address}") String embedderAddress,
+            @Value("${embedder.url}") String embedderUrl,
             @Qualifier("ollamaRestTemplate") RestTemplate ollamaRestTemplate,
             OllamaHealthTracker ollamaHealthTracker
     ) {
-        final Embedder embedder = new OllamaEmbedder(hostOf(embedderAddress), portOf(embedderAddress), "nomic-embed-text:v1.5", "NOMIC_EMBED_TEXT", MilvusCollection.DIM_768, ollamaRestTemplate, ollamaHealthTracker);
+        final UrlUtil.Endpoint endpoint = UrlUtil.endpoint(embedderUrl);
+        final Embedder embedder = new OllamaEmbedder(endpoint.host(), endpoint.port(), "nomic-embed-text:v1.5", "NOMIC_EMBED_TEXT", MilvusCollection.DIM_768, ollamaRestTemplate, ollamaHealthTracker);
         log.info(embedder.toString());
         return embedder;
     }

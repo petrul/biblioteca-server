@@ -49,6 +49,7 @@ public class AdminRestController {
                 .map( it -> {
                     return TeiRepoDto.builder()
                             .name(it.getName())
+                            .enabled(it.isEnabled())
                             .files(it.list())
                             .build();
                 })

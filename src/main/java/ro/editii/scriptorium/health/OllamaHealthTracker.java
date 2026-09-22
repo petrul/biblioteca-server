@@ -6,7 +6,7 @@ import java.time.Duration;
 
 /**
  * Shared across every Ollama-backed dependency (OllamaEmbedder's 3
- * configured models AND AiEnrichmentService's generation calls) - they
+ * configured models AND EnrichmentService's generation calls) - they
  * all hit the same physical Ollama instance/GPU, so a stuck generate
  * call is just as good evidence the embed endpoint will hang too, and
  * vice versa. One flag, not one per model.

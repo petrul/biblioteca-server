@@ -32,7 +32,7 @@ public class TeiDiv extends TeiElem {
     @EqualsAndHashCode.Include
     String head;
 
-    // Auto-generated (AiEnrichmentService, async after import) - only
+    // Auto-generated (EnrichmentService, async after import) - only
     // ever meaningful on an opus (root) div, same reasoning as
     // Author.bio: a trusted source (Wikipedia's summary API) when this
     // work has a page there, else the search engine's own snippets.

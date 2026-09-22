@@ -108,6 +108,7 @@ class GitTeiRepoImplTest {
 
         repo.startSync()
         assert !repo.awaitReady(5000)
+        assert !repo.isEnabled()
         assert !repo.list()
 
         File checkoutDir = new File(cache, "git-repos")

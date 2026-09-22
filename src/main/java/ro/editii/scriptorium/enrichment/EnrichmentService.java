@@ -70,7 +70,7 @@ import java.util.stream.Collectors;
 @Service
 @RequiredArgsConstructor
 @Log4j2
-public class AiEnrichmentService {
+public class EnrichmentService {
 
     private static final List<String> TRUSTED_DOMAINS = List.of("wikipedia.org", "britannica.com");
     private static final String ENRICHMENT_ROLE = "enrichment";
@@ -125,7 +125,7 @@ public class AiEnrichmentService {
                 + (workTitles.isEmpty() ? "" : ", author of " + String.join(", ", workTitles));
         final Languages searchLanguage = author.getNativeLanguage() != null ? author.getNativeLanguage() : language;
 
-        Thread.ofVirtual().name("ai-enrich-author-" + author.getStrId()).start(() -> {
+        Thread.ofVirtual().name("enrich-author-" + author.getStrId()).start(() -> {
             try {
                 final SourceMaterial material = findSourceMaterial(query, searchLanguage);
                 if (material != null) {

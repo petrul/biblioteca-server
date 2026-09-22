@@ -81,7 +81,7 @@ import static ro.editii.scriptorium.TestUtils.TEI_ELEM
         // destroyAllExistingAndReimportAllTeis, @AfterEach's own
         // full-corpus recovery reimport, etc.) would otherwise each fire
         // real Ollama/SearXNG enrichment calls as an untested side effect.
-        // AiEnrichmentITest is the one test in the whole suite that
+        // AuthorWorkEnrichmentTest is the one test in the whole suite that
         // exercises that real integration, in its own isolated context.
 ])
 @SpringBootTest(
@@ -404,7 +404,7 @@ class WebITest {
     }
 
     // aiEnrichmentEventuallyFillsInARealAuthorBioAndOpusSummary() moved to
-    // AiEnrichmentITest - see that class's doc comment for why.
+    // AuthorWorkEnrichmentTest - see that class's doc comment for why.
 
     @Test
     void exportedOpenApiYamlIsValidAndInternallyConsistent() {

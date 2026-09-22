@@ -25,11 +25,11 @@ import org.springframework.boot.test.context.SpringBootTest
         properties = [
             "sts.host=mini.local",
             "sts.port=11200",
-            "milvus.address=zmeu.local:20112",
-            "embedder.address=zmeu.local:11434",
+            "milvus.url=http://srv2.local:20112",
+            "embedder.url=http://zmeu.local:11434",
         ])
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
-@Tag("external")
+@Tag("integration-test")
 class StsEmbedderTest {
 
     static final String TEST_COLLECTION = "test_textbase_paras_sts_all_minilm_l6_v2_stsembeddertest"
