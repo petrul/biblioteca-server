@@ -11,6 +11,7 @@ import org.springframework.context.annotation.Lazy;
 import org.springframework.context.annotation.Primary;
 import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.web.client.RestTemplate;
+import java.util.concurrent.TimeUnit;
 import ro.editii.scriptorium.client.TextbaseClient;
 import ro.editii.scriptorium.health.OllamaHealthTracker;
 import ro.editii.scriptorium.search.content.UrlContentResolver;
@@ -42,6 +43,11 @@ public class VectorConfig {
         return new MilvusServiceClient(ConnectParam.newBuilder()
             .withHost(milvusHost)
             .withPort(milvusPort)
+            // Do not let an unavailable development Milvus block forever;
+            // the experiment/test caller can make at most its own bounded
+            // retry rather than inheriting an unbounded gRPC wait.
+            .withConnectTimeout(2, TimeUnit.SECONDS)
+            .withRpcDeadline(3, TimeUnit.SECONDS)
             .build()
         );
     }

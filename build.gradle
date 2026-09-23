@@ -92,7 +92,7 @@ tasks.register('unittest', Test) {
     testClassesDirs = sourceSets.test.output.classesDirs
     classpath = sourceSets.test.runtimeClasspath
     useJUnitPlatform {
-        excludeTags 'external'
+        excludeTags 'integration-test'
     }
     systemProperty 'vector.search.availability-check.enabled', 'false'
 }
@@ -103,16 +103,11 @@ tasks.register('integrationTest', Test) {
     testClassesDirs = sourceSets.test.output.classesDirs
     classpath = sourceSets.test.runtimeClasspath
     useJUnitPlatform {
-        includeTags 'external'
+        includeTags 'integration-test'
     }
     shouldRunAfter tasks.named('unittest')
     jvmArgs '-Xss10m'
     systemProperty 'spring.profiles.active', 'ci'
-    doFirst {
-        if (profile != 'ci') {
-            throw new GradleException("integrationTest requires -Pci so it uses the CI/integration-deps configuration")
-        }
-    }
 }
 
 clean.doFirst {

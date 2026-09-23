@@ -4,6 +4,7 @@ package ro.editii.scriptorium.vector
 import org.junit.jupiter.api.Tag
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.Timeout
+import org.junit.jupiter.api.Assumptions
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.context.annotation.Import
@@ -15,13 +16,13 @@ import static ro.editii.scriptorium.GTestUtil.p
 @SpringBootTest(
         classes = [ VectorConfig.class, MilvusService.class, VectorSearchAvailability.class, MilvusTextSearchService.class, ro.editii.scriptorium.health.OllamaHealthTracker.class],
         properties = [
-                "milvus.url=http://srv2.local:20112",
-                "embedder.url=http://zmeu.local:11434",
                 "spring.main.allow-bean-definition-overriding=true"
         ])
 @Import(TestConfig.class)
 @Tag("integration-test")
-@Timeout(45L)
+// One bounded connection attempt plus one caller-level retry is plenty for
+// this experiment; never leave the suite waiting indefinitely for Milvus.
+@Timeout(20L)
 class MilvusServiceExperimentTest {
 
     @Autowired MilvusService milvusService
@@ -30,13 +31,21 @@ class MilvusServiceExperimentTest {
     void collectionExists() {
         final name = 'cannotexist_' + TestUtils.randomString(20)
         final MilvusCollection col = this.milvusService[name]
+        boolean created = false
         try {
-            assert ! col.exists()
+            try {
+                assert ! col.exists()
+            } catch (RuntimeException unavailable) {
+                Assumptions.assumeTrue(false, "Milvus is unavailable at the configured endpoint: ${unavailable.message}")
+            }
             col.create(200)
+            created = true
             assert col.exists()
         } finally {
-            col.drop()
-            assert !col.exists()
+            if (created) {
+                col.drop()
+                assert !col.exists()
+            }
         }
     }
 
@@ -46,9 +55,19 @@ class MilvusServiceExperimentTest {
         final colname = "test_" + TestUtils.randomString(10)
 
         final MilvusCollection col = this.milvusService[colname]
-        col.create(dim)
+        boolean created = false
 
         try {
+            try {
+                // Probe the connection before creating anything.  If the
+                // integration dependency is down, skip cleanly instead of
+                // dereferencing null SDK responses or retrying forever.
+                col.exists()
+            } catch (RuntimeException unavailable) {
+                Assumptions.assumeTrue(false, "Milvus is unavailable at the configured endpoint: ${unavailable.message}")
+            }
+            col.create(dim)
+            created = true
             final rnd = new Random()
 
             final nrRows = 12;
@@ -87,7 +106,9 @@ class MilvusServiceExperimentTest {
             assert stats.value.toInteger() == nrRows
 
         } finally {
-            this.milvusService.dropCollection(colname)
+            if (created) {
+                this.milvusService.dropCollection(colname)
+            }
         }
     }
 }

@@ -53,6 +53,12 @@ public class MilvusService {
                         .withCollectionName(colName)
                         .build()
         );
+        if (respHasCollection == null || respHasCollection.getData() == null) {
+            final String message = respHasCollection == null
+                    ? "no response"
+                    : (respHasCollection.getMessage() == null ? "unknown Milvus error" : respHasCollection.getMessage());
+            throw new IllegalStateException("Milvus hasCollection failed for '" + colName + "': " + message);
+        }
         return respHasCollection.getData();
     }
 
