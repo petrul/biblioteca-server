@@ -19,4 +19,17 @@ class VectorConfigWiringTest {
         assert embedder.vectorDimension() == MilvusCollection.DIM_1024
         assert collection.name == "int_tb_paras_bge_m3"
     }
+
+    // EMBEDDER_URL/MILVUS_URL's pass-store value is a real "http://host:port"
+    // URL (unlike the older bare "host:port" EMBEDDER_ADDRESS/MILVUS_ADDRESS
+    // convention the test above still covers) - hostOf/portOf must strip
+    // that scheme rather than treat "http://host" as the host.
+    @Test
+    void toleratesASchemePrefixOnTheAddress() {
+        final config = new VectorConfig()
+        final embedder = (OllamaEmbedder) config.bgeM3Embedder("http://unused.invalid:11434", mock(RestTemplate.class), new OllamaHealthTracker())
+
+        assert embedder.host == "unused.invalid"
+        assert embedder.port == 11434
+    }
 }

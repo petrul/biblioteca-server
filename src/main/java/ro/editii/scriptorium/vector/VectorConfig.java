@@ -22,10 +22,17 @@ public class VectorConfig {
     public static final String TEXTBASE_CLIENT = "textbaseClient";
 
     // Host and port only ever travel together to address one service, so
-    // MILVUS_ADDRESS/EMBEDDER_ADDRESS are each a single "host:port" Vault
-    // secret rather than two - trivial to split back apart here.
-    private static String hostOf(String address) { return address.substring(0, address.lastIndexOf(':')); }
-    private static int portOf(String address) { return Integer.parseInt(address.substring(address.lastIndexOf(':') + 1)); }
+    // MILVUS_URL/EMBEDDER_URL are each a single "host:port" pass-store
+    // secret rather than two - trivial to split back apart here. The pass
+    // store's own values are "http://host:port" (a real URL, readable on
+    // its own), so a scheme prefix is stripped first if present rather
+    // than requiring every caller (compose, Rakefile-loaded env) to do it.
+    private static String stripScheme(String address) {
+        final int idx = address.indexOf("://");
+        return idx >= 0 ? address.substring(idx + 3) : address;
+    }
+    private static String hostOf(String address) { final String a = stripScheme(address); return a.substring(0, a.lastIndexOf(':')); }
+    private static int portOf(String address) { final String a = stripScheme(address); return Integer.parseInt(a.substring(a.lastIndexOf(':') + 1)); }
 
     @Bean
     public MilvusServiceClient milvusClient(@Value("${milvus.address}") String milvusAddress) {

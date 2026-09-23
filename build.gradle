@@ -462,11 +462,11 @@ tasks.withType(ProcessForkOptions).configureEach { task ->
                 final port = props.getProperty(portKey)
                 host == null ? null : (port == null || host.contains(':') ? host : "${host}:${port}")
             }
-            addFallback('MILVUS_ADDRESS', addressFrom('MILVUS_HOST', 'MILVUS_PORT'))
-            addFallback('EMBEDDER_ADDRESS', addressFrom('EMBEDDER_HOST', 'EMBEDDER_PORT'))
-            if (System.getenv('REPO_TEI_REPOS') == null) {
+            addFallback('MILVUS_URL', addressFrom('MILVUS_HOST', 'MILVUS_PORT'))
+            addFallback('EMBEDDER_URL', addressFrom('EMBEDDER_HOST', 'EMBEDDER_PORT'))
+            if (System.getenv('TEI_REPOS') == null) {
                 final legacyRepo = System.getenv('REPO_TEI_DIRS') ?: props.getProperty('REPO_TEI_DIRS')
-                addFallback('REPO_TEI_REPOS', legacyRepo)
+                addFallback('TEI_REPOS', legacyRepo)
             }
 
             final mysqlHost = addressFrom('MYSQL_HOST', 'MYSQL_PORT')
@@ -475,7 +475,7 @@ tasks.withType(ProcessForkOptions).configureEach { task ->
             final mysqlPassword = props.getProperty('MYSQL_PASSWORD')
             if ([mysqlHost, mysqlDb, mysqlUser, mysqlPassword].every { it != null }) {
                 final encode = { String value -> URLEncoder.encode(value, StandardCharsets.UTF_8) }
-                addFallback('MYSQL_JDBC_URL',
+                addFallback('MYSQL_URL',
                         "jdbc:mysql://${mysqlHost}/${mysqlDb}" +
                         "?user=${encode(mysqlUser)}&password=${encode(mysqlPassword)}" +
                         '&autoReconnect=true&useSSL=false&noAccessToProcedureBodies=true' +
@@ -486,9 +486,9 @@ tasks.withType(ProcessForkOptions).configureEach { task ->
 
         if (task.name != 'unittest') {
             final requiredKeys = [
-                    "MILVUS_ADDRESS", "EMBEDDER_ADDRESS",
-                    "REPO_TEI_REPOS", "KAFKA_BROKERS",
-                    "MYSQL_JDBC_URL"
+                    "MILVUS_URL", "EMBEDDER_URL",
+                    "TEI_REPOS", "KAFKA_BROKERS",
+                    "MYSQL_URL"
             ]
             final missingKeys = requiredKeys.findAll {
                 System.getenv(it) == null && props.getProperty(it) == null

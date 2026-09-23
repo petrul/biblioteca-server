@@ -47,11 +47,11 @@ Kafka are needed for the full feature set (vector search, async vectorization)
 but aren't required just to boot and browse the corpus — see [Search](#search)
 for what degrades gracefully without them.
 
-Repositories are configured in one list, `REPO_TEI_REPOS`, with
+Repositories are configured in one list, `TEI_REPOS`, with
 comma-separated entries in the form `url|basepath|filespec`:
 
 ```bash
-REPO_TEI_REPOS=/corpus/tei,/corpus/other,https://github.com/petrul/universal-literature-tei/
+TEI_REPOS=/corpus/tei,/corpus/other,https://github.com/petrul/universal-literature-tei/
 ```
 
 Plain paths and `file:` URLs are local repositories; SSH, Git, HTTP, and
@@ -95,7 +95,7 @@ testing a Git-backed repository:
 
 ```bash
 WORK_DIR=~/.biblioteca-work \
-REPO_TEI_REPOS=https://github.com/petrul/universal-literature-tei/ \
+TEI_REPOS=https://github.com/petrul/universal-literature-tei/ \
 ./gradlew -Pdev bootRun -x test
 ```
 

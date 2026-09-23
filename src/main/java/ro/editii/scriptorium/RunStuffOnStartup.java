@@ -18,7 +18,7 @@ public class RunStuffOnStartup {
     public CommandLineRunner printJdbcUrlCLR(DataSource dataSource) {
         return args -> {
             try {
-                // MYSQL_JDBC_URL embeds credentials as user:password@host
+                // MYSQL_URL embeds credentials as user:password@host
                 // (see application.properties) - this is the one place
                 // they should stay visible at runtime (which DB textbase
                 // is actually connected to), so redact just the password
