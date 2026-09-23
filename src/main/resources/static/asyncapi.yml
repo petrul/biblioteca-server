@@ -29,6 +29,7 @@ servers:
     description: Shared prod Kafka broker (one of the three KRaft nodes - mini/srv2/zmeu).
 
 channels:
+  # All Kafka topics owned by Biblioteca use the biblioteca_ namespace prefix.
   newOpusImportedTopic:
     address: biblioteca_newOpusImportedTopic
     description: |

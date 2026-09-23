@@ -29,16 +29,16 @@ import static ro.editii.scriptorium.GTestUtil.p
             // list, so VectorConfig's real bean would win instead.
             FakeEmbedderTestConfig.class],
         properties = [
-        "milvus.address=zmeu.local:20112",
+        "milvus.url=http://srv2.local:20112",
         "milvus.collection=test_tb_paras_qwen3_embedding_4b_duplicate",
         "embeddings.host=mini.local",
         "embeddings.port=11200",
-        "embedder.address=zmeu.local:11434",
+        "embedder.url=http://zmeu.local:11434",
         "textbase-dl.dir=~/data/textbase-dl",
         "spring.main.allow-bean-definition-overriding=true"
 ])
 @Import(TestConfig.class)
-@Tag("external")
+@Tag("integration-test")
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class MilvusServiceTest {
 

@@ -127,8 +127,14 @@ class AsyncApiContractTest {
         final channels = root.path('channels')
         final props = new KafkaProps()
 
+        assert props.newOpusImportedTopicName.startsWith('biblioteca_')
+        assert props.opusReimportedTopicName.startsWith('biblioteca_')
+        assert props.opusRemovedTopicName.startsWith('biblioteca_')
+        assert props.loginTopicName.startsWith('biblioteca_')
+
         assert channels.path('newOpusImportedTopic').path('address').asText() == props.newOpusImportedTopicName
         assert channels.path('opusReimportedTopic').path('address').asText() == props.opusReimportedTopicName
+        assert channels.path('opusRemovedTopic').path('address').asText() == props.opusRemovedTopicName
         assert channels.path('loginTopic').path('address').asText() == props.loginTopicName
     }
 }

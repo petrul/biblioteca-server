@@ -84,7 +84,7 @@ public class Author implements Comparable<Author>, Serializable {
     @Lob @ToString.Exclude
     Blob avatar;
 
-    // Auto-generated (AiEnrichmentService, async after import) - a short
+    // Auto-generated (EnrichmentService, async after import) - a short
     // biography synthesized from a trusted source (Wikipedia's own REST
     // summary API when this author has a page there, else the search
     // engine's own snippets as a fallback - see enrichAuthorAsync). Null
@@ -100,7 +100,7 @@ public class Author implements Comparable<Author>, Serializable {
     String bioSourceUrl;
 
     // Most authors write in exactly one language - backfilled
-    // opportunistically (AiEnrichmentService) from whichever opus of
+    // opportunistically (EnrichmentService) from whichever opus of
     // theirs happens to get imported/enriched first, since nothing
     // detects this independently yet. Drives which language the
     // enrichment search itself runs in (a native-language query finds
@@ -110,7 +110,7 @@ public class Author implements Comparable<Author>, Serializable {
     @Enumerated(EnumType.STRING)
     Languages nativeLanguage;
 
-    // Auto-generated alongside bio (AiEnrichmentService, same call, same
+    // Auto-generated alongside bio (EnrichmentService, same call, same
     // "only ever set once" one-shot rule) - free-text rather than a
     // parsed date, since the source material often only gives an
     // approximate or partial date (a bare year, "c. 1837") and a strict

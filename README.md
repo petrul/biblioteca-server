@@ -1,10 +1,7 @@
 # Biblioteca Server
 
 A structured digital library that serves classical and philosophical texts
-— encoded in TEI P5 XML — as an addressable text database, not a pile of
-ebooks. Every author, work, chapter, paragraph, and even arbitrary character
-range has its own stable URL, all the way down to a single quotable
-sentence.
+— encoded in TEI P5 XML — as an addressable text database. Every author, work, chapter, paragraph, and even arbitrary character range has its own stable URL, all the way down to a single quotable sentence.
 
 ## What it does
 
@@ -118,6 +115,28 @@ values always win) — so this works whether you invoke Gradle directly or
 via `rake` (a thin wrapper around the same Gradle tasks, with no env
 logic of its own). `.env.example` documents every variable that needs a
 value.
+
+## Environment variables
+
+The canonical environment variable names expected by the application are:
+
+| Variable | Purpose |
+| --- | --- |
+| `MILVUS_URL` | Milvus URL, including port |
+| `EMBEDDER_URL` | Ollama/embedder URL, including port |
+| `TEI_REPOS` | Comma-separated local or Git-backed TEI repository specifications |
+| `KAFKA_BROKERS` | Kafka broker address or comma-separated broker addresses |
+| `MYSQL_URL` | JDBC URL containing the database host, port, name, user, and password |
+| `WORK_DIR` | Persistent application work directory; the application uses its `cache/` subdirectory for caches |
+| `BIBLIOTECA_EXTERNAL_URL` | Public/base URL advertised by the application |
+| `MLVCOL_TB_PARAS_BGE_M3` | Milvus collection for BGE-M3 vectors |
+| `MLVCOL_TB_PARAS_ALL_MPNET_BASE_V2` | Milvus collection for all-mpnet-base-v2 vectors |
+| `MLVCOL_TB_PARAS_QWEN3_EMBEDDING_4B` | Milvus collection for Qwen3 vectors |
+| `MLVCOL_TEXTBASE_PARAS_STS_ALL_MINILM_L6_V2` | Milvus collection for STS vectors |
+| `GOOGLE_OAUTH_CLIENT_ID` | Optional Google OAuth client ID |
+
+`TEI_REPOS` can point directly to the local corpus build directory, such as
+`/home/petru/work/scriptorium-masters/build/`.
 
 ## Running tests
 

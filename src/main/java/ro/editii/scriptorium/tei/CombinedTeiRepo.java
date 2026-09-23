@@ -37,7 +37,7 @@ public class CombinedTeiRepo implements TeiRepo, Serializable {
     @Override
     public boolean has(String resName) {
         for (TeiRepo r : this.repos) {
-            if (r.has(resName))
+            if (r.isEnabled() && r.has(resName))
                 return true;
         }
         return false;
@@ -46,7 +46,7 @@ public class CombinedTeiRepo implements TeiRepo, Serializable {
     @Override
     public InputStream getStreamForName(String resName) {
         for (TeiRepo r : this.repos) {
-            if (r.has(resName))
+            if (r.isEnabled() && r.has(resName))
                 return r.getStreamForName(resName);
         }
         throw new IllegalArgumentException("no res named " + resName);
@@ -56,14 +56,14 @@ public class CombinedTeiRepo implements TeiRepo, Serializable {
     public List<String> list() {
         List<String> res = new ArrayList<>();
         for (TeiRepo r : this.repos)
-            res.addAll(r.list());
+            if (r.isEnabled()) res.addAll(r.list());
         return res;
     }
 
     @Override
     public File getFile(String resName) {
         for (TeiRepo r : this.repos) {
-            if (r.has(resName))
+            if (r.isEnabled() && r.has(resName))
                 return r.getFile(resName);
         }
         throw new IllegalArgumentException("no res named " + resName);
@@ -72,7 +72,7 @@ public class CombinedTeiRepo implements TeiRepo, Serializable {
     @Override
     public Languages getLanguageHint(String resName) {
         for (TeiRepo r : this.repos) {
-            if (r.has(resName))
+            if (r.isEnabled() && r.has(resName))
                 return r.getLanguageHint(resName);
         }
         throw new IllegalArgumentException("no res named " + resName);
@@ -81,7 +81,7 @@ public class CombinedTeiRepo implements TeiRepo, Serializable {
     @Override
     public String getRepoNameForFile(String resName) {
         for (TeiRepo r : this.repos) {
-            if (r.has(resName))
+            if (r.isEnabled() && r.has(resName))
                 return r.getName();
         }
         throw new IllegalArgumentException("no res named " + resName);

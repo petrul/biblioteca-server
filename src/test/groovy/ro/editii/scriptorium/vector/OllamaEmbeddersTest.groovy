@@ -23,7 +23,7 @@ import static org.springframework.test.web.client.response.MockRestResponseCreat
  *
  * This is deliberately NOT the place that verifies Ollama (or SearXNG)
  * actually work for real end-to-end - that's the one job of
- * AiEnrichmentITest (@Tag("external")), the only test in this whole suite
+ * AuthorWorkEnrichmentTest (@Tag("integration-test")), the only test in this whole suite
  * that makes a real network call to either. See its doc comment.
  */
 class OllamaEmbeddersTest {
