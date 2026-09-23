@@ -2,6 +2,7 @@ package ro.editii.scriptorium;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.security.authorization.AuthorizationDecision;
 import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
@@ -10,6 +11,7 @@ import org.springframework.security.config.annotation.web.configuration.WebSecur
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.firewall.HttpFirewall;
 import org.springframework.security.web.firewall.StrictHttpFirewall;
+import ro.editii.scriptorium.security.AdminUsers;
 
 import java.util.List;
 
@@ -45,7 +47,7 @@ public class SecurityConfig {
     }
 
     @Bean
-    public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
+    public SecurityFilterChain filterChain(HttpSecurity http, AdminUsers adminUsers) throws Exception {
         http
                 .csrf(it -> it.disable())
                 .cors(it  -> Customizer.withDefaults())
@@ -53,6 +55,15 @@ public class SecurityConfig {
                 .formLogin(it -> Customizer.withDefaults())
                 .authorizeHttpRequests(it -> it
                     .requestMatchers("/admin/**").authenticated()
+                    // Was permitAll (fell through to anyRequest below) -
+                    // adminUsers.isAdmin() is ADMIN_USERS (see AdminUsers/
+                    // application.properties), not just "signed in" -
+                    // reimport/reindex/prune are real, unattributed-cost
+                    // operations, not something any logged-in reader
+                    // should be able to trigger.
+                    .requestMatchers("/api/admin/**")
+                        .access((authentication, context) ->
+                                new AuthorizationDecision(adminUsers.isAdmin(authentication.get().getName())))
                     .requestMatchers("/api/shell").authenticated()
                     .requestMatchers("/api/users/register").permitAll()
                     .requestMatchers("/api/auth/google").permitAll()

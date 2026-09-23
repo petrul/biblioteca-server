@@ -7,6 +7,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 import ro.editii.scriptorium.dao.AppUserRepository;
 import ro.editii.scriptorium.model.AppUser;
+import ro.editii.scriptorium.security.AdminUsers;
 import ro.editii.scriptorium.security.AppUserRegistrationService;
 
 import java.util.HashMap;
@@ -27,6 +28,7 @@ public class UserRestController {
 
     final AppUserRegistrationService registrationService;
     final AppUserRepository appUserRepository;
+    final AdminUsers adminUsers;
 
     @Value
     public static class RegisterRequest {
@@ -65,6 +67,7 @@ public class UserRestController {
         final Map<String, Object> result = new HashMap<>();
         result.put("authenticated", true);
         result.put("username", authentication.getName());
+        result.put("isAdmin", this.adminUsers.isAdmin(authentication.getName()));
         final Optional<AppUser> appUser = this.appUserRepository.findByUsername(authentication.getName());
         log.debug("GET /api/users/me: AppUser lookup for '{}' found={}, avatarUrl={}",
                 authentication.getName(), appUser.isPresent(), appUser.map(AppUser::getAvatarUrl).orElse(null));

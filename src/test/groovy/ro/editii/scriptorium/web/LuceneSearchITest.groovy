@@ -108,7 +108,12 @@ class LuceneSearchITest {
         final languages = teiFiles*.language as Set
         assert languages == [Languages.RO, Languages.EN, Languages.FR, Languages.DE, Languages.ES, Languages.IT] as Set
 
-        final indexed = this.tbc.post_api_admin_lucene_reindex()
+        // Direct service call, not tbc.post_api_admin_lucene_reindex() - that
+        // endpoint now requires an ADMIN_USERS-listed principal (see
+        // SecurityConfig/AdminUsers), and this test is only using reindexing
+        // as fixture setup for exercising search, not testing the endpoint's
+        // auth behavior itself (see AdminUsersAccessTest for that).
+        final indexed = this.adminService.reindexLucene()
         assert indexed > 0
     }
 
