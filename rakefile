@@ -21,6 +21,9 @@ def load_profile_env(task_profile)
   raise "Could not load biblioteca/#{task_profile} from pass store" unless status.success?
   output.split("\0").each do |entry|
     key, value = entry.split('=', 2)
+    # Pass-store path settings may use the conventional leading `~/` form.
+    # Expand only a leading tilde; values such as passwords remain untouched.
+    value = value.sub(/\A~(?=\/|\z)/, Dir.home) if value
     ENV[key] = value if key && value
   end
   $biblioteca_loaded_profiles[task_profile] = true
@@ -62,7 +65,7 @@ task :itest, [:task_profile] do |_task, args|
   task_profile = args[:task_profile] || profile
   load_profile_env(task_profile)
   puts "Running integration tests..."
-  sh "#{GRADLE} -P#{task_profile} integrationTest"
+  sh "#{GRADLE} -Pprofile=#{task_profile} integrationTest"
 end
 
 desc "Verify required environment variables are available from the pass store"
@@ -141,18 +144,36 @@ task :load_pass_secrets do
   puts "> Loaded #{loaded} secret(s)/config value(s) from pass (#{ci_dir})"
 end
 
-task :test, [:task_profile] do |_task, args|
+task :test, [:task_profile, :test_filter] do |_task, args|
     task_profile = args[:task_profile] || profile
+    test_filter = args[:test_filter]
     load_profile_env(task_profile)
     puts "Running unit and integration tests..."
-    sh "#{GRADLE} -P#{task_profile} test"
+    selector = ''
+    if test_filter && !test_filter.empty?
+      # Resolve the friendly filter case-insensitively against test source
+      # filenames, then pass Gradle the exact fully-qualified class names.
+      needle = test_filter.downcase
+      matches = Dir.glob('src/test/**/*.{groovy,java}').select do |path|
+        File.basename(path, '.*').downcase.include?(needle)
+      end
+      selectors = matches.map do |path|
+        source = File.read(path)
+        package = source[/^\s*package\s+([\w.]+)/, 1]
+        klass = File.basename(path, '.*')
+        package ? "#{package}.#{klass}" : klass
+      end.uniq
+      abort "No test matches '#{test_filter}'" if selectors.empty?
+      selector = selectors.map { |name| " --tests '#{name}'" }.join
+    end
+    sh "#{GRADLE} -Pprofile=#{task_profile} test#{selector}"
 end
 
 task :run, [:task_profile] do |_task, args|
     run_profile = args[:task_profile] || profile
     load_profile_env(run_profile)
     puts "Running application..."
-    sh "#{GRADLE} -P#{run_profile} bootRun"
+    sh "#{GRADLE} -Pprofile=#{run_profile} bootRun"
 end
 
 task :build, [:task_profile] do |_task, args|
@@ -160,7 +181,14 @@ task :build, [:task_profile] do |_task, args|
     puts "Building application..."
     # Tests have their own Rake stage. Excluding Gradle's test task keeps
     # `rake ci` from running the same suite once here and once in `test[ci]`.
-    sh "#{GRADLE} -P#{task_profile} build -x test"
+    sh "#{GRADLE} -Pprofile=#{task_profile} build -x test"
+end
+
+desc "Optionally compile the GraalVM native image (opt-in; not part of test/build/ci)"
+task :graalvm, [:task_profile] do |_task, args|
+    task_profile = args[:task_profile] || profile
+    load_profile_env(task_profile)
+    sh "#{GRADLE} -P#{task_profile} -Pgraalvm nativeCompile"
 end
 
 task :clean do

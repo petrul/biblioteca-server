@@ -31,6 +31,21 @@ plugins {
     id 'org.graalvm.buildtools.native' version '1.1.11'
 }
 
+// Spring Boot exposes AOT tasks as soon as the native plugin is applied. Keep
+// those tasks completely out of ordinary test/run/build work; native
+// compilation is an explicit, opt-in measurement step.
+def graalvmRequested = project.hasProperty('graalvm')
+tasks.matching { it.name in ['processAot', 'processTestAot'] }.configureEach {
+    enabled = graalvmRequested
+}
+// Spring Boot may register processTestAot after the initial task collection;
+// enforce the same opt-in rule once all plugins have finished configuring.
+gradle.projectsEvaluated {
+    ['processAot', 'processTestAot'].each { taskName ->
+        tasks.findByName(taskName)?.enabled = graalvmRequested
+    }
+}
+
 idea {
     module {
         excludeDirs += files("node_modules")
@@ -65,7 +80,7 @@ tasks.named('test') {
     // tests that exercise integration-deps. Plain `gradlew test` therefore
     // defaults to the CI profile and its integration-deps environment.
     useJUnitPlatform()
-    if (!['dev', 'ci', 'prod'].any { project.hasProperty(it) } &&
+    if (!['dev', 'ci', 'prod', 'yoga'].any { project.hasProperty(it) } &&
             System.getenv('SPRING_PROFILES_ACTIVE') == null) {
         systemProperty 'spring.profiles.active', 'ci'
     }
@@ -297,6 +312,10 @@ tasks.withType(Test).configureEach {
     // ALWAYS true regardless of any -P flag actually passed. Learned this the
     // hard way: it was silently overriding -Pdev/-Pci/-Pprod every time.
     if (project.hasProperty('dev')) systemProperty 'spring.profiles.active', 'dev'
+    if (project.hasProperty('yoga')) systemProperty 'spring.profiles.active', 'yoga'
+    if (project.hasProperty('profile')) {
+        systemProperty 'spring.profiles.active', project.property('profile').toString()
+    }
     if (project.hasProperty('ci'))  systemProperty 'spring.profiles.active', 'ci'
     if (project.hasProperty('prod'))  systemProperty 'spring.profiles.active', 'prod'
     final resolvedProfile = systemProperties['spring.profiles.active'] ?: System.getenv('SPRING_PROFILES_ACTIVE') ?: '(none)'

@@ -44,8 +44,13 @@ public class AdminRestController {
 
     @GetMapping("/teirepos")
     public List<TeiRepoDto> listTeiRepos() {
-        CombinedTeiRepo combinedTeiRepo = (CombinedTeiRepo) this.teiRepo;
-        return combinedTeiRepo.getRepos().stream()
+        // Tests and single-repository deployments may inject a plain TeiRepo;
+        // the admin endpoint should report that repository too instead of
+        // assuming the production CombinedTeiRepo wiring.
+        final List<TeiRepo> repos = this.teiRepo instanceof CombinedTeiRepo combined
+                ? combined.getRepos()
+                : List.of(this.teiRepo);
+        return repos.stream()
                 .map( it -> {
                     return TeiRepoDto.builder()
                             .name(it.getName())
