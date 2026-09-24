@@ -60,6 +60,25 @@ task :ci => [:clean] do
   Rake::Task['docker:publish'].invoke
 end
 
+desc "Same pipeline as ci, plus a GraalVM native-image build, published with a -graalvm tag suffix"
+task :'ci-graalvm' => [:clean] do
+  Rake::Task[:'check-env'].invoke('ci')
+  Rake::Task[:test].invoke
+  Rake::Task[:itest].invoke
+  Rake::Task[:build].invoke('ci')
+  # The opt-in native step (build.gradle gates the AOT/native tasks behind
+  # -Pgraalvm). Expect the first stable builds to surface reachability-
+  # metadata needs - Milvus SDK's gRPC/Netty stack is the likely first,
+  # per build.gradle's own comment - this pipeline exists precisely to
+  # measure that.
+  sh "#{GRADLE} -Pprofile=ci -Pgraalvm nativeCompile"
+  # Pick the native runtime stage from the same Dockerfile and publish
+  # with the suffix: editii/biblioteca-server:<version>-graalvm.
+  ENV['DOCKER_TAG_SUFFIX'] = '-graalvm'
+  ENV['DOCKER_TARGET'] = 'runtime-native'
+  Rake::Task['docker:publish'].invoke
+end
+
 desc "Run integration-test tagged tests against the integration dependencies"
 task :itest, [:task_profile, :test_filter] do |_task, args|
   task_profile = args[:task_profile] || profile
@@ -243,31 +262,40 @@ def assert_gluster_mounted!(path)
   end
 end
 
+def docker_tag
+    # Empty suffix for the ordinary ci pipeline; rake ci-graalvm sets
+    # DOCKER_TAG_SUFFIX (-graalvm) and DOCKER_TARGET (runtime-native)
+    # before invoking docker:publish, so the native variant is
+    # unmistakable in the registry. Computed at task-run time on purpose:
+    # a load-time constant would freeze the empty suffix before
+    # ci-graalvm ever got to set it.
+    "#{version}#{ENV['DOCKER_TAG_SUFFIX'] || ''}"
+end
+
 namespace :docker do
 
-
-    TAG           = "#{version}" # Replace with your desired tag
-    LOCAL_REGISTRY = "mini.local:5000" # Replace with your local registry address (e.g., 192.168.1.50:5000)
-
-    LOCAL_TAG = "#{IMAGE_NAME}:#{TAG}"
-    TARGET_TAG = "#{LOCAL_REGISTRY}/#{IMAGE_NAME}:#{TAG}"
-
+    LOCAL_REGISTRY = "mini.local:5000"
 
     desc "Build, tag, and publish image to local registry"
     task :build do
-        puts "==> Building Docker image..."
-        sh "docker build -f docker/dockerfile --build-arg APP_VERSION=#{version} -t #{LOCAL_TAG} ."
+        local_tag = "#{IMAGE_NAME}:#{docker_tag}"
+        target_tag = "#{LOCAL_REGISTRY}/#{IMAGE_NAME}:#{docker_tag}"
+        build_target = ENV['DOCKER_TARGET'] || 'runtime'
+
+        puts "==> Building Docker image (#{local_tag}, target #{build_target})..."
+        sh "docker build -f docker/dockerfile --target #{build_target} --build-arg APP_VERSION=#{version} -t #{local_tag} ."
 
         puts "==> Tagging image for local registry..."
-        sh "docker tag #{LOCAL_TAG} #{TARGET_TAG}"
+        sh "docker tag #{local_tag} #{target_tag}"
 
     end
 
     desc "Build, tag, and publish image to local registry"
     task :publish => [:build] do
+        target_tag = "#{LOCAL_REGISTRY}/#{IMAGE_NAME}:#{docker_tag}"
         puts "==> Pushing image to #{LOCAL_REGISTRY}..."
-        sh "docker push #{TARGET_TAG}"
+        sh "docker push #{target_tag}"
 
-        puts "==> Successfully published #{TARGET_TAG}!"
+        puts "==> Successfully published #{target_tag}!"
     end
 end

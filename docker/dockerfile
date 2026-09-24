@@ -79,3 +79,23 @@ USER 10001
 
 EXPOSE 8080
 ENTRYPOINT ["java", "-Xmx4g", "-Xss20m", "-jar", "/biblioteca-server.jar"]
+
+# Stage 3: the GraalVM native-image variant - the same converter toolbox
+# (the app shells out to these tools at runtime regardless of how the JVM
+# itself is packaged), the native binary instead of the jar. Selected
+# with --target runtime-native after a -Pgraalvm nativeCompile, published
+# with the -graalvm tag suffix by rake ci-graalvm.
+FROM converters AS runtime-native
+
+CMD []
+ENV GIT_TERMINAL_PROMPT=0
+
+COPY build/native/nativeCompile/biblioteca-server /biblioteca-server
+
+VOLUME /cache
+
+RUN useradd dockerapp -u 10001
+USER 10001
+
+EXPOSE 8080
+ENTRYPOINT ["/biblioteca-server"]
