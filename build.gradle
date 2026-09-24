@@ -315,6 +315,28 @@ tasks.withType(Test).configureEach {
     if (project.hasProperty('prod'))  systemProperty 'spring.profiles.active', 'prod'
     final resolvedProfile = systemProperties['spring.profiles.active'] ?: System.getenv('SPRING_PROFILES_ACTIVE') ?: '(none)'
     println "${name}: spring.profiles.active = " + resolvedProfile
+
+    // Lucene indexing stays off for every test run under every profile: no
+    // test needs the startup auto-build or the per-import incremental
+    // reindex unless it deliberately tests that indexing behavior itself -
+    // WebITest, the one exception, flips lucene.incremental.enabled back on
+    // in its own @TestPropertySource, which outranks these system
+    // properties. Mirrors the same two flags application-ci.properties
+    // already sets false, so dev/prod/yoga test runs behave like ci ones
+    // instead of paying a full fixture reindex per reimport-heavy class.
+    systemProperty 'lucene.autoindex.enabled', 'false'
+    systemProperty 'lucene.incremental.enabled', 'false'
+    // ... and the index itself lives in a per-task scratch dir under build/,
+    // never the real dev/int/prod index that lucene.index.dir otherwise
+    // defaults to (${work.dir}/cache/lucene-index) - no test may even open,
+    // let alone write, the live machine's index (see WebITest's own
+    // isolation comment for the lock contention/corruption that causes).
+    // The two tests that actually build/search a real index (WebITest,
+    // LuceneSearchITest) pin their own temp dirs via
+    // @TestPropertySource/@DynamicPropertySource, which outrank this
+    // system property.
+    systemProperty 'lucene.index.dir', layout.buildDirectory.dir("test-lucene-index/${name}").get().asFile.absolutePath
+
 //    maxParallelForks = Runtime.runtime.availableProcessors().intdiv(2) ?: 1
 }
 

@@ -23,6 +23,8 @@ import org.springframework.http.HttpHeaders
 import org.springframework.http.HttpStatus
 import org.springframework.jdbc.core.JdbcTemplate
 import org.springframework.test.annotation.DirtiesContext
+import org.springframework.test.context.DynamicPropertyRegistry
+import org.springframework.test.context.DynamicPropertySource
 import org.springframework.test.context.TestPropertySource
 import org.springframework.test.jdbc.JdbcTestUtils
 import org.springframework.transaction.PlatformTransactionManager
@@ -67,15 +69,21 @@ import static ro.editii.scriptorium.TestUtils.TEI_ELEM
         "spring.jpa.database-platform=org.hibernate.dialect.H2Dialect",
         "spring.main.allow-bean-definition-overriding=true",
         "spring.jpa.hibernate.ddl-auto=create",
-        // Isolated from the real dev/int/prod Lucene index at
-        // ~/.textbase/cache/lucene-index (lucene.index.dir's own default
-        // otherwise) - without this, these tests shared a single-writer
-        // Lucene lock with whatever's actually running on this machine,
-        // and could block on (or corrupt) a real, unrelated index.
-        "lucene.index.dir=\${java.io.tmpdir}/webitest-lucene-index",
+        // lucene.index.dir is not pinned here: it's a fresh per-run temp
+        // dir via @DynamicPropertySource below - isolated from the real
+        // dev/int/prod Lucene index (lucene.index.dir's own default
+        // otherwise), and unlike the previous fixed
+        // ${java.io.tmpdir}/webitest-lucene-index, no longer shared
+        // between concurrent runs or leftover from a crashed one.
         // The auto-build-on-startup thread would otherwise race this
         // class's own explicit imports/incremental reindexing.
         "lucene.autoindex.enabled=false",
+        // The one suite that deliberately tests the incremental
+        // index-on-import path itself (see
+        // theLuceneIndexIsIncrementallyBuiltByTheOrdinaryImportPath...) -
+        // overrides the test-wide lucene.incremental.enabled=false that
+        // build.gradle's tasks.withType(Test) sets for every profile.
+        "lucene.incremental.enabled=true",
         // Inherits application-ci.properties's enrichment.enabled=false -
         // this class's many reimports (relocationWorks,
         // destroyAllExistingAndReimportAllTeis, @AfterEach's own
@@ -124,6 +132,16 @@ class WebITest {
         adminService.reimportAllTeis(new NullWriter())
     }
 
+    static java.nio.file.Path indexDir
+
+    // Fresh, unique-per-run Lucene index dir (see the @TestPropertySource
+    // comment) - the same isolation pattern as LuceneSearchITest.
+    @DynamicPropertySource
+    static void luceneIndexDir(DynamicPropertyRegistry registry) {
+        indexDir = Files.createTempDirectory("WebITest-")
+        registry.add("lucene.index.dir", { indexDir.toAbsolutePath().toString() })
+    }
+
     File cacheDir
     int importedAuthorCount
 
@@ -163,7 +181,8 @@ class WebITest {
     @AfterAll
     void afterAll() {
         FileUtils.deleteDirectory(this.cacheDir)
-        p "deleted basedir ${this.cacheDir}"
+        FileUtils.deleteDirectory(indexDir.toFile())
+        p "deleted basedir ${this.cacheDir}, lucene index dir ${indexDir}"
     }
 
     @Test

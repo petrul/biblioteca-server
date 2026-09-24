@@ -1,0 +1,6 @@
+# Auto-registered for every @SpringBootTest context (test classpath only -
+# never the running application): TestTeiRepoGuard fails any context that
+# would wire the production TEI repositories (AppConfig.teiRepo, driven by
+# repo.tei.repos/TEI_REPOS) instead of a test-fixture TeiRepo.
+org.springframework.test.context.ContextCustomizerFactory=\
+ro.editii.scriptorium.TestTeiRepoGuardContextCustomizerFactory
