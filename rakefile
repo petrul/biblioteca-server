@@ -268,8 +268,11 @@ def docker_tag
     # before invoking docker:publish, so the native variant is
     # unmistakable in the registry. Computed at task-run time on purpose:
     # a load-time constant would freeze the empty suffix before
-    # ci-graalvm ever got to set it.
-    "#{version}#{ENV['DOCKER_TAG_SUFFIX'] || ''}"
+    # ci-graalvm ever got to set it. Re-reads build.gradle (a def method
+    # has no closure over the rakefile's top-level version local, unlike
+    # the task blocks) - same parse the top of this file does.
+    v = File.read('build.gradle')[/^\s*version\s*=\s*['"]([^'"]+)['"]/, 1]
+    "#{v}#{ENV['DOCKER_TAG_SUFFIX'] || ''}"
 end
 
 namespace :docker do
