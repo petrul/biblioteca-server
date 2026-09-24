@@ -53,7 +53,7 @@ idea {
 }
 
 group = 'ro.editii'
-version = '0.9.4-SNAPSHOT'
+version = '0.9.5-SNAPSHOT'
 
 java {
     sourceCompatibility = '25'
