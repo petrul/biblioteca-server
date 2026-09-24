@@ -202,6 +202,17 @@ dependencies {
 //	implementation('org.springframework.boot:spring-boot-starter-data-cassandra')
 //	implementation('org.springframework.boot:spring-boot-starter-data-elasticsearch')
 	implementation('org.springframework.boot:spring-boot-starter-data-jpa')
+	// Native-image support for Hibernate: substitutions plus a GraalVM
+	// feature that registers JPA entity classes (reflection/class-init) at
+	// image build time. Without it the AOT-processed app starts Tomcat and
+	// the connection pool, then dies at EntityManagerFactory creation with
+	// "Unable to load class [ro.editii.scriptorium.model.Author]"
+	// (observed booting the 0.9.6-SNAPSHOT-graalvm image). Only the
+	// -Pgraalvm nativeCompile path needs it; the plain JVM build carries
+	// the jar unused. Version pinned to the hibernate-core the Boot BOM
+	// resolves (7.4.1.Final today) because Boot does not manage this
+	// artifact itself.
+	implementation('org.hibernate.orm:hibernate-graalvm:7.4.1.Final')
 	implementation('org.springframework.boot:spring-boot-starter-data-rest')
 	implementation('org.springframework.boot:spring-boot-starter-web')
 	implementation('org.springframework.boot:spring-boot-starter-restclient')
