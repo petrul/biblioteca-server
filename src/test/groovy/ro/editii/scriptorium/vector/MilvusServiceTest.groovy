@@ -8,6 +8,8 @@ import org.junit.jupiter.api.TestInstance
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.context.annotation.Import
+import org.springframework.test.context.DynamicPropertyRegistry
+import org.springframework.test.context.DynamicPropertySource
 import ro.editii.scriptorium.TestConfig
 import ro.editii.scriptorium.TestUtils
 import ro.editii.scriptorium.search.MilvusHit
@@ -30,7 +32,6 @@ import static ro.editii.scriptorium.GTestUtil.p
             FakeEmbedderTestConfig.class],
         properties = [
         "milvus.url=http://srv2.local:20112",
-        "milvus.collection=test_tb_paras_qwen3_embedding_4b_duplicate",
         "embeddings.host=mini.local",
         "embeddings.port=11200",
         "embedder.url=http://zmeu.local:11434",
@@ -42,7 +43,22 @@ import static ro.editii.scriptorium.GTestUtil.p
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class MilvusServiceTest {
 
-    static final String TEST_COLLECTION = "test_tb_paras_qwen3_embedding_4b_duplicate"
+    /**
+     * Unique per run: concurrent test executions (two developers, or a
+     * developer plus a CI agent) share the same Milvus instance
+     * (srv2.local:20112), and this class drops the existing collection of
+     * this name before creating a fresh one - with a fixed name, one run's
+     * setup silently drops the other run's collection mid-test. Registered
+     * as the context's milvus.collection via @DynamicPropertySource below,
+     * so the app's MilvusCollection bean and this test's setup/teardown
+     * agree on it.
+     */
+    static final String TEST_COLLECTION = "test_tb_paras_qwen3_embedding_4b_" + TestUtils.randomString()
+
+    @DynamicPropertySource
+    static void milvusCollection(DynamicPropertyRegistry registry) {
+        registry.add("milvus.collection", { TEST_COLLECTION })
+    }
 
     @Autowired MilvusService milvusService
     @Autowired MilvusCollection milvusCollection

@@ -61,11 +61,29 @@ task :ci => [:clean] do
 end
 
 desc "Run integration-test tagged tests against the integration dependencies"
-task :itest, [:task_profile] do |_task, args|
+task :itest, [:task_profile, :test_filter] do |_task, args|
   task_profile = args[:task_profile] || profile
+  test_filter = args[:test_filter]
   load_profile_env(task_profile)
   puts "Running integration tests..."
-  sh "#{GRADLE} -Pprofile=#{task_profile} integrationTest"
+  selector = ''
+  if test_filter && !test_filter.empty?
+    # Same friendly, case-insensitive filename filter as rake test - e.g.
+    # `rake itest[dev,SearchITest]` runs only the matching test classes.
+    needle = test_filter.downcase
+    matches = Dir.glob('src/test/**/*.{groovy,java}').select do |path|
+      File.basename(path, '.*').downcase.include?(needle)
+    end
+    selectors = matches.map do |path|
+      source = File.read(path)
+      package = source[/^\s*package\s+([\w.]+)/, 1]
+      klass = File.basename(path, '.*')
+      package ? "#{package}.#{klass}" : klass
+    end.uniq
+    abort "No test matches '#{test_filter}'" if selectors.empty?
+    selector = selectors.map { |name| " --tests '#{name}'" }.join
+  end
+  sh "#{GRADLE} -Pprofile=#{task_profile} integrationTest#{selector}"
 end
 
 desc "Verify required environment variables are available from the pass store"

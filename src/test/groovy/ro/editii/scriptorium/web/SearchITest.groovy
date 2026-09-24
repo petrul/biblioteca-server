@@ -10,6 +10,8 @@ import org.springframework.boot.kafka.autoconfigure.KafkaAutoConfiguration
 import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.context.annotation.Lazy
 import org.springframework.jdbc.core.JdbcTemplate
+import org.springframework.test.context.DynamicPropertyRegistry
+import org.springframework.test.context.DynamicPropertySource
 import org.springframework.test.context.TestPropertySource
 import org.springframework.transaction.annotation.Transactional
 import ro.editii.scriptorium.TestConfig
@@ -34,7 +36,6 @@ import static ro.editii.scriptorium.TestUtils.TEI_ELEM
         "spring.main.allow-bean-definition-overriding=true",
         "spring.jpa.hibernate.ddl-auto=create",
         "milvus.url=http://srv2.local:20112",
-        "milvus.collection=test_tb_paras_qwen3_embedding_4b_duplicate",
         "embeddings.host=mini.local",
         "embeddings.port=11200",
         "embedder.url=http://zmeu.local:11434",
@@ -48,7 +49,22 @@ import static ro.editii.scriptorium.TestUtils.TEI_ELEM
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class SearchITest {
 
-    static final String TEST_MILVUS_COLLECTION = "test_tb_paras_qwen3_embedding_4b_duplicate"
+    /**
+     * Unique per run: concurrent itest executions (two developers, or a
+     * developer plus a CI agent) share the same Milvus instance this test
+     * uses (srv2.local:20112), and setupMilvusCollection drops the existing
+     * collection of this name before creating a fresh one - with a fixed
+     * name, one run's setup silently drops the other run's collection
+     * mid-test (ann()/search() then fail with "can't find collection").
+     * Registered as the context's milvus.collection via @DynamicPropertySource
+     * below, so the app's vector store and this test's setup/teardown agree.
+     */
+    static final String TEST_MILVUS_COLLECTION = "test_tb_paras_qwen3_embedding_4b_" + TestUtils.randomString()
+
+    @DynamicPropertySource
+    static void milvusCollection(DynamicPropertyRegistry registry) {
+        registry.add("milvus.collection", { TEST_MILVUS_COLLECTION })
+    }
 
     @Autowired @Lazy TextbaseClient tbc;
     @Autowired AdminService adminService
@@ -178,13 +194,16 @@ class SearchITest {
     private static void waitUntilRowsAreVisible(MilvusCollection col, int expectedRows) {
         final deadline = System.currentTimeMillis() + 30_000
         while (System.currentTimeMillis() <= deadline) {
-            final stats = col.statistics.data.statsList
-            final rowCount = stats.find { it.key == 'row_count' }
+            // A failed/empty R (data null - Milvus briefly unavailable or the
+            // collection not yet queryable after create/flush) is exactly
+            // what this loop exists to wait out; dereferencing it directly
+            // NPEs and fails the whole class from @BeforeAll instead.
+            final rowCount = col.statistics?.data?.statsList?.find { it.key == 'row_count' }
             if (rowCount != null && rowCount.value.toInteger() == expectedRows)
                 return
             Thread.sleep(250)
         }
-        assert col.statistics.data.statsList.find { it.key == 'row_count' }?.value?.toInteger() == expectedRows
+        assert col.statistics?.data?.statsList?.find { it.key == 'row_count' }?.value?.toInteger() == expectedRows
     }
 
     @AfterAll
