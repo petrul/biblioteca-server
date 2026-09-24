@@ -114,4 +114,19 @@ class AdminUsersAccessTest {
         // app, not specific to /api/admin.
         assert response.statusCode() == 302
     }
+
+    @Test
+    void apiAdminConfigIsTheOnePublicAdminEndpointForTheVectorizerStartupBootstrap() {
+        // The deliberate /api/admin/config exception (see SecurityConfig):
+        // biblioteca-nestjs fetches the shared naming convention at
+        // startup with no credentials, so it must be reachable anonymously.
+        // Every other /api/admin path stays gated - see the tests above.
+        final response = this.client.send(
+                HttpRequest.newBuilder(URI.create(url("/api/admin/config")))
+                        .header("Accept", "*/*").GET().build(),
+                HttpResponse.BodyHandlers.ofString())
+
+        assert response.statusCode() == 200
+        assert response.body().contains('"kafka"')
+    }
 }

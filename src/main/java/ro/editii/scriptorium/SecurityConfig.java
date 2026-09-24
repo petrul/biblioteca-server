@@ -55,6 +55,15 @@ public class SecurityConfig {
                 .formLogin(it -> Customizer.withDefaults())
                 .authorizeHttpRequests(it -> it
                     .requestMatchers("/admin/**").authenticated()
+                    // The one deliberate exception under /api/admin: the
+                    // non-secret shared-resource naming convention (Kafka
+                    // topics, Milvus collection, embedder model) that
+                    // biblioteca-nestjs fetches at startup to bootstrap its
+                    // PROVIDER_SHARED_CONFIG - it has no user account and
+                    // sends no credentials, and ConfigRestController exposes
+                    // only names, never addresses or secrets. Matched before
+                    // the /api/admin/** rule below on purpose.
+                    .requestMatchers("/api/admin/config").permitAll()
                     // Was permitAll (fell through to anyRequest below) -
                     // adminUsers.isAdmin() is ADMIN_USERS (see AdminUsers/
                     // application.properties), not just "signed in" -
