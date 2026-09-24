@@ -79,7 +79,7 @@ task :'check-env', [:task_profile] do |_task, args|
     'ci' => [
       %w[MILVUS_URL MILVUS_ADDRESS],
       %w[EMBEDDER_URL EMBEDDER_ADDRESS],
-      %w[TEI_REPOS REPO_TEI_REPOS],
+      %w[TEI_REPOS],
       %w[KAFKA_BROKERS KAFKA_SERVERS],
       %w[MYSQL_URL MYSQL_JDBC_URL]
     ],

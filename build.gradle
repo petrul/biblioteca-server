@@ -478,10 +478,6 @@ tasks.withType(ProcessForkOptions).configureEach { task ->
             }
             addFallback('MILVUS_URL', addressFrom('MILVUS_HOST', 'MILVUS_PORT'))
             addFallback('EMBEDDER_URL', addressFrom('EMBEDDER_HOST', 'EMBEDDER_PORT'))
-            if (System.getenv('TEI_REPOS') == null) {
-                final legacyRepo = System.getenv('REPO_TEI_DIRS') ?: props.getProperty('REPO_TEI_DIRS')
-                addFallback('TEI_REPOS', legacyRepo)
-            }
 
             final mysqlHost = addressFrom('MYSQL_HOST', 'MYSQL_PORT')
             final mysqlDb = props.getProperty('MYSQL_DB')

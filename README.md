@@ -44,12 +44,19 @@ Kafka are needed for the full feature set (vector search, async vectorization)
 but aren't required just to boot and browse the corpus — see [Search](#search)
 for what degrades gracefully without them.
 
-Repositories are configured in one list, `TEI_REPOS`, with
+Repositories are configured in one required list, `TEI_REPOS`, with
 comma-separated entries in the form `url|basepath|filespec`:
 
 ```bash
 TEI_REPOS=/corpus/tei,/corpus/other,https://github.com/petrul/universal-literature-tei/
 ```
+
+There is no implicit local repository. Each local entry initializes its own
+repository, and its optional `basepath` is resolved beneath that directory.
+
+For Docker deployments, `TEI_REPOS` uses host paths for local entries. The
+deployment wrapper mounts each existing local directory and translates its
+path for the container; Git entries remain unchanged.
 
 Plain paths and `file:` URLs are local repositories; SSH, Git, HTTP, and
 HTTPS URLs are cloned read-only with the system `git` command. Git checkouts

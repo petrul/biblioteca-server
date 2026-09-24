@@ -72,7 +72,6 @@ ENV GIT_TERMINAL_PROMPT=0
 
 COPY build/libs/biblioteca-server-*-application.jar /biblioteca-server.jar
 
-VOLUME /scriptorium-masters
 VOLUME /cache
 
 RUN useradd dockerapp -u 10001

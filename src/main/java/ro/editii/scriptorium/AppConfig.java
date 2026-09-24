@@ -40,6 +40,7 @@ public class AppConfig {
         String path = spec.url().startsWith("file:")
                 ? Paths.get(URI.create(spec.url())).toString()
                 : spec.url();
+        path = Paths.get(Util.replaceTilde(path)).resolve(spec.basePath()).normalize().toString();
         return new ro.editii.scriptorium.tei.TeiDirRepoImpl(path,
                 Map.of(TeiRepo.PROP_KEY_FILTER,
                         globToRegex(spec.fileSpec() == null ? "**/*.xml" : spec.fileSpec())));
