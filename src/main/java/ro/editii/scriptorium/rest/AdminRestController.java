@@ -96,6 +96,11 @@ public class AdminRestController {
         this.adminService.pruneRemovedTeis(new NoWriter());
     }
 
+    @PostMapping("/teirepos/pruneOrphanedElems")
+    public void teiReposPruneOrphanedElems() {
+        this.adminService.pruneOrphanedElems(new NoWriter());
+    }
+
     @PostMapping("/lucene/reindex")
     @ResponseBody
     public Map<String, Integer> reindexLucene() {

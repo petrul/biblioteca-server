@@ -259,6 +259,71 @@ public class AdminService {
         }
     }
 
+    /**
+     * Sweeps true FK-orphans: tei_elem rows whose tei_file row is gone
+     * (dangling or NULL tei_file_id) - the residue of out-of-band
+     * tei_file deletion (raw SQL on the DB), never of the normal
+     * deleteTeiFile cascade. pruneRemovedTeis cannot see these (it walks
+     * tei_file rows, which is precisely what is missing here); until the
+     * Lucene build learned to skip them, one such orphan could also keep
+     * the whole index from ever completing.
+     *
+     * Orphaned opera (root divs) are deleted through the same recursive
+     * walk deleteTeiFile uses, per-item isolated; whatever orphaned rows
+     * remain afterwards (a tree broken mid-level, non-div elems without
+     * any root) has nothing navigating to it, so a bulk anti-join delete
+     * finishes the job. Lucene documents and Milvus vectors for orphans
+     * are deliberately not cleaned here: getCompletePath needs the (gone)
+     * TeiFile, so their paths are unresolvable - the next full index
+     * rebuild (which completes despite ghosts, see LuceneIndexService)
+     * wipes the Lucene side, and vector hits for dead divs degrade to
+     * 404s until then.
+     */
+    public void pruneOrphanedElems(Writer logActivity) {
+        synchronized (Globals.IMPORT_TEIS_WORKING) {
+            // queryForList(sql) (not the typed (sql, Class) overload):
+            // deliberately the plainest overload - the typed one cannot be
+            // stubbed from the Groovy test suite, where Mockito's
+            // all-matchers rule meets Groovy's runtime overload dispatch
+            // (matchers return null, and (sql, null) is ambiguous between
+            // the Class and Object... overloads).
+            final List<Long> orphanedOperaIds = this.jdbcTemplate.queryForList(
+                            "SELECT d.id FROM " + Util.TEI_ELEM + " d"
+                                            + " LEFT JOIN tei_file f ON f.id = d.tei_file_id"
+                                            + " WHERE f.id IS NULL AND d.parent_id IS NULL AND d.name = 'div'")
+                            .stream()
+                            .map(row -> ((Number) row.get("id")).longValue())
+                            .toList();
+
+            int pruned = 0;
+            for (final Long id : orphanedOperaIds) {
+                final Optional<TeiDiv> opus = this.teiDivRepository.findById(id);
+                if (opus.isEmpty())
+                    continue;
+                try {
+                    this.teiFileDbService.deleteOrphanedElems(opus.get());
+                    pruned++;
+                    log.info("pruned orphaned opus id {} - its tei_file row is gone", id);
+                    writeLn(logActivity, "pruned orphaned opus id " + id);
+                } catch (RuntimeException e) {
+                    log.error("Failed to prune orphaned opus {} - continuing with the rest (it will be retried next sweep)", id, e);
+                }
+            }
+
+            // Leftovers: orphaned rows with no (reachable) root. Nothing
+            // can navigate to these, so a bulk delete is safe and final.
+            final int leftovers = this.jdbcTemplate.update(
+                    "DELETE e FROM " + Util.TEI_ELEM + " e"
+                            + " LEFT JOIN tei_file f ON f.id = e.tei_file_id"
+                            + " WHERE f.id IS NULL");
+
+            if (pruned > 0 || leftovers > 0) {
+                log.info("Orphan sweep: {} opera trees and {} leftover elems removed", pruned, leftovers);
+                writeLn(logActivity, "orphan sweep: " + pruned + " opera trees, " + leftovers + " leftover elems removed");
+            }
+        }
+    }
+
     public void destroyAllExistingAndReimportAllTeis(Writer logActivity, boolean iUnderstandThatThisIsAPotentiallyDangerousOperation) {
         synchronized (Globals.IMPORT_TEIS_WORKING) {
             writeLn(logActivity, "will first destroy existing data...");

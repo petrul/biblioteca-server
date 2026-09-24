@@ -52,5 +52,24 @@ public class TeiImportScheduler {
             }
         }
     }
+
+    /**
+     * Hourly sweep of true FK-orphans (tei_elem rows whose tei_file row
+     * vanished out-of-band - see AdminService.pruneOrphanedElems), with a
+     * first run a minute after boot so a DB carrying orphans is cleaned
+     * promptly. Rare by construction (raw SQL on prod is the only known
+     * cause), so an hourly cadence - not the 15s import cycle, whose
+     * anti-join over the whole elem table would be needlessly constant.
+     */
+    @Scheduled(fixedDelay = 60 * 60 * 1000, initialDelay = 60 * 1000)
+    public void pruneOrphanedElems() {
+        synchronized (Globals.IMPORT_TEIS_WORKING) {
+            try {
+                adminService.pruneOrphanedElems(new NoWriter());
+            } catch (RuntimeException e) {
+                log.error("Scheduled prune of orphaned elems failed - will retry next cycle", e);
+            }
+        }
+    }
 }
 

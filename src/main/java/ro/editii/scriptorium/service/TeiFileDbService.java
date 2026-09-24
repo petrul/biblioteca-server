@@ -99,6 +99,19 @@ public class TeiFileDbService {
         this.teiDivRepository.deleteById(div.getId());
     }
 
+    /**
+     * Deletes an elem tree whose TeiFile row is already gone - the true
+     * FK-orphan case (see AdminService.pruneOrphanedElems): the same
+     * recursive walk deleteTeiFile uses, minus the TeiFile/Author cleanup
+     * that has nothing left to clean. The root must itself be an orphan
+     * (dangling/absent tei_file_id) - callers ensure that; this method
+     * never touches rows that still belong to a live TeiFile.
+     */
+    @Transactional
+    public void deleteOrphanedElems(TeiDiv root) {
+        this.delete_rec(root);
+    }
+
     @Transactional
     public void importTeiFile(String teiFilename, boolean forceReimport) throws TeiFileAlreadyImportedException {
         // invalidate caches
