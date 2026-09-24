@@ -10,6 +10,7 @@ import ro.editii.scriptorium.model.TeiDiv
 import ro.editii.scriptorium.model.TeiElem
 import ro.editii.scriptorium.service.ControllerTool
 import ro.editii.scriptorium.service.DivService
+import ro.editii.scriptorium.tei.TeiResourceNotFoundException
 
 import java.nio.file.Path
 
@@ -155,5 +156,41 @@ class LuceneIndexServiceResumeTest {
         final remaining = service.search("keeper", 1000)
         assertEquals(1, remaining.size())
         assertEquals("seneca/de-vita-longa/p0", remaining[0].getUrl())
+    }
+
+    @Test
+    void buildIndexSkipsAnOpusWhoseSourceVanishedAndStillCompletes() {
+        // The prod failure this guards against: one stale row (its TEI file
+        // gone from the repos, prune not run yet) used to abort the whole
+        // build via DivService.getParagraphs - the per-paragraph try/catch
+        // only covered toDocument, not the paragraph derivation itself.
+        final goodOpus = opusMock("bacon/of_gardens")
+        final ghostOpus = opusMock("bcucluj/fcs_brv10")
+        final int pageSize = LuceneIndexService.OPERA_PAGE_SIZE
+        Mockito.when(teiDivRepository.findOpera(PageRequest.of(0, pageSize)))
+                .thenReturn(new PageImpl<>([goodOpus, ghostOpus], PageRequest.of(0, pageSize), 2))
+
+        // Resolve paraMock() to a plain value FIRST - it does its own
+        // when()/thenReturn() pairs, and calling anything that touches a
+        // mock as an argument to thenReturn() itself corrupts Mockito's
+        // Groovy stubbing state (UnfinishedStubbingException - see the
+        // comment in the resume test above).
+        final goodParagraphs = [paraMock("bacon/of_gardens/p0", "gardens head")]
+        Mockito.when(divService.getParagraphs(goodOpus)).thenReturn(goodParagraphs)
+        Mockito.when(divService.getParagraphs(ghostOpus))
+                .thenThrow(new TeiResourceNotFoundException("bcucluj_fcs_brv10_1.tei.xml"))
+        Mockito.when(controllerTool.teiElemToString(Mockito.any())).thenReturn("gardens paragraph text")
+
+        final service = newService()
+        final int indexed = service.rebuildIndex()
+
+        // The good opus is indexed, the ghost is skipped, and the build
+        // still finishes - REBUILD_COMPLETE=true is what keeps
+        // autoBuildIndexOnStartup from pointlessly rebuilding again on the
+        // next restart.
+        assertEquals(1, indexed)
+        assertEquals(1, service.search("gardens", 10).size())
+        final Map<String, String> commitData = service.readCommitData()
+        assertEquals("true", commitData.get(LuceneIndexService.COMMIT_DATA_REBUILD_COMPLETE))
     }
 }

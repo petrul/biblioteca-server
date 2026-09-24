@@ -35,15 +35,20 @@ public class TeiImportScheduler {
             // aborting reimportFresherTeis outside its per-file handler,
             // say) must not starve the other - a prune that never gets its
             // turn leaves stale rows for vanished corpus files forever.
-            try {
-                adminService.reimportFresherTeis(new NoWriter());
-            } catch (RuntimeException e) {
-                log.error("Scheduled reimport of fresher TEIs failed - will retry next cycle", e);
-            }
+            // The prune runs FIRST: it's a quick DB pass, while the reimport
+            // can hold this lock for hours on a large corpus - running the
+            // prune second meant stale rows (whose opera break the Lucene
+            // auto-build, among other things) survived a whole import pass
+            // before their cleanup even started.
             try {
                 adminService.pruneRemovedTeis(new NoWriter());
             } catch (RuntimeException e) {
                 log.error("Scheduled prune of removed TEIs failed - will retry next cycle", e);
+            }
+            try {
+                adminService.reimportFresherTeis(new NoWriter());
+            } catch (RuntimeException e) {
+                log.error("Scheduled reimport of fresher TEIs failed - will retry next cycle", e);
             }
         }
     }

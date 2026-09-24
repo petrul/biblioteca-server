@@ -40,6 +40,7 @@ import ro.editii.scriptorium.model.TeiElem;
 import ro.editii.scriptorium.search.LuceneHit;
 import ro.editii.scriptorium.service.ControllerTool;
 import ro.editii.scriptorium.service.DivService;
+import ro.editii.scriptorium.tei.TeiResourceNotFoundException;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -241,7 +242,10 @@ public class LuceneIndexService {
      * sub-chapters included). One bad paragraph (e.g. an XSLT transform
      * failure) is logged and skipped rather than aborting the whole build -
      * same reasoning as the per-message isolation used elsewhere for
-     * batch/streaming work.
+     * batch/streaming work. An opus whose TEI source has vanished from the
+     * repos entirely (stale rows still in the DB, awaiting the prune) is
+     * skipped the same way: indexing nothing for it is the correct
+     * outcome, and one ghost must not leave every other opus unindexed.
      *
      * Commits (and refreshes the searcher) after every page rather than
      * once at the very end, for two reasons: the index becomes
@@ -260,6 +264,7 @@ public class LuceneIndexService {
             watch.start();
             int indexed = 0;
             int skipped = 0;
+            int skippedOpera = 0;
 
             try (IndexWriter writer = new IndexWriter(this.directory,
                     new IndexWriterConfig(this.analyzer).setOpenMode(openMode))) {
@@ -269,7 +274,25 @@ public class LuceneIndexService {
                 do {
                     opera = this.teiDivRepository.findOpera(PageRequest.of(pageNr, OPERA_PAGE_SIZE));
                     for (TeiDiv opus : opera) {
-                        for (TeiElem para : this.divService.getParagraphs(opus)) {
+                        final List<TeiElem> paragraphs;
+                        try {
+                            paragraphs = this.divService.getParagraphs(opus);
+                        } catch (TeiResourceNotFoundException e) {
+                            // The opus's TEI source is gone from the repos
+                            // but its rows are still in the DB - the prune
+                            // (TeiImportScheduler) removes them on a later
+                            // cycle, and indexing nothing for it is the
+                            // correct outcome until then. One such ghost
+                            // must not abort the whole build (observed in
+                            // prod: a single stale row kept the startup
+                            // auto-build from ever completing, leaving
+                            // /api/search/lucene incomplete indefinitely).
+                            skippedOpera++;
+                            log.warn("Skipping opus while building the Lucene index - its source is missing ({}): {}",
+                                    safeCompletePath(opus), e.getMessage());
+                            continue;
+                        }
+                        for (TeiElem para : paragraphs) {
                             try {
                                 final Document doc = toDocument(para);
                                 if (doc != null) {
@@ -305,8 +328,8 @@ public class LuceneIndexService {
             this.refreshSearcherAfterCommit();
 
             watch.stop();
-            log.info("Built Lucene index from page {}: {} paragraphs indexed, {} skipped, took {}",
-                    startPage, indexed, skipped, watch);
+            log.info("Built Lucene index from page {}: {} paragraphs indexed, {} skipped, {} opera skipped (missing source), took {}",
+                    startPage, indexed, skipped, skippedOpera, watch);
             return indexed;
         }
     }
