@@ -32,6 +32,7 @@ import org.springframework.context.event.EventListener;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
+import ro.editii.scriptorium.Util;
 import ro.editii.scriptorium.dao.TeiDivRepository;
 import ro.editii.scriptorium.model.Languages;
 import ro.editii.scriptorium.model.TeiDiv;
@@ -134,7 +135,12 @@ public class LuceneIndexService {
                                TeiDivRepository teiDivRepository,
                                DivService divService,
                                ControllerTool controllerTool) throws IOException {
-        this.indexDir = Path.of(indexDir);
+        // Expand a leading ~ to the user's home (same as CacheConf/AppConfig):
+        // lucene.index.dir defaults to ${cache.dir}/lucene-index, which
+        // inherits the pass store's WORK_DIR value - and that is allowed to
+        // use the conventional leading-~/ form (e.g. ~/.biblioteca), which
+        // must never reach Path.of as a literal tilde-named directory.
+        this.indexDir = Path.of(Util.replaceTilde(indexDir));
         Files.createDirectories(this.indexDir);
         this.directory = FSDirectory.open(this.indexDir);
         // Language-aware: FIELD_CONTENT/FIELD_HEAD (always populated) use
