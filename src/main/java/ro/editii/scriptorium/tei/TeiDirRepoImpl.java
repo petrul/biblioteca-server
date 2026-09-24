@@ -98,7 +98,10 @@ public class TeiDirRepoImpl implements TeiRepo, Serializable {
         try {
             is = new BufferedInputStream(new FileInputStream(file));
         } catch (FileNotFoundException e) {
-            throw new RuntimeException(e);
+            // has() said yes a moment ago - the file vanished in between.
+            // Same missing-source semantics as CombinedTeiRepo's not-found
+            // throw: TeiSourceMissingAdvice turns it into a clean 404.
+            throw new TeiResourceNotFoundException(resName, e);
         }
         return is;
     }

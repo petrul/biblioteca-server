@@ -107,4 +107,26 @@ class AdminServicePruneRemovedTeisTest {
         Mockito.verify(eventsPublisher, Mockito.times(1)).signalOpusRemoved(captor.capture())
         assertEquals("gutenberg/flaky-opus", captor.getValue().getPath())
     }
+
+    @Test
+    void aFailedPruneForOneRemovedFileDoesNotStopThePruneOfTheNext() {
+        // One un-deletable row (bad FK state, a concurrent delete racing us,
+        // whatever) must not abort the whole run: before the per-file
+        // isolation in pruneRemovedTeis it did, and called from the
+        // scheduler every 15s that meant one poison row kept EVERY removed
+        // file's cleanup from ever completing.
+        final brokenFile = teiFile(4L, "broken-gone.xml")
+        final nextFile = teiFile(5L, "also-gone.xml")
+
+        Mockito.when(teiRepo.list()).thenReturn([])
+        Mockito.when(teiFileRepository.findAll()).thenReturn([brokenFile, nextFile])
+        Mockito.when(teiDivRepository.getOperaForTeiFileId(4L)).thenReturn([])
+        Mockito.when(teiDivRepository.getOperaForTeiFileId(5L)).thenReturn([])
+        Mockito.doThrow(new RuntimeException("delete is having a bad day"))
+                .when(teiFileDbService).deleteTeiFile("broken-gone.xml")
+
+        adminService.pruneRemovedTeis(new NoWriter())
+
+        Mockito.verify(teiFileDbService, Mockito.times(1)).deleteTeiFile("also-gone.xml")
+    }
 }

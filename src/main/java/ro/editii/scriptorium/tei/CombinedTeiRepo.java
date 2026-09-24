@@ -49,7 +49,7 @@ public class CombinedTeiRepo implements TeiRepo, Serializable {
             if (r.isEnabled() && r.has(resName))
                 return r.getStreamForName(resName);
         }
-        throw new IllegalArgumentException("no res named " + resName);
+        throw new TeiResourceNotFoundException(resName);
     }
 
     @Override
@@ -66,7 +66,7 @@ public class CombinedTeiRepo implements TeiRepo, Serializable {
             if (r.isEnabled() && r.has(resName))
                 return r.getFile(resName);
         }
-        throw new IllegalArgumentException("no res named " + resName);
+        throw new TeiResourceNotFoundException(resName);
     }
 
     @Override
@@ -75,7 +75,7 @@ public class CombinedTeiRepo implements TeiRepo, Serializable {
             if (r.isEnabled() && r.has(resName))
                 return r.getLanguageHint(resName);
         }
-        throw new IllegalArgumentException("no res named " + resName);
+        throw new TeiResourceNotFoundException(resName);
     }
 
     @Override
@@ -84,7 +84,7 @@ public class CombinedTeiRepo implements TeiRepo, Serializable {
             if (r.isEnabled() && r.has(resName))
                 return r.getName();
         }
-        throw new IllegalArgumentException("no res named " + resName);
+        throw new TeiResourceNotFoundException(resName);
     }
 
     public static Builder builder() { return new Builder() ; }

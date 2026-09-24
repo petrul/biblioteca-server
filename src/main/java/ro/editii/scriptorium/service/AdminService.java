@@ -229,7 +229,18 @@ public class AdminService {
                 log.info("will prune removed TeiFile {} ({} opera)", teiFile.getFilename(), opusPaths.size());
                 writeLn(logActivity, "will prune removed TeiFile " + teiFile.getFilename());
 
-                this.teiFileDbService.deleteTeiFile(teiFile.getFilename());
+                // Per-file isolation: one failing file must not abort the
+                // prune of every file after it in the same run (and, called
+                // from the scheduler every 15s, forever after) - a single
+                // bad row would otherwise keep all removed files' cleanup
+                // from ever completing.
+                try {
+                    this.teiFileDbService.deleteTeiFile(teiFile.getFilename());
+                } catch (RuntimeException e) {
+                    log.error("Failed to prune removed TeiFile {} - continuing with the remaining files "
+                            + "(it will be retried on the next prune)", teiFile.getFilename(), e);
+                    continue;
+                }
 
                 for (String opusPath : opusPaths) {
                     try {

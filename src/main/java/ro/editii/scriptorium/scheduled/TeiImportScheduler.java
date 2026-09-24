@@ -1,6 +1,7 @@
 package ro.editii.scriptorium.scheduled;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.log4j.Log4j2;
 import org.springframework.context.annotation.Profile;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
@@ -14,6 +15,7 @@ import ro.editii.scriptorium.tei.AuthorStrIdComputer;
 import ro.editii.scriptorium.tei.TeiRepo;
 
 @Component
+@Log4j2
 @RequiredArgsConstructor
 @Profile("autoimport")
 public class TeiImportScheduler {
@@ -29,8 +31,20 @@ public class TeiImportScheduler {
     @Scheduled(fixedRate = 15 * 1000)
     public void importTeis() {
         synchronized (Globals.IMPORT_TEIS_WORKING) {
-            adminService.reimportFresherTeis(new NoWriter());
-            adminService.pruneRemovedTeis(new NoWriter());
+            // Independent try/catches: a failure in one half (a poison file
+            // aborting reimportFresherTeis outside its per-file handler,
+            // say) must not starve the other - a prune that never gets its
+            // turn leaves stale rows for vanished corpus files forever.
+            try {
+                adminService.reimportFresherTeis(new NoWriter());
+            } catch (RuntimeException e) {
+                log.error("Scheduled reimport of fresher TEIs failed - will retry next cycle", e);
+            }
+            try {
+                adminService.pruneRemovedTeis(new NoWriter());
+            } catch (RuntimeException e) {
+                log.error("Scheduled prune of removed TEIs failed - will retry next cycle", e);
+            }
         }
     }
 }
