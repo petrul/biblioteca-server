@@ -16,10 +16,10 @@ import org.springframework.scheduling.annotation.EnableScheduling;
 	@Server(url = "/", description = "Biblioteca Server")}
 )
 
-public class TextbaseServer {
+public class BibliotecaServer {
 
 	public static void main(String[] args) {
-		SpringApplication.run(TextbaseServer.class, args);
+		SpringApplication.run(BibliotecaServer.class, args);
 	}
 
 }

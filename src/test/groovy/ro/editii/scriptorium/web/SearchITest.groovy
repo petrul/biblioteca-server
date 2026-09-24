@@ -16,7 +16,7 @@ import org.springframework.test.context.TestPropertySource
 import org.springframework.transaction.annotation.Transactional
 import ro.editii.scriptorium.TestConfig
 import ro.editii.scriptorium.TestUtils
-import ro.editii.scriptorium.TextbaseServer
+import ro.editii.scriptorium.BibliotecaServer
 import ro.editii.scriptorium.client.TextbaseClient
 import ro.editii.scriptorium.dto.HitDto
 import ro.editii.scriptorium.service.AdminService
@@ -43,7 +43,7 @@ import static ro.editii.scriptorium.TestUtils.TEI_ELEM
 ])
 @SpringBootTest(
         webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT,
-        classes = [TextbaseServer.class, TestConfig.class, FakeEmbedderTestConfig.class])
+        classes = [BibliotecaServer.class, TestConfig.class, FakeEmbedderTestConfig.class])
 @EnableAutoConfiguration(exclude = KafkaAutoConfiguration.class)
 @Tag("integration-test")
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)

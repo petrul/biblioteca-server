@@ -18,7 +18,7 @@ import org.springframework.test.context.TestPropertySource
 import ro.editii.scriptorium.MultilangTeiRepoConfig
 import ro.editii.scriptorium.TestConfig
 import ro.editii.scriptorium.TestUtils
-import ro.editii.scriptorium.TextbaseServer
+import ro.editii.scriptorium.BibliotecaServer
 import ro.editii.scriptorium.client.TextbaseClient
 import ro.editii.scriptorium.dao.TeiFileRepository
 import ro.editii.scriptorium.dto.HitDto
@@ -61,7 +61,7 @@ import static ro.editii.scriptorium.TestUtils.TEI_ELEM
         // MultilangTeiRepoConfig listed after TestConfig so its teiRepo bean
         // overrides TestConfig's (allow-bean-definition-overriding above) -
         // verified by the exact-count assertion in beforeAll below.
-        classes = [TextbaseServer.class, TestConfig.class, FakeEmbedderTestConfig.class,
+        classes = [BibliotecaServer.class, TestConfig.class, FakeEmbedderTestConfig.class,
                    MultilangTeiRepoConfig.class, NetworkFreeVectorTestConfig.class])
 @EnableAutoConfiguration(exclude = KafkaAutoConfiguration.class)
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)

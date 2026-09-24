@@ -10,7 +10,7 @@ import org.springframework.security.core.userdetails.UserDetails
 import org.springframework.security.crypto.password.PasswordEncoder
 import org.springframework.test.context.TestPropertySource
 import ro.editii.scriptorium.TestConfig
-import ro.editii.scriptorium.TextbaseServer
+import ro.editii.scriptorium.BibliotecaServer
 import ro.editii.scriptorium.dao.AppUserRepository
 import ro.editii.scriptorium.model.AppUser
 import ro.editii.scriptorium.vector.FakeEmbedderTestConfig
@@ -38,7 +38,7 @@ import ro.editii.scriptorium.vector.NetworkFreeVectorTestConfig
 ])
 @SpringBootTest(
         webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT,
-        classes = [TextbaseServer.class, TestConfig.class, FakeEmbedderTestConfig.class,
+        classes = [BibliotecaServer.class, TestConfig.class, FakeEmbedderTestConfig.class,
                    NetworkFreeVectorTestConfig.class])
 @EnableAutoConfiguration(exclude = KafkaAutoConfiguration.class)
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)

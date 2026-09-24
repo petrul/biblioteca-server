@@ -14,7 +14,7 @@ import org.springframework.test.context.TestPropertySource
 import ro.editii.scriptorium.MultilangTeiRepoConfig
 import ro.editii.scriptorium.TestConfig
 import ro.editii.scriptorium.TestUtils
-import ro.editii.scriptorium.TextbaseServer
+import ro.editii.scriptorium.BibliotecaServer
 import ro.editii.scriptorium.dao.TeiDivRepository
 import ro.editii.scriptorium.dto.ReadingProgressDto
 import ro.editii.scriptorium.model.AppUser
@@ -47,7 +47,7 @@ import static ro.editii.scriptorium.TestUtils.TEI_ELEM
 ])
 @SpringBootTest(
         webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT,
-        classes = [TextbaseServer.class, TestConfig.class, FakeEmbedderTestConfig.class,
+        classes = [BibliotecaServer.class, TestConfig.class, FakeEmbedderTestConfig.class,
                    MultilangTeiRepoConfig.class, NetworkFreeVectorTestConfig.class])
 @EnableAutoConfiguration(exclude = KafkaAutoConfiguration.class)
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
