@@ -202,7 +202,7 @@ public class LuceneIndexService {
                 log.error("Background (re)build of the Lucene index failed - /api/search/lucene stays "
                         + "incomplete until POST /api/admin/lucene/reindex is tried manually.", e);
             }
-        }, "lucene-autoindex");
+        }, "lucene-auto");
         thread.setDaemon(true);
         thread.setPriority(Thread.MIN_PRIORITY);
         thread.start();
