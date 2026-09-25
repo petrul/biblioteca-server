@@ -72,9 +72,19 @@ public class MilvusTextSearchService {
     public List<MilvusHit> search(float[] vector, int topK) {
         if (!this.vectorSearchAvailability.isAvailable())
             return List.of();
-        final SearchResultsWrapper resultsWrapper = this.milvusCollection.search(new float[][] { vector }, topK);
-
-        return VectorUtils.searchResultsWrapperToHits(resultsWrapper, this.contentResolver);
+        try {
+            final SearchResultsWrapper resultsWrapper = this.milvusCollection.search(new float[][] { vector }, topK);
+            return VectorUtils.searchResultsWrapperToHits(resultsWrapper, this.contentResolver);
+        } catch (RuntimeException e) {
+            // Same degradation as the embedder timeout above: a mid-run Milvus
+            // outage/restart must turn this one request into empty results,
+            // not a raw SDK exception (a 500 to the caller) - the one-shot
+            // availability flag can still be true through such an outage,
+            // and VectorSearchAvailability's periodic re-check only flips it
+            // within its next minute-long interval.
+            log.warn("Milvus search failed ({}) - degrading to empty results for this search.", e.getMessage());
+            return List.of();
+        }
     }
 
 

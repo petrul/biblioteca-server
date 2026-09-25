@@ -18,6 +18,7 @@ import ro.editii.scriptorium.dto.HitsDto;
 import ro.editii.scriptorium.model.Author;
 import ro.editii.scriptorium.model.TeiDiv;
 import ro.editii.scriptorium.model.TeiElem;
+import ro.editii.scriptorium.search.MilvusHit;
 import ro.editii.scriptorium.search.content.ContentResolver;
 import ro.editii.scriptorium.service.ControllerTool;
 import ro.editii.scriptorium.service.DbSearchService;
@@ -188,24 +189,37 @@ public class SearchRestController extends CommonControllerUtil {
         final var elemInfo = elem.toElemInfo();
         final var text = this.controllerTool.teiElemToString(elemInfo);
         final var sha256 = Util.sha256Hex(text);
-        final Content content = this.milvusCollection.findBySha256(sha256);
-        final float[] vector;
-        if (content != null) {
-            // it's already in milvus
-            vector = content.getEmbedding();
-        } else {
-            // it's not already in milvus, need to compute it - bounded so a
-            // slow/GPU-contended Ollama degrades this one request to empty
-            // results instead of hanging it.
-            try {
-                vector = Util.runWithTimeout(() -> this.embedder.encode(text), EMBED_TIMEOUT_SECONDS);
-            } catch (Exception e) {
-                log.warn("Embedder call failed/timed out ({}) - degrading to empty results for this ann() call.", e.getMessage());
-                return EnvelopeDto.Hits.builder().data(new HitsDto(new HitDto[0])).build();
+        final List<MilvusHit> hits;
+        try {
+            final Content content = this.milvusCollection.findBySha256(sha256);
+            final float[] vector;
+            if (content != null) {
+                // it's already in milvus
+                vector = content.getEmbedding();
+            } else {
+                // it's not already in milvus, need to compute it - bounded so a
+                // slow/GPU-contended Ollama degrades this one request to empty
+                // results instead of hanging it.
+                try {
+                    vector = Util.runWithTimeout(() -> this.embedder.encode(text), EMBED_TIMEOUT_SECONDS);
+                } catch (Exception e) {
+                    log.warn("Embedder call failed/timed out ({}) - degrading to empty results for this ann() call.", e.getMessage());
+                    return EnvelopeDto.Hits.builder().data(new HitsDto(new HitDto[0])).build();
+                }
             }
+            final SearchResultsWrapper search = this.milvusCollection.search(vector, 20);
+            hits = VectorUtils.searchResultsWrapperToHits(search, this.contentResolver);
+        } catch (RuntimeException e) {
+            // A mid-run Milvus outage/restart: the one-shot startup
+            // availability flag stays true through it, so without this the
+            // raw SDK exception (connection refused mid-restart) would
+            // surface as a 500 on this endpoint. Same degradation as the
+            // embedder timeout above; VectorSearchAvailability's periodic
+            // re-check flips the flag within its next minute-long interval,
+            // after which the isAvailable() guard at the top handles it.
+            log.warn("Milvus failed ({}) - degrading to empty results for this ann() call.", e.getMessage());
+            return EnvelopeDto.Hits.builder().data(new HitsDto(new HitDto[0])).build();
         }
-        final SearchResultsWrapper search = this.milvusCollection.search(vector, 20);
-        final var hits = VectorUtils.searchResultsWrapperToHits(search, this.contentResolver);
         final HitDto[] dtos = hits.stream().map(it -> {
             final var dto = HitDto.from(it);
             return dto;

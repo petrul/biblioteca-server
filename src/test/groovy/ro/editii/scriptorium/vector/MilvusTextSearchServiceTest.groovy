@@ -66,6 +66,24 @@ class MilvusTextSearchServiceTest {
     }
 
     @Test
+    void milvusFailureDegradesToEmptyResults() {
+        // A mid-run Milvus outage/restart: the availability flag is still
+        // true (its periodic re-check only flips within its next interval),
+        // so the search goes through to a dead Milvus - and must degrade to
+        // empty results, not surface the raw SDK exception to the caller.
+        final vector = [0.25f, 0.5f] as float[]
+        when(availability.isAvailable()).thenReturn(true)
+        when(embedder.encode("query")).thenReturn(vector)
+        collection.failWith = new IllegalStateException("connection refused")
+        final service = new MilvusTextSearchService(collection, embedder, contentResolver, availability)
+
+        assert service.search("query", 4).isEmpty()
+
+        verify(embedder).encode("query")
+        assert collection.searches == 1
+    }
+
+    @Test
     void rejectsAnEmbedderPairedWithTheWrongCollection() {
         when(embedder.modelName()).thenReturn("BGE_M3")
 
@@ -87,6 +105,7 @@ class MilvusTextSearchServiceTest {
 
     private static class RecordingMilvusCollection extends MilvusCollection {
         SearchResultsWrapper result
+        RuntimeException failWith
         int searches
         int topK
         float[][] vectors
@@ -98,6 +117,8 @@ class MilvusTextSearchServiceTest {
         @Override
         SearchResultsWrapper search(float[][] vectors, int topK) {
             this.searches++
+            if (this.failWith != null)
+                throw this.failWith
             this.vectors = vectors
             this.topK = topK
             return result
