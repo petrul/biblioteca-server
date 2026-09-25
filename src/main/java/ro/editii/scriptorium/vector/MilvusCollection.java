@@ -32,10 +32,17 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor @Log4j2
 public class MilvusCollection {
 
-    // how many buckets should be the vector search space split into
-    public static final int DEFAULT_NLIST = 256;
-    // how many buckets to try out at search-time of total nlist
-    public static final int DEFAULT_NPROBE = 10;
+    // how many buckets the vector search space is split into - kept equal to
+    // the nlist biblioteca-nestjs creates collection indexes with (see its
+    // idx_ivfsq8_l2_8192), so this legacy/manual create-index path can't
+    // produce a differently-tuned collection than the vectorizer would
+    public static final int DEFAULT_NLIST = 8192;
+    // how many buckets to try out at search-time of total nlist - kept in
+    // relation to the nlist biblioteca-nestjs builds collection indexes
+    // with (8192 at the target ~6.5M-paragraph corpus; scanning sqrt(nlist)
+    // buckets balances recall against latency - see biblioteca-nestjs's
+    // README "Vector-related configuration" for the pairing rationale)
+    public static final int DEFAULT_NPROBE = 64;
     public static final int DEFAULT_TOPK = 10;
 
     public static final String FIELD_SHA_256 = "sha256";
