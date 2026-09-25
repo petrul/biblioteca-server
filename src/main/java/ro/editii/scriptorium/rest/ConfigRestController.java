@@ -2,6 +2,7 @@ package ro.editii.scriptorium.rest;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -36,6 +37,15 @@ public class ConfigRestController {
     // that to when /config is actually called instead.
     final ObjectProvider<MilvusCollection> prodCollection;
     final ObjectProvider<Embedder> embedder;
+
+    // Paragraph size window exported alongside the rest (see
+    // application.properties's vectorizer.para.*) - plain non-final @Value
+    // fields rather than constructor params: @RequiredArgsConstructor's
+    // generated constructor wouldn't carry @Value annotations.
+    @Value("${vectorizer.para.minChars:20}")
+    int paraMinChars;
+    @Value("${vectorizer.para.maxChars:3000}")
+    int paraMaxChars;
 
     /**
      * The non-secret shared-resource naming convention every dependent
@@ -82,6 +92,10 @@ public class ConfigRestController {
                         .build())
                 .milvus(milvusInfo)
                 .embedder(embedderInfo)
+                .paragraph(SharedConfigDto.Paragraph.builder()
+                        .minChars(this.paraMinChars)
+                        .maxChars(this.paraMaxChars)
+                        .build())
                 .build();
     }
 }
