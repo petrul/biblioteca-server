@@ -121,8 +121,10 @@ public class VectorConfig {
 
     @Bean
     MilvusCollection prodCollection(MilvusService milvusService,
-            // This exact name is also configured in textbase-nestjs .env.dev.
-            @Value("${milvus.collection:int_tb_paras_bge_m3}") String collectionName) {
+            // The default below is what every stage uses unless
+            // milvus.collection is set - biblioteca-nestjs never has a name
+            // of its own, it takes this one from GET /api/admin/config.
+            @Value("${milvus.collection:biblioteca_paras_bge_m3}") String collectionName) {
 
         final MilvusCollection col = new MilvusCollection(milvusService, collectionName) {
             @Override
