@@ -13,7 +13,7 @@ import java.util.List;
  *
  * Collection NAMING is shared with Milvus on purpose (see
  * VectorTextSearchService.validateModelCollectionCompatible): the same
- * "biblioteca_paras_bge_m3"-style name, derived from the active embedder's
+ * "biblioteca_paragraphs_bge_m3"-style name, derived from the active embedder's
  * modelName, is used whichever store backs it - a name identifies "this
  * corpus embedded with this encoder", never "this store".
  */

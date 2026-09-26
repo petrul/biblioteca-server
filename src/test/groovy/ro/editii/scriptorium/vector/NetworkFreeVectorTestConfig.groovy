@@ -70,7 +70,7 @@ class NetworkFreeVectorTestConfig {
     @Bean
     @Primary
     VectorCollection networkFreeVectorCollection(
-            @Value('${vector.collection:biblioteca_paras_bge_m3}') String collectionName) {
+            @Value('${vector.collection:biblioteca_paragraphs_bge_m3}') String collectionName) {
         return [
                 getName            : { collectionName },
                 exists             : { false },

@@ -144,7 +144,7 @@ public class VectorConfig {
     MilvusCollection prodCollection(MilvusService milvusService,
             // biblioteca-nestjs never has a collection name of its own -
             // it takes this one from GET /api/admin/config.
-            @Value("${vector.collection:biblioteca_paras_bge_m3}") String collectionBaseName,
+            @Value("${vector.collection:biblioteca_paragraphs_bge_m3}") String collectionBaseName,
             @Value("${vector.collection.prefix:}") String collectionPrefix) {
 
         final MilvusCollection col = new MilvusCollection(milvusService, prefixedCollectionName(collectionPrefix, collectionBaseName)) {
@@ -167,7 +167,7 @@ public class VectorConfig {
     @ConditionalOnProperty(name = "vector.store", havingValue = "qdrant", matchIfMissing = true)
     QdrantCollection qdrantProdCollection(
             @Value("${vectorstore.address}") String vectorStoreAddress,
-            @Value("${vector.collection:biblioteca_paras_bge_m3}") String collectionBaseName,
+            @Value("${vector.collection:biblioteca_paragraphs_bge_m3}") String collectionBaseName,
             @Value("${vector.collection.prefix:}") String collectionPrefix,
             @Qualifier("qdrantRestTemplate") RestTemplate qdrantRestTemplate) {
         final QdrantCollection col = new QdrantCollection(vectorStoreAddress,

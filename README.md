@@ -131,7 +131,7 @@ The canonical environment variable names expected by the application are:
 | --- | --- |
 | `VECTORSTORE_URL` | URL of the active vector store (qdrant or milvus), including port; `MILVUS_URL` is the legacy name still accepted as a fallback |
 | `VECTOR_STORE` | Active vector store backend: `qdrant` (the default) or `milvus` |
-| `VECTOR_COLLECTION` | Base vector collection name; defaults to `biblioteca_paras_bge_m3` |
+| `VECTOR_COLLECTION` | Base vector collection name; defaults to `biblioteca_paragraphs_bge_m3` |
 | `VECTOR_COLLECTION_PREFIX` | Prefix prepended to the collection name so non-prod environments can share the prod store (the dev/int profiles set `dev-`/`int-`); empty by default |
 | `EMBEDDER_URL` | Ollama/embedder URL, including port |
 | `TEI_REPOS` | Comma-separated local or Git-backed TEI repository specifications |

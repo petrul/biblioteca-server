@@ -87,10 +87,9 @@ tasks.named('test') {
     // 7223: SearchITest.ann() asserting empty hits). Production keeps the
     // periodic recheck; tests get the deterministic startup-check behavior.
     systemProperty 'vector.search.availability-recheck.enabled', 'false'
-    if (!['dev', 'ci', 'prod', 'yoga'].any { project.hasProperty(it) } &&
-            System.getenv('SPRING_PROFILES_ACTIVE') == null) {
-        systemProperty 'spring.profiles.active', 'ci'
-    }
+    // Profile resolution itself lives in the shared tasks.withType(Test)
+    // block below (applies to this task too, since it's Test-typed) -
+    // nothing extra needed here.
 }
 
 tasks.register('unittest', Test) {
@@ -113,8 +112,8 @@ tasks.register('integrationTest', Test) {
         includeTags 'integration-test'
     }
     shouldRunAfter tasks.named('unittest')
-    jvmArgs '-Xss10m'
-    systemProperty 'spring.profiles.active', 'ci'
+    // Profile resolution (jvmArgs too) comes from the shared
+    // tasks.withType(Test) block below - this task is Test-typed too.
     // Same reasoning as the test task above: the store-integration tests
     // manage the availability flag themselves around their own collections.
     systemProperty 'vector.search.availability-recheck.enabled', 'false'
@@ -308,12 +307,14 @@ dependencies {
 
 bootRun {
     jvmArgs '-Xss10m' // add line
-    final profileProperty = ['dev', 'ci', 'prod'].find { project.hasProperty(it) }
-    final configuredProfiles = System.getenv('SPRING_PROFILES_ACTIVE') ?: profileProperty
-    final activeProfiles = ['autoimport']
-    if (configuredProfiles != null && !configuredProfiles.isBlank()) {
-        activeProfiles.addAll(configuredProfiles.split(',').findAll { !it.isBlank() })
-    }
+    // resolveProfile() (below) is the single source of truth: the rakefile
+    // always passes -Pprofile=<profile> (biblioteca/<profile> in the pass
+    // store - a hostname by default, e.g. zmeu, see the rakefile's own
+    // Socket.gethostname fallback). 'autoimport' is always included on top
+    // of that - it's a standing behavior flag for local bootRun, not a
+    // profile choice itself (see `$ gradle bootRun -Pprofile=air,autoimport`
+    // further down for the pattern this replaced).
+    final activeProfiles = (['autoimport'] + resolveProfile().split(',').toList()).findAll { !it.isBlank() }.unique()
     systemProperties['spring.profiles.active'] = activeProfiles.join(',')
     println "bootRun: spring.profiles.active = " + systemProperties['spring.profiles.active']
 }
@@ -321,20 +322,12 @@ bootRun {
 
 tasks.withType(Test).configureEach {
     jvmArgs '-Xss10m' // needed for the recursion of serializing DOM Nodes
-    // $ ./gradlew -Pci unittest   or   $ ./gradlew -Pci test
-    // NOTE: no '-Ptest' case here on purpose - every Gradle project with the
-    // java/groovy plugins already has a task named 'test', and Gradle exposes
-    // tasks as dynamic properties on the project, so hasProperty('test') is
-    // ALWAYS true regardless of any -P flag actually passed. Learned this the
-    // hard way: it was silently overriding -Pdev/-Pci/-Pprod every time.
-    if (project.hasProperty('dev')) systemProperty 'spring.profiles.active', 'dev'
-    if (project.hasProperty('yoga')) systemProperty 'spring.profiles.active', 'yoga'
-    if (project.hasProperty('profile')) {
-        systemProperty 'spring.profiles.active', project.property('profile').toString()
-    }
-    if (project.hasProperty('ci'))  systemProperty 'spring.profiles.active', 'ci'
-    if (project.hasProperty('prod'))  systemProperty 'spring.profiles.active', 'prod'
-    final resolvedProfile = systemProperties['spring.profiles.active'] ?: System.getenv('SPRING_PROFILES_ACTIVE') ?: '(none)'
+    // $ ./gradlew -Pprofile=ci test   (resolveProfile() below; the rakefile
+    // always passes -Pprofile=<profile> this same way). Plain `test`/
+    // `unittest`/`integrationTest` with nothing set default to 'ci' - the
+    // conventional full suite runs against integration-deps.
+    final resolvedProfile = resolveProfile('ci')
+    systemProperty 'spring.profiles.active', resolvedProfile
     println "${name}: spring.profiles.active = " + resolvedProfile
 
     // Lucene indexing stays off for every test run under every profile: no
@@ -362,8 +355,9 @@ tasks.withType(Test).configureEach {
 }
 
 /*
-    run the server like this:
-    $ gradle bootRun -Pprofile=air,autoimport
+    run the server like this (autoimport is always added automatically -
+    see bootRun above):
+    $ gradle bootRun -Pprofile=air
  */
  
 jar {
@@ -475,13 +469,17 @@ swaggerSources {
 }
 
 // load .env.xxx for dev or test execution
-final profile = getProfile()
-def getProfile() {
-    if (project.hasProperty('dev')) return 'dev' // you can call it with -Pdev
-    if (project.hasProperty('ci'))  return 'ci'
-    if (project.hasProperty('prod'))  return 'prod'
-    if (project.hasProperty('profile')) return project.property('profile')
-    'dev' // default
+final profile = resolveProfile()
+// Single source of truth for "which profile is this run for", used by
+// bootRun and every Test task above, and by the dotenv fallback loader
+// below: -Pprofile=<profile> (what the rakefile always passes - a
+// hostname by default, e.g. zmeu) wins; SPRING_PROFILES_ACTIVE covers a
+// bare `./gradlew` invocation with no rakefile involved at all; fallback
+// is the caller's own default (Test tasks want 'ci', everything else 'dev').
+def resolveProfile(String fallback = 'dev') {
+    if (project.hasProperty('profile')) return project.property('profile').toString()
+    if (System.getenv('SPRING_PROFILES_ACTIVE')) return System.getenv('SPRING_PROFILES_ACTIVE')
+    fallback
 }
 println "profile: ${profile}"
 // ProcessForkOptions covers both bootRun (JavaExec) and test (Test)

@@ -3,10 +3,17 @@ require 'fileutils'
 require 'shellwords'
 require 'tmpdir'
 require 'open3'
+require 'socket'
 
 GRADLE = "./gradlew"
 
-profile = ENV['PROFILE'] || (Rake.application.top_level_tasks.include?('ci') ? 'ci' : 'dev')
+# Same convention as wavelen-market-data's rakefile: with no PROFILE env and
+# not running the ci task, default to this machine's own short hostname
+# rather than a generic "dev" - each dev box gets its own biblioteca/<host>
+# pass-store section (e.g. biblioteca/zmeu) instead of everyone sharing one
+# "dev" bucket. Explicit `rake run[dev]` (or any [task_profile] arg) still
+# always wins - this is only the fallback.
+profile = ENV['PROFILE'] || (Rake.application.top_level_tasks.include?('ci') ? 'ci' : Socket.gethostname.split('.').first)
 puts "profile: #{profile}"
 
 def load_profile_env(task_profile)
