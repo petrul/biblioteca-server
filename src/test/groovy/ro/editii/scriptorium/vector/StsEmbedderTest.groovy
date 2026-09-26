@@ -2,6 +2,7 @@ package ro.editii.scriptorium.vector
 
 import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.BeforeAll
+import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.Tag
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestInstance
@@ -34,6 +35,7 @@ import org.springframework.boot.test.context.SpringBootTest
         ])
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 @Tag("integration-test")
+@Disabled("Milvus is retired infrastructure - its collection round-trip needs a live milvus instance that no longer exists; the vector store itest path is qdrant now (QdrantCollectionITest).")
 class StsEmbedderTest {
 
     static final String TEST_COLLECTION = "test_textbase_paras_sts_all_minilm_l6_v2_stsembeddertest"

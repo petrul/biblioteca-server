@@ -52,6 +52,7 @@ import static ro.editii.scriptorium.TestUtils.TEI_ELEM
 @EnableAutoConfiguration(exclude = KafkaAutoConfiguration.class)
 @Tag("integration-test")
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
+@Disabled("Milvus is retired infrastructure - this itest manages its own collection on a live milvus instance that no longer exists; the vector store itest path is qdrant now (QdrantCollectionITest).")
 class SearchITest {
 
     /**

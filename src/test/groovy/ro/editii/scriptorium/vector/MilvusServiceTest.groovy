@@ -2,6 +2,7 @@ package ro.editii.scriptorium.vector
 
 import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.BeforeAll
+import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.Tag
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestInstance
@@ -48,6 +49,7 @@ import static ro.editii.scriptorium.GTestUtil.p
 @Import(TestConfig.class)
 @Tag("integration-test")
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
+@Disabled("Milvus is retired infrastructure - the vector store itest path is qdrant now (QdrantCollectionITest). Re-enable only if a dedicated milvus instance is ever stood up again.")
 class MilvusServiceTest {
 
     /**
