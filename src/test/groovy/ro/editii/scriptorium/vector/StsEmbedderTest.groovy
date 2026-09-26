@@ -25,8 +25,12 @@ import org.springframework.boot.test.context.SpringBootTest
         properties = [
             "sts.host=mini.local",
             "sts.port=11200",
-            "milvus.url=http://srv2.local:20112",
-            "embedder.url=http://zmeu.local:11434",
+            // The collection round-trip below is milvus-specific machinery
+            // (MilvusService.getAt), so opt into the milvus beans explicitly
+            // - qdrant is the default store now.
+            "vector.store=milvus",
+            "vectorstore.address=http://srv2.local:20112",
+            "embedder.address=http://zmeu.local:11434",
         ])
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 @Tag("integration-test")

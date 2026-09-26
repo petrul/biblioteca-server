@@ -30,7 +30,7 @@ import java.util.stream.Collectors;
 
 
 @RequiredArgsConstructor @Log4j2
-public class MilvusCollection {
+public class MilvusCollection implements VectorCollection {
 
     // how many buckets the vector search space is split into - kept equal to
     // the nlist biblioteca-nestjs creates collection indexes with (see its
@@ -64,6 +64,18 @@ public class MilvusCollection {
 
     public String getName() {
         return this.name;
+    }
+
+    /**
+     * Store-agnostic search entry (see VectorCollection) - converts this
+     * collection's SDK-typed search into the neutral VectorSearchHit, so
+     * VectorTextSearchService depends on the interface, not on Milvus's
+     * SearchResultsWrapper.
+     */
+    @Override
+    public List<VectorSearchHit> searchHits(float[] vector, int topK) {
+        return VectorUtils.searchResultsWrapperToSearchHits(
+                this.search(new float[][] { vector }, topK));
     }
 
     public void load() {
@@ -107,7 +119,7 @@ public class MilvusCollection {
      *                     and its name/characteristics - since a collection
      *                     is only ever compatible with vectors from the one
      *                     encoder it was created for (see
-     *                     MilvusTextSearchService.validateModelCollectionCompatible).
+     *                     VectorTextSearchService.validateModelCollectionCompatible).
      *                     Callers that just need a generic collection
      *                     (most existing tests) can use the single-arg
      *                     create(int) overload instead.
@@ -398,6 +410,7 @@ public class MilvusCollection {
         return  fields;
     }
 
+    @Override
     public Content findBySha256(String sha256) {
         final var resp = this.milvusService.milvus.query(QuerySimpleParam.newBuilder()
                 .withCollectionName(this.name)

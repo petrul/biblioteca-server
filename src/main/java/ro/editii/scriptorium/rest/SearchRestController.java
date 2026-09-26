@@ -1,6 +1,5 @@
 package ro.editii.scriptorium.rest;
 
-import io.milvus.response.SearchResultsWrapper;
 import io.swagger.v3.oas.annotations.Operation;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.constraints.Size;
@@ -18,7 +17,7 @@ import ro.editii.scriptorium.dto.HitsDto;
 import ro.editii.scriptorium.model.Author;
 import ro.editii.scriptorium.model.TeiDiv;
 import ro.editii.scriptorium.model.TeiElem;
-import ro.editii.scriptorium.search.MilvusHit;
+import ro.editii.scriptorium.search.VectorHit;
 import ro.editii.scriptorium.search.content.ContentResolver;
 import ro.editii.scriptorium.service.ControllerTool;
 import ro.editii.scriptorium.service.DbSearchService;
@@ -34,26 +33,26 @@ import java.util.List;
 @Log4j2
 public class SearchRestController extends CommonControllerUtil {
 
-    // bounds the embedder fallback call in ann() below - see MilvusTextSearchService
+    // bounds the embedder fallback call in ann() below - see VectorTextSearchService
     // for the same pattern/reasoning.
     private static final int EMBED_TIMEOUT_SECONDS = 15;
 
     final DbSearchService dbSearchService;
-    final MilvusTextSearchService milvusTextSearchService;
+    final VectorTextSearchService vectorTextSearchService;
     final DivService divService;
     @Autowired ControllerTool controllerTool;
-    @Autowired MilvusCollection milvusCollection;
+    @Autowired VectorCollection vectorCollection;
     @Autowired Embedder embedder;
     @Autowired ContentResolver contentResolver;
     @Autowired VectorSearchAvailability vectorSearchAvailability;
 
     public SearchRestController(Environment environment,
                                 DbSearchService dbSearchService,
-                                MilvusTextSearchService milvusTextSearchService,
+                                VectorTextSearchService vectorTextSearchService,
                                 DivService divService) {
         super(environment);
         this.dbSearchService = dbSearchService;
-        this.milvusTextSearchService = milvusTextSearchService;
+        this.vectorTextSearchService = vectorTextSearchService;
         this.divService = divService;
     }
 
@@ -189,15 +188,15 @@ public class SearchRestController extends CommonControllerUtil {
         final var elemInfo = elem.toElemInfo();
         final var text = this.controllerTool.teiElemToString(elemInfo);
         final var sha256 = Util.sha256Hex(text);
-        final List<MilvusHit> hits;
+        final List<VectorHit> hits;
         try {
-            final Content content = this.milvusCollection.findBySha256(sha256);
+            final Content content = this.vectorCollection.findBySha256(sha256);
             final float[] vector;
             if (content != null) {
-                // it's already in milvus
+                // it's already stored in the vector collection
                 vector = content.getEmbedding();
             } else {
-                // it's not already in milvus, need to compute it - bounded so a
+                // it's not stored, need to compute it - bounded so a
                 // slow/GPU-contended Ollama degrades this one request to empty
                 // results instead of hanging it.
                 try {
@@ -207,17 +206,17 @@ public class SearchRestController extends CommonControllerUtil {
                     return EnvelopeDto.Hits.builder().data(new HitsDto(new HitDto[0])).build();
                 }
             }
-            final SearchResultsWrapper search = this.milvusCollection.search(vector, 20);
-            hits = VectorUtils.searchResultsWrapperToHits(search, this.contentResolver);
+            hits = VectorUtils.searchHitsToHits(
+                    this.vectorCollection.searchHits(vector, 20), this.contentResolver);
         } catch (RuntimeException e) {
-            // A mid-run Milvus outage/restart: the one-shot startup
+            // A mid-run vector-store outage/restart: the one-shot startup
             // availability flag stays true through it, so without this the
-            // raw SDK exception (connection refused mid-restart) would
+            // raw store exception (connection refused mid-restart) would
             // surface as a 500 on this endpoint. Same degradation as the
             // embedder timeout above; VectorSearchAvailability's periodic
             // re-check flips the flag within its next minute-long interval,
             // after which the isAvailable() guard at the top handles it.
-            log.warn("Milvus failed ({}) - degrading to empty results for this ann() call.", e.getMessage());
+            log.warn("Vector store failed ({}) - degrading to empty results for this ann() call.", e.getMessage());
             return EnvelopeDto.Hits.builder().data(new HitsDto(new HitDto[0])).build();
         }
         final HitDto[] dtos = hits.stream().map(it -> {

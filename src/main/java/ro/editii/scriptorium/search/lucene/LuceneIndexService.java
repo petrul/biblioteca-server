@@ -103,6 +103,10 @@ public class LuceneIndexService {
     static final int OPERA_PAGE_SIZE = 20; // package-private: LuceneIndexServiceResumeTest references it
     private static final int SEARCH_CONTENT_BOOST = 1;
     private static final int SEARCH_HEAD_BOOST = 3;
+    // Ceiling for the per-opus cooling pause (see cooldownAfter): a
+    // pathological opus (minutes of indexing) still yields a bounded
+    // breather, so the build can never stall on one document.
+    private static final long MAX_COOLDOWN_MILLIS = 10_000;
 
     // Lucene commit user-data keys (IndexWriter.setLiveCommitData /
     // SegmentInfos.readLatestCommit().getUserData()) - how buildIndex
@@ -122,6 +126,15 @@ public class LuceneIndexService {
     private final DivService divService;
     private final ControllerTool controllerTool;
     private final boolean autoIndexEnabled;
+    /**
+     * Cooling pace between documents during a build: after each opus, the
+     * build sleeps this fraction of the time that opus itself took to
+     * index (a build is a background, low-priority job - trading some
+     * wall-clock for not competing with request traffic, the embedder and
+     * the vector store for CPU/disk, exactly like biblioteca-nestjs's
+     * embedding-batch cooldown). 0 disables the pauses entirely.
+     */
+    private final double buildCooldownFactor;
 
     // Guards the MAIN index's writer - both rebuildIndex() and
     // reindexOpus()'s brief merge step take this, so the two can never
@@ -133,6 +146,7 @@ public class LuceneIndexService {
 
     public LuceneIndexService(@Value("${lucene.index.dir}") String indexDir,
                                @Value("${lucene.autoindex.enabled}") boolean autoIndexEnabled,
+                               @Value("${lucene.build.cooldown.factor:0.5}") double buildCooldownFactor,
                                TeiDivRepository teiDivRepository,
                                DivService divService,
                                ControllerTool controllerTool) throws IOException {
@@ -155,6 +169,7 @@ public class LuceneIndexService {
         this.divService = divService;
         this.controllerTool = controllerTool;
         this.autoIndexEnabled = autoIndexEnabled;
+        this.buildCooldownFactor = buildCooldownFactor;
 
         if (DirectoryReader.indexExists(this.directory)) {
             this.searcherManager = new SearcherManager(this.directory, null);
@@ -274,6 +289,7 @@ public class LuceneIndexService {
                 do {
                     opera = this.teiDivRepository.findOpera(PageRequest.of(pageNr, OPERA_PAGE_SIZE));
                     for (TeiDiv opus : opera) {
+                        final long opusStartNanos = System.nanoTime();
                         final List<TeiElem> paragraphs;
                         try {
                             paragraphs = this.divService.getParagraphs(opus);
@@ -305,6 +321,7 @@ public class LuceneIndexService {
                                         safeCompletePath(para), e.getMessage());
                             }
                         }
+                        cooldownAfter(opusStartNanos);
                     }
                     pageNr++;
 
@@ -331,6 +348,27 @@ public class LuceneIndexService {
             log.info("Built Lucene index from page {}: {} paragraphs indexed, {} skipped, {} opera skipped (missing source), took {}",
                     startPage, indexed, skipped, skippedOpera, watch);
             return indexed;
+        }
+    }
+
+    /**
+     * The cooling pause between two opera of a build (see
+     * buildCooldownFactor): sleeps proportionally to how long the just-
+     * indexed opus itself took, so a heavy opus (thousands of paragraphs)
+     * yields a proportionally longer breather than a light one - the
+     * build keeps making progress (never more than its own runtime in
+     * pauses at the default 0.5) while the box gets usable gaps.
+     */
+    private void cooldownAfter(long opusStartNanos) {
+        if (this.buildCooldownFactor <= 0)
+            return;
+        final long pauseMillis = (long) ((System.nanoTime() - opusStartNanos) * this.buildCooldownFactor / 1_000_000);
+        if (pauseMillis <= 0)
+            return;
+        try {
+            Thread.sleep(Math.min(pauseMillis, MAX_COOLDOWN_MILLIS));
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
         }
     }
 

@@ -22,7 +22,7 @@ import ro.editii.scriptorium.Util;
  * can make startup slow/flaky if Ollama happens to be busy/contended.
  *
  * A likely reason this matters in practice: swapping the production
- * embedder (see VectorConfig) means the Milvus collection it expects
+ * embedder (see VectorConfig) means the Vector collection it expects
  * (named after that embedder, by convention) may not exist yet until
  * someone re-embeds the corpus with the new model - this lets the rest
  * of the app (DB-backed search, everything not vector-search-related) keep
@@ -46,18 +46,24 @@ public class VectorSearchAvailability {
     // set) could otherwise hang app startup indefinitely.
     private static final int CHECK_TIMEOUT_SECONDS = 15;
 
-    private final MilvusService milvusService;
-    private final MilvusCollection milvusCollection;
+    private final VectorCollection vectorCollection;
     private final Embedder embedder;
 
     @Value("${vector.search.availability-check.enabled:true}")
     private boolean availabilityCheckEnabled;
 
+    // Separate gate for the periodic recheck below: production leaves it
+    // on, tests turn it off (build.gradle's test/integrationTest tasks set
+    // vector.search.availability-recheck.enabled=false) so the one-shot
+    // startup check stays the single authority on `available` while they
+    // create/drop their own collections around it.
+    @Value("${vector.search.availability-recheck.enabled:true}")
+    private boolean recheckEnabled;
+
     private volatile boolean available = false;
 
-    public VectorSearchAvailability(MilvusService milvusService, MilvusCollection milvusCollection, Embedder embedder) {
-        this.milvusService = milvusService;
-        this.milvusCollection = milvusCollection;
+    public VectorSearchAvailability(VectorCollection vectorCollection, Embedder embedder) {
+        this.vectorCollection = vectorCollection;
         this.embedder = embedder;
     }
 
@@ -71,11 +77,11 @@ public class VectorSearchAvailability {
         this.available = this.checkMilvus(true);
 
         if (this.available) {
-            log.info("Vector similarity search available: milvus collection ({}) reachable.", this.milvusCollection.name);
+            log.info("Vector similarity search available: vector collection ({}) reachable.", this.vectorCollection.getName());
         } else {
-            log.warn("Vector similarity search DISABLED (milvus collection '{}' not reachable). "
+            log.warn("Vector similarity search DISABLED (vector collection '{}' not reachable). "
                             + "/api/search/milvus and /api/search/ann will return empty results until the next periodic check picks it up.",
-                    this.milvusCollection.name);
+                    this.vectorCollection.getName());
         }
     }
 
@@ -91,13 +97,15 @@ public class VectorSearchAvailability {
      *
      * Cadence: one interval is the worst-case window in which search
      * requests still go through to a dead Milvus (and degrade per-request
-     * instead - see MilvusTextSearchService/ann()'s catch blocks), while
+     * instead - see VectorTextSearchService/ann()'s catch blocks), while
      * the check itself is two cheap gRPC reads. A minute is far off the
      * 15s import cycle's cadence on purpose: this state practically never
      * changes, so there is nothing to gain from checking it any faster.
      */
     @Scheduled(initialDelay = 60 * 1000, fixedDelay = 60 * 1000)
     public void recheckAvailability() {
+        if (!this.recheckEnabled)
+            return; // one-shot mode (tests): only the startup check manages `available`
         if (!this.availabilityCheckEnabled)
             return; // stays off; the startup check above already announced that
 
@@ -108,21 +116,21 @@ public class VectorSearchAvailability {
             return;
 
         if (this.available) {
-            log.info("Vector similarity search available again: milvus collection ({}) reachable.", this.milvusCollection.name);
+            log.info("Vector similarity search available again: vector collection ({}) reachable.", this.vectorCollection.getName());
         } else {
-            log.warn("Vector similarity search now DISABLED (milvus collection '{}' unreachable since the last check) - "
+            log.warn("Vector similarity search now DISABLED (vector collection '{}' unreachable since the last check) - "
                             + "/api/search/milvus and /api/search/ann will return empty results until the next check finds it back.",
-                    this.milvusCollection.name);
+                    this.vectorCollection.getName());
         }
     }
 
     private boolean checkMilvus(boolean logOnFailure) {
         try {
-            return Util.runWithTimeout(() -> this.milvusService.has(this.milvusCollection.name)
-                    && this.milvusCollection.getVectorDimension() == this.embedder.vectorDimension(), CHECK_TIMEOUT_SECONDS);
+            return Util.runWithTimeout(() -> this.vectorCollection.exists()
+                    && this.vectorCollection.getVectorDimension() == this.embedder.vectorDimension(), CHECK_TIMEOUT_SECONDS);
         } catch (Exception e) {
             if (logOnFailure)
-                log.warn("Milvus availability check failed (collection '{}'): {}", this.milvusCollection.name, e.getMessage());
+                log.warn("Vector store availability check failed (collection '{}'): {}", this.vectorCollection.getName(), e.getMessage());
             return false;
         }
     }

@@ -12,7 +12,7 @@ import org.springframework.test.context.DynamicPropertyRegistry
 import org.springframework.test.context.DynamicPropertySource
 import ro.editii.scriptorium.TestConfig
 import ro.editii.scriptorium.TestUtils
-import ro.editii.scriptorium.search.MilvusHit
+import ro.editii.scriptorium.search.VectorHit
 
 import static ro.editii.scriptorium.GTestUtil.p
 
@@ -21,7 +21,7 @@ import static ro.editii.scriptorium.GTestUtil.p
             VectorConfig.class,
             MilvusService.class,
             VectorSearchAvailability.class,
-            MilvusTextSearchService.class,
+            VectorTextSearchService.class,
             ro.editii.scriptorium.health.OllamaHealthTracker.class,
             // must come AFTER VectorConfig.class - classes= entries are
             // processed in order, and a later definition for the same bean
@@ -31,10 +31,17 @@ import static ro.editii.scriptorium.GTestUtil.p
             // list, so VectorConfig's real bean would win instead.
             FakeEmbedderTestConfig.class],
         properties = [
-        "milvus.url=http://srv2.local:20112",
+        // This is the milvus-backend itest: qdrant is the default store now,
+        // so the milvus beans (MilvusService included) must be opted into.
+        "vector.store=milvus",
+        "vectorstore.address=http://srv2.local:20112",
+        // This class owns the full lifecycle of its own random-named
+        // collection on the dedicated integration milvus - the per-env
+        // prefix (dev-, for sharing the prod qdrant) must not apply to it.
+        "vector.collection.prefix=",
         "embeddings.host=mini.local",
         "embeddings.port=11200",
-        "embedder.url=http://zmeu.local:11434",
+        "embedder.address=http://zmeu.local:11434",
         "textbase-dl.dir=~/data/textbase-dl",
         "spring.main.allow-bean-definition-overriding=true"
 ])
@@ -49,7 +56,7 @@ class MilvusServiceTest {
      * (srv2.local:20112), and this class drops the existing collection of
      * this name before creating a fresh one - with a fixed name, one run's
      * setup silently drops the other run's collection mid-test. Registered
-     * as the context's milvus.collection via @DynamicPropertySource below,
+     * as the context's vector.collection via @DynamicPropertySource below,
      * so the app's MilvusCollection bean and this test's setup/teardown
      * agree on it.
      */
@@ -57,13 +64,13 @@ class MilvusServiceTest {
 
     @DynamicPropertySource
     static void milvusCollection(DynamicPropertyRegistry registry) {
-        registry.add("milvus.collection", { TEST_COLLECTION })
+        registry.add("vector.collection", { TEST_COLLECTION })
     }
 
     @Autowired MilvusService milvusService
     @Autowired MilvusCollection milvusCollection
     @Autowired Embedder embedder
-    @Autowired MilvusTextSearchService milvusTextSearchService
+    @Autowired VectorTextSearchService milvusTextSearchService
     @Autowired VectorSearchAvailability vectorSearchAvailability
 
     @BeforeAll
@@ -190,7 +197,7 @@ class MilvusServiceTest {
         return resp
     }
 
-    void printHits(List<MilvusHit> milvusHits) {
+    void printHits(List<VectorHit> milvusHits) {
         p(("> Hits:"))
         milvusHits.each {p "\t$it"}
     }

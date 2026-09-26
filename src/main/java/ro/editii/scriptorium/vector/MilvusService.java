@@ -6,6 +6,7 @@ import io.milvus.grpc.ShowCollectionsResponse;
 import io.milvus.param.R;
 import io.milvus.param.collection.*;
 import lombok.RequiredArgsConstructor;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Service;
 import ro.editii.scriptorium.search.content.NoContentResolver;
 
@@ -14,6 +15,7 @@ import ro.editii.scriptorium.search.content.NoContentResolver;
  */
 @Service
 @RequiredArgsConstructor
+@ConditionalOnProperty(name = "vector.store", havingValue = "milvus")
 public class MilvusService {
 
     final MilvusServiceClient milvus;

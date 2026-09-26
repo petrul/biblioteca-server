@@ -67,7 +67,7 @@ public class OllamaEmbedder implements Embedder {
     @Override
     public float[][] encode(String[] texts) {
         // Fails immediately, no network attempt at all, while Ollama's
-        // known stuck - callers (MilvusTextSearchService,
+        // known stuck - callers (VectorTextSearchService,
         // SearchRestController's /api/search/ann) already bound the
         // actual attempt with their own timeout, but skipping it
         // entirely turns a guaranteed ~15s wait into an instant one for

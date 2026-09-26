@@ -80,6 +80,13 @@ tasks.named('test') {
     // tests that exercise integration-deps. Plain `gradlew test` therefore
     // defaults to the CI profile and its integration-deps environment.
     useJUnitPlatform()
+    // The store-integration tests (SearchITest et al.) create and drop their
+    // own fresh collections and re-run the availability check themselves -
+    // the periodic recheck must not flip `available` inside that window, or
+    // the tests become a race with a moving target (observed as CI build
+    // 7223: SearchITest.ann() asserting empty hits). Production keeps the
+    // periodic recheck; tests get the deterministic startup-check behavior.
+    systemProperty 'vector.search.availability-recheck.enabled', 'false'
     if (!['dev', 'ci', 'prod', 'yoga'].any { project.hasProperty(it) } &&
             System.getenv('SPRING_PROFILES_ACTIVE') == null) {
         systemProperty 'spring.profiles.active', 'ci'
@@ -108,6 +115,9 @@ tasks.register('integrationTest', Test) {
     shouldRunAfter tasks.named('unittest')
     jvmArgs '-Xss10m'
     systemProperty 'spring.profiles.active', 'ci'
+    // Same reasoning as the test task above: the store-integration tests
+    // manage the availability flag themselves around their own collections.
+    systemProperty 'vector.search.availability-recheck.enabled', 'false'
 }
 
 clean.doFirst {
@@ -528,14 +538,19 @@ tasks.withType(ProcessForkOptions).configureEach { task ->
         }
 
         if (task.name != 'unittest') {
+            // VECTORSTORE_URL is the canonical name; MILVUS_URL remains an
+            // accepted alternative until the pass-store key is renamed
+            // everywhere, so each entry lists the names that can satisfy it.
             final requiredKeys = [
-                    "MILVUS_URL", "EMBEDDER_URL",
-                    "TEI_REPOS", "KAFKA_BROKERS",
-                    "MYSQL_URL"
+                    ['VECTORSTORE_URL', 'MILVUS_URL'],
+                    ['EMBEDDER_URL'],
+                    ['TEI_REPOS'],
+                    ['KAFKA_BROKERS'],
+                    ['MYSQL_URL']
             ]
-            final missingKeys = requiredKeys.findAll {
-                System.getenv(it) == null && props.getProperty(it) == null
-            }
+            final missingKeys = requiredKeys.findAll { alternatives ->
+                alternatives.every { System.getenv(it) == null && props.getProperty(it) == null }
+            }.collect { alternatives -> alternatives.join(' or ') }
             if (!missingKeys.isEmpty()) {
                 throw new GradleException(
                         "Missing required ${taskProfile} configuration: ${missingKeys.join(', ')}. " +

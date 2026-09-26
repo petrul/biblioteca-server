@@ -111,16 +111,25 @@ task :'check-env', [:task_profile] do |_task, args|
   load_profile_env(task_profile)
 
   required = {
-    'dev' => %w[MILVUS_URL EMBEDDER_URL TEI_REPOS KAFKA_BROKERS MYSQL_URL WORK_DIR
-                BIBLIOTECA_EXTERNAL_URL],
+    # VECTORSTORE_URL is the canonical name of the active store's address
+    # (qdrant by default); MILVUS_URL stays as an accepted alternative so
+    # pass-store entries not yet renamed keep working.
+    'dev' => [
+      %w[VECTORSTORE_URL MILVUS_URL],
+      'EMBEDDER_URL', 'TEI_REPOS', 'KAFKA_BROKERS', 'MYSQL_URL', 'WORK_DIR',
+      'BIBLIOTECA_EXTERNAL_URL'
+    ],
     'ci' => [
-      %w[MILVUS_URL MILVUS_ADDRESS],
+      %w[VECTORSTORE_URL MILVUS_URL MILVUS_ADDRESS],
       %w[EMBEDDER_URL EMBEDDER_ADDRESS],
       %w[TEI_REPOS],
       %w[KAFKA_BROKERS KAFKA_SERVERS],
       %w[MYSQL_URL MYSQL_JDBC_URL]
     ],
-    'prod' => %w[MILVUS_URL EMBEDDER_URL TEI_REPOS KAFKA_BROKERS MYSQL_URL]
+    'prod' => [
+      %w[VECTORSTORE_URL MILVUS_URL],
+      'EMBEDDER_URL', 'TEI_REPOS', 'KAFKA_BROKERS', 'MYSQL_URL'
+    ]
   }
   expected = required.fetch(task_profile) { raise "Unknown profile '#{task_profile}' (expected dev, ci, or prod)" }
   missing = expected.reject do |entry|

@@ -10,7 +10,7 @@ import ro.editii.scriptorium.model.Author;
 import ro.editii.scriptorium.model.TeiDiv;
 import ro.editii.scriptorium.search.GrepHit;
 import ro.editii.scriptorium.search.LuceneHit;
-import ro.editii.scriptorium.search.MilvusHit;
+import ro.editii.scriptorium.search.VectorHit;
 
 @JsonInclude(JsonInclude.Include.NON_NULL)
 @Data @AllArgsConstructor @NoArgsConstructor @Builder
@@ -41,7 +41,7 @@ public class HitDto implements Dto {
                 .build();
     }
 
-    public static HitDto from(MilvusHit hit
+    public static HitDto from(VectorHit hit
 //            , UriComponentsBuilder uriComponentsBuilder
     ) {
         return HitDto.builder()

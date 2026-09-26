@@ -3,7 +3,7 @@ package ro.editii.scriptorium.vector;
 /**
  * Common contract for anything that turns text into embedding vectors,
  * regardless of backend (a dedicated sentence-transformers server, an
- * Ollama-served model, etc.) - lets MilvusTextSearchService/SearchRestController
+ * Ollama-served model, etc.) - lets VectorTextSearchService/SearchRestController
  * depend on "an embedder" without caring which implementation backs it.
  */
 public interface Embedder {
@@ -20,7 +20,7 @@ public interface Embedder {
     /**
      * Canonical, Milvus-collection-naming-convention-friendly identifier for
      * whichever model this embedder is backed by (e.g. "ALL_MPNET_BASE_V2",
-     * "QWEN3_EMBEDDING_4B") - see MilvusTextSearchService's compatibility check.
+     * "QWEN3_EMBEDDING_4B") - see VectorTextSearchService's compatibility check.
      */
     String modelName();
 

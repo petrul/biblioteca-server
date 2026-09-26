@@ -9,10 +9,10 @@ import ro.editii.scriptorium.model.Author;
 import ro.editii.scriptorium.model.TeiDiv;
 import ro.editii.scriptorium.search.GrepHit;
 import ro.editii.scriptorium.search.LuceneHit;
-import ro.editii.scriptorium.search.MilvusHit;
+import ro.editii.scriptorium.search.VectorHit;
 import ro.editii.scriptorium.search.grep.GrepSearchService;
 import ro.editii.scriptorium.search.lucene.LuceneIndexService;
-import ro.editii.scriptorium.vector.MilvusTextSearchService;
+import ro.editii.scriptorium.vector.VectorTextSearchService;
 
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -24,7 +24,7 @@ public class DbSearchService {
 
     final AuthorRepository authorRepository;
     final TeiDivRepository teiDivRepository;
-    final MilvusTextSearchService milvusTextSearchService;
+    final VectorTextSearchService vectorTextSearchService;
     final LuceneIndexService luceneIndexService;
     final GrepSearchService grepSearchService;
 
@@ -60,9 +60,9 @@ public class DbSearchService {
         return  divs;
     }
 
-    public List<MilvusHit> searchMilvus(String q, int limit) {
+    public List<VectorHit> searchMilvus(String q, int limit) {
         assert limit > 0;
-        final var resp = this.milvusTextSearchService.search(q, limit);
+        final var resp = this.vectorTextSearchService.search(q, limit);
         return resp;
     }
 

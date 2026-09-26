@@ -9,7 +9,7 @@ import org.springframework.web.bind.annotation.RestController;
 import ro.editii.scriptorium.dto.SharedConfigDto;
 import ro.editii.scriptorium.kafka.KafkaProps;
 import ro.editii.scriptorium.vector.Embedder;
-import ro.editii.scriptorium.vector.MilvusCollection;
+import ro.editii.scriptorium.vector.VectorCollection;
 import ro.editii.scriptorium.vector.OllamaEmbedder;
 
 /**
@@ -27,15 +27,17 @@ import ro.editii.scriptorium.vector.OllamaEmbedder;
 public class ConfigRestController {
 
     final KafkaProps kafkaProps;
-    // ObjectProvider, not a plain MilvusCollection/Embedder field: those
-    // beans (see VectorConfig) require ${milvus.url}/${ollama.host} etc.
-    // to actually resolve, which not every profile that boots this
-    // controller (e.g. test profiles with no Milvus configured at all)
-    // provides. A plain constructor dependency here would force their
+    // ObjectProvider, not a plain VectorCollection/Embedder field: those
+    // beans (see VectorConfig) require ${vectorstore.address}/${ollama.host}
+    // etc. to actually resolve, which not every profile that boots this
+    // controller (e.g. test profiles with no vector store configured at
+    // all) provides. A plain constructor dependency here would force their
     // eager construction the moment ANY test loads the full app context,
     // even ones with nothing to do with vectors -- ObjectProvider defers
-    // that to when /config is actually called instead.
-    final ObjectProvider<MilvusCollection> prodCollection;
+    // that to when /config is actually called instead. VectorCollection
+    // (not MilvusCollection) so the exported name is whichever store is
+    // active - qdrant by default, milvus behind vector.store=milvus.
+    final ObjectProvider<VectorCollection> prodCollection;
     final ObjectProvider<Embedder> embedder;
 
     // Paragraph size window exported alongside the rest (see
@@ -79,7 +81,10 @@ public class ConfigRestController {
             embedderInfo = SharedConfigDto.Embedder.builder().build();
         }
 
-        MilvusCollection resolvedCollection = this.prodCollection.getIfAvailable();
+        VectorCollection resolvedCollection = this.prodCollection.getIfAvailable();
+        // The DTO field keeps its historic "milvus" name on the wire (the
+        // deployed textbase-nestjs reads shared.milvus.collection) - what
+        // it carries is simply "the collection name", for whichever store.
         SharedConfigDto.Milvus milvusInfo = SharedConfigDto.Milvus.builder()
                 .collection(resolvedCollection != null ? resolvedCollection.getName() : null)
                 .build();

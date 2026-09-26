@@ -2,7 +2,7 @@ package ro.editii.scriptorium.vector;
 
 import io.milvus.response.SearchResultsWrapper;
 import org.jetbrains.annotations.NotNull;
-import ro.editii.scriptorium.search.MilvusHit;
+import ro.editii.scriptorium.search.VectorHit;
 import ro.editii.scriptorium.search.content.ContentResolver;
 
 import java.util.Arrays;
@@ -25,20 +25,41 @@ public class VectorUtils {
                 .toList();
     }
 
-    public static List<MilvusHit> searchResultsWrapperToHits(SearchResultsWrapper resultsWrapper, ContentResolver contentResolver) {
+    public static List<VectorHit> searchResultsWrapperToHits(SearchResultsWrapper resultsWrapper, ContentResolver contentResolver) {
         final List<SearchResultsWrapper.IDScore> scores = resultsWrapper.getIDScore(0);
-        final List<MilvusHit> milvusHits = getMilvusHits(scores, contentResolver);
+        final List<VectorHit> milvusHits = getVectorHits(scores, contentResolver);
         return milvusHits;
     }
 
+    /**
+     * Store-agnostic counterparts of the wrapper-based conversions above
+     * (see VectorCollection/QdrantCollection): a store returns neutral
+     * VectorSearchHits, and the search services resolve them into the
+     * same VectorHit the SDK-typed path always produced.
+     */
+    public static List<VectorSearchHit> searchResultsWrapperToSearchHits(SearchResultsWrapper resultsWrapper) {
+        return resultsWrapper.getIDScore(0).stream()
+                .map(row -> new VectorSearchHit(
+                        (String) row.get(MilvusCollection.FIELD_SHA_256),
+                        (String) row.get(MilvusCollection.FIELD_URL),
+                        row.getScore()))
+                .toList();
+    }
+
+    public static List<VectorHit> searchHitsToHits(List<VectorSearchHit> hits, ContentResolver contentResolver) {
+        return hits.stream()
+                .map(hit -> VectorHit.from(hit.url(), hit.score(), contentResolver.resolve(hit.url())))
+                .toList();
+    }
+
     @NotNull
-    private static List<MilvusHit> getMilvusHits(List<SearchResultsWrapper.IDScore> scores, ContentResolver contentResolver) {
+    private static List<VectorHit> getVectorHits(List<SearchResultsWrapper.IDScore> scores, ContentResolver contentResolver) {
         final var resp  = scores.stream()
                 .map(it -> {
 //                    final var sid = (String) it.get(MilvusCollection.FIELD_SHA_256);
                     final var url = (String) it.get(MilvusCollection.FIELD_URL);
                     final var cnt = contentResolver.resolve(url);
-                    return MilvusHit.from(url, it.getScore(), cnt);
+                    return VectorHit.from(url, it.getScore(), cnt);
                 })
                 .toList();
         return resp;

@@ -14,9 +14,15 @@ import ro.editii.scriptorium.TestUtils
 import static ro.editii.scriptorium.GTestUtil.p
 
 @SpringBootTest(
-        classes = [ VectorConfig.class, MilvusService.class, VectorSearchAvailability.class, MilvusTextSearchService.class, ro.editii.scriptorium.health.OllamaHealthTracker.class],
+        classes = [ VectorConfig.class, MilvusService.class, VectorSearchAvailability.class, VectorTextSearchService.class, ro.editii.scriptorium.health.OllamaHealthTracker.class],
         properties = [
-                "spring.main.allow-bean-definition-overriding=true"
+                "spring.main.allow-bean-definition-overriding=true",
+                // The milvus beans only exist in milvus mode (qdrant is the
+                // default store), and this experiment talks to the dedicated
+                // integration milvus - not whatever VECTORSTORE_URL points
+                // the default at.
+                "vector.store=milvus",
+                "vectorstore.address=http://srv2.local:20112"
         ])
 @Import(TestConfig.class)
 @Tag("integration-test")

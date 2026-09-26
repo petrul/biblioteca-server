@@ -35,10 +35,15 @@ import static ro.editii.scriptorium.TestUtils.TEI_ELEM
         "spring.jpa.database-platform=org.hibernate.dialect.H2Dialect",
         "spring.main.allow-bean-definition-overriding=true",
         "spring.jpa.hibernate.ddl-auto=create",
-        "milvus.url=http://srv2.local:20112",
+        "vector.store=milvus",
+        "vectorstore.address=http://srv2.local:20112",
+        // The collection below is this test's own random-named one on the
+        // dedicated integration milvus - the per-env prefix (dev-, meant
+        // for sharing the prod qdrant) must not apply to it.
+        "vector.collection.prefix=",
         "embeddings.host=mini.local",
         "embeddings.port=11200",
-        "embedder.url=http://zmeu.local:11434",
+        "embedder.address=http://zmeu.local:11434",
         "textbase.advertised.url=http://localhost:8080"
 ])
 @SpringBootTest(
@@ -56,14 +61,14 @@ class SearchITest {
      * collection of this name before creating a fresh one - with a fixed
      * name, one run's setup silently drops the other run's collection
      * mid-test (ann()/search() then fail with "can't find collection").
-     * Registered as the context's milvus.collection via @DynamicPropertySource
+     * Registered as the context's vector.collection via @DynamicPropertySource
      * below, so the app's vector store and this test's setup/teardown agree.
      */
     static final String TEST_MILVUS_COLLECTION = "test_tb_paras_qwen3_embedding_4b_" + TestUtils.randomString()
 
     @DynamicPropertySource
     static void milvusCollection(DynamicPropertyRegistry registry) {
-        registry.add("milvus.collection", { TEST_MILVUS_COLLECTION })
+        registry.add("vector.collection", { TEST_MILVUS_COLLECTION })
     }
 
     @Autowired @Lazy TextbaseClient tbc;

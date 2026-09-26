@@ -5,6 +5,7 @@ import io.milvus.param.ConnectParam;
 import lombok.extern.log4j.Log4j2;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Lazy;
@@ -23,7 +24,7 @@ public class VectorConfig {
     public static final String TEXTBASE_CLIENT = "textbaseClient";
 
     // Host and port only ever travel together to address one service, so
-    // MILVUS_URL/EMBEDDER_URL are each a single "host:port" pass-store
+    // VECTORSTORE_URL/EMBEDDER_URL are each a single "host:port" pass-store
     // secret rather than two - trivial to split back apart here. The pass
     // store's own values are "http://host:port" (a real URL, readable on
     // its own), so a scheme prefix is stripped first if present rather
@@ -35,10 +36,23 @@ public class VectorConfig {
     private static String hostOf(String address) { final String a = stripScheme(address); return a.substring(0, a.lastIndexOf(':')); }
     private static int portOf(String address) { final String a = stripScheme(address); return Integer.parseInt(a.substring(a.lastIndexOf(':') + 1)); }
 
+    /**
+     * The effective collection name: the environment prefix (dev-/int-,
+     * so non-prod stages share the one prod store without ever touching
+     * prod data) + the convention-carrying base name. Same naming for
+     * every store - a name identifies "this corpus embedded with this
+     * encoder", never "this store" (see MilvusTextSearchService's
+     * compatibility check, which the prefix never disturbs).
+     */
+    static String prefixedCollectionName(String prefix, String baseName) {
+        return (prefix == null ? "" : prefix) + baseName;
+    }
+
     @Bean
-    public MilvusServiceClient milvusClient(@Value("${milvus.address}") String milvusAddress) {
-        final String milvusHost = hostOf(milvusAddress);
-        final int milvusPort = portOf(milvusAddress);
+    @ConditionalOnProperty(name = "vector.store", havingValue = "milvus")
+    public MilvusServiceClient milvusClient(@Value("${vectorstore.address}") String vectorStoreAddress) {
+        final String milvusHost = hostOf(vectorStoreAddress);
+        final int milvusPort = portOf(vectorStoreAddress);
         log.info(String.format("MilvusServiceClient: %s:%d", milvusHost, milvusPort));
         return new MilvusServiceClient(ConnectParam.newBuilder()
             .withHost(milvusHost)
@@ -119,14 +133,21 @@ public class VectorConfig {
         return embedder;
     }
 
+    // The vector store behind VectorCollection-backed search: qdrant
+    // (the default - the shared prod instance serves every environment,
+    // with per-environment collection names) or milvus (the historic
+    // store, still fully supported). Selected once at wiring time - the
+    // whole rest of the vector layer depends on VectorCollection, never
+    // on which implementation is behind it.
     @Bean
+    @ConditionalOnProperty(name = "vector.store", havingValue = "milvus")
     MilvusCollection prodCollection(MilvusService milvusService,
-            // The default below is what every stage uses unless
-            // milvus.collection is set - biblioteca-nestjs never has a name
-            // of its own, it takes this one from GET /api/admin/config.
-            @Value("${milvus.collection:biblioteca_paras_bge_m3}") String collectionName) {
+            // biblioteca-nestjs never has a collection name of its own -
+            // it takes this one from GET /api/admin/config.
+            @Value("${vector.collection:biblioteca_paras_bge_m3}") String collectionBaseName,
+            @Value("${vector.collection.prefix:}") String collectionPrefix) {
 
-        final MilvusCollection col = new MilvusCollection(milvusService, collectionName) {
+        final MilvusCollection col = new MilvusCollection(milvusService, prefixedCollectionName(collectionPrefix, collectionBaseName)) {
             @Override
             public void create(int vectorDimension) {
                 throw new IllegalStateException("create disabled for production read-only collection " + name);
@@ -134,6 +155,38 @@ public class VectorConfig {
         };
         log.info(col.toString());
         return col;
+    }
+
+    /**
+     * The qdrant counterpart of prodCollection above - same
+     * convention-carrying collection name (see VectorTextSearchService's
+     * model-name compatibility check), different store behind the same
+     * VectorCollection contract.
+     */
+    @Bean
+    @ConditionalOnProperty(name = "vector.store", havingValue = "qdrant", matchIfMissing = true)
+    QdrantCollection qdrantProdCollection(
+            @Value("${vectorstore.address}") String vectorStoreAddress,
+            @Value("${vector.collection:biblioteca_paras_bge_m3}") String collectionBaseName,
+            @Value("${vector.collection.prefix:}") String collectionPrefix,
+            @Qualifier("qdrantRestTemplate") RestTemplate qdrantRestTemplate) {
+        final QdrantCollection col = new QdrantCollection(vectorStoreAddress,
+                prefixedCollectionName(collectionPrefix, collectionBaseName), qdrantRestTemplate);
+        log.info(col.toString());
+        return col;
+    }
+
+    /**
+     * Bounded like ollamaRestTemplate below: a reachable-but-unresponsive
+     * Qdrant must fail fast (empty results / availability flip) instead of
+     * hanging a search request or the periodic availability check.
+     */
+    @Bean
+    public RestTemplate qdrantRestTemplate() {
+        final SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();
+        factory.setConnectTimeout(2_000);
+        factory.setReadTimeout(5_000);
+        return new RestTemplate(factory);
     }
 
     @Bean(TEXTBASE_CLIENT)
@@ -156,7 +209,7 @@ public class VectorConfig {
     // for most callers, but a real problem for Ollama specifically: a
     // reachable-but-GPU-contended instance can otherwise block a request
     // thread indefinitely rather than ever throwing, which means neither
-    // Util.runWithTimeout's own bound (MilvusTextSearchService,
+    // Util.runWithTimeout's own bound (VectorTextSearchService,
     // SearchRestController) NOR OllamaHealthTracker's markUnavailable()
     // ever actually fires - the blocked thread just never gets back to
     // either. A bounded read timeout here is what makes both of those

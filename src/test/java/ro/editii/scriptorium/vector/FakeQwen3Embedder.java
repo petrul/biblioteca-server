@@ -6,7 +6,7 @@ import java.util.Random;
  * Deterministic, network-free stand-in for the real Ollama-backed embedder.
  * For tests that need *an* Embedder bean (to satisfy DI, or the
  * collection-name/model-name compatibility check in
- * MilvusTextSearchService) but aren't testing embedding quality
+ * VectorTextSearchService) but aren't testing embedding quality
  * themselves - that's OllamaEmbeddersTest's job, against the real Ollama
  * server. Vectors are seeded from the input text's hashCode, so the same
  * text always produces the same vector within a run, and different texts
@@ -18,7 +18,7 @@ public class FakeQwen3Embedder implements Embedder {
 
     // matches the real qwen3EmbeddingEmbedder's modelName() - tests rely on
     // this being part of the Milvus collection name they use (see
-    // MilvusTextSearchService.validateModelCollectionCompatible).
+    // VectorTextSearchService.validateModelCollectionCompatible).
     public static final String MODEL_NAME = "QWEN3_EMBEDDING_4B";
 
     @Override

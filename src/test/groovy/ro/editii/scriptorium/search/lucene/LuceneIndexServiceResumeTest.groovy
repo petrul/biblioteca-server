@@ -44,7 +44,7 @@ class LuceneIndexServiceResumeTest {
     final ControllerTool controllerTool = Mockito.mock(ControllerTool)
 
     LuceneIndexService newService() {
-        return new LuceneIndexService(tempDir.toString(), false, teiDivRepository, divService, controllerTool)
+        return new LuceneIndexService(tempDir.toString(), false, 0d, teiDivRepository, divService, controllerTool)
     }
 
     static TeiDiv opusMock(String path) {
