@@ -230,6 +230,11 @@ dependencies {
     implementation("org.springframework.boot:spring-boot-starter-cache")
     implementation("org.springframework.boot:spring-boot-starter-validation")
     implementation('org.springframework.boot:spring-boot-starter-kafka')
+    // Standard /actuator/health (used by the overnight watcher instead of
+    // an ad-hoc endpoint) and /actuator/metrics - the lucene/vectorizing
+    // progress bars still come from their own domain-specific status
+    // endpoints, actuator doesn't know about those.
+    implementation('org.springframework.boot:spring-boot-starter-actuator')
 
     implementation('org.springdoc:springdoc-openapi-starter-webmvc-ui:3.0.2')
 

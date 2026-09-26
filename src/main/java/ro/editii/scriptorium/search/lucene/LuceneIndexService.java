@@ -33,6 +33,8 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import ro.editii.scriptorium.Util;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicLong;
 import ro.editii.scriptorium.dao.TeiDivRepository;
 import ro.editii.scriptorium.model.Languages;
 import ro.editii.scriptorium.model.TeiDiv;
@@ -143,6 +145,42 @@ public class LuceneIndexService {
     // fast addIndexes() merge, not for deriving the opus's text.
     private final Object rebuildLock = new Object();
     private volatile SearcherManager searcherManager;
+
+    // Live progress for whichever buildIndex() call (rebuildIndex() or
+    // resumeIndex()) is currently running, if any - for the admin UI's
+    // progress bar (GET /api/admin/lucene/status), not the rebuild's own
+    // correctness (that's the durable commit checkpoints above). Counts
+    // are per-invocation, not cumulative across a resume - good enough for
+    // "how far along is the run in progress," not meant to reconstruct
+    // exact totals across a restart.
+    private final AtomicBoolean rebuildRunning = new AtomicBoolean(false);
+    private final AtomicLong rebuildStartedAtMillis = new AtomicLong(0);
+    private final AtomicLong rebuildTotalOpera = new AtomicLong(0);
+    private final AtomicLong rebuildProcessedOpera = new AtomicLong(0);
+    private final AtomicLong rebuildIndexedDocs = new AtomicLong(0);
+
+    public record RebuildStatus(boolean indexExists, boolean running, long startedAtMillis,
+                                 long totalOpera, long processedOpera, long indexedDocs) {}
+
+    /**
+     * Snapshot for the admin UI's progress bar - see the fields above for
+     * what each number actually means (per-run, not cumulative).
+     */
+    public RebuildStatus rebuildStatus() {
+        boolean indexExists;
+        try {
+            indexExists = DirectoryReader.indexExists(this.directory);
+        } catch (IOException e) {
+            indexExists = false;
+        }
+        return new RebuildStatus(
+                indexExists,
+                this.rebuildRunning.get(),
+                this.rebuildStartedAtMillis.get(),
+                this.rebuildTotalOpera.get(),
+                this.rebuildProcessedOpera.get(),
+                this.rebuildIndexedDocs.get());
+    }
 
     public LuceneIndexService(@Value("${lucene.index.dir}") String indexDir,
                                @Value("${lucene.autoindex.enabled}") boolean autoIndexEnabled,
@@ -280,6 +318,11 @@ public class LuceneIndexService {
             int indexed = 0;
             int skipped = 0;
             int skippedOpera = 0;
+            this.rebuildRunning.set(true);
+            this.rebuildStartedAtMillis.set(System.currentTimeMillis());
+            this.rebuildTotalOpera.set(0);
+            this.rebuildProcessedOpera.set(0);
+            this.rebuildIndexedDocs.set(0);
 
             try (IndexWriter writer = new IndexWriter(this.directory,
                     new IndexWriterConfig(this.analyzer).setOpenMode(openMode))) {
@@ -288,6 +331,9 @@ public class LuceneIndexService {
                 Page<TeiDiv> opera;
                 do {
                     opera = this.teiDivRepository.findOpera(PageRequest.of(pageNr, OPERA_PAGE_SIZE));
+                    if (pageNr == startPage) {
+                        this.rebuildTotalOpera.set(opera.getTotalElements());
+                    }
                     for (TeiDiv opus : opera) {
                         final long opusStartNanos = System.nanoTime();
                         final List<TeiElem> paragraphs;
@@ -306,6 +352,7 @@ public class LuceneIndexService {
                             skippedOpera++;
                             log.warn("Skipping opus while building the Lucene index - its source is missing ({}): {}",
                                     safeCompletePath(opus), e.getMessage());
+                            this.rebuildProcessedOpera.incrementAndGet();
                             continue;
                         }
                         for (TeiElem para : paragraphs) {
@@ -314,6 +361,7 @@ public class LuceneIndexService {
                                 if (doc != null) {
                                     writer.addDocument(doc);
                                     indexed++;
+                                    this.rebuildIndexedDocs.incrementAndGet();
                                 }
                             } catch (Exception e) {
                                 skipped++;
@@ -322,6 +370,7 @@ public class LuceneIndexService {
                             }
                         }
                         cooldownAfter(opusStartNanos);
+                        this.rebuildProcessedOpera.incrementAndGet();
                     }
                     pageNr++;
 
@@ -340,6 +389,8 @@ public class LuceneIndexService {
                 writer.commit();
             } catch (IOException e) {
                 throw new RuntimeException("Failed to build the Lucene index at " + this.indexDir, e);
+            } finally {
+                this.rebuildRunning.set(false);
             }
 
             this.refreshSearcherAfterCommit();
