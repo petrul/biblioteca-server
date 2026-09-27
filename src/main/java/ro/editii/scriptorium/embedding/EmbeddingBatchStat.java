@@ -4,6 +4,7 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.PrePersist;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -52,4 +53,13 @@ public class EmbeddingBatchStat {
 
     @Comment("Wall-clock time the embedding call itself took, milliseconds - store+flush time is not part of this.")
     Long durationMs;
+
+    // Enforces the "server-side, not the caller's clock" comment on
+    // recordedAt above: Spring Data REST's POST otherwise deserializes
+    // whatever the client's JSON body happens to contain, including a
+    // spoofed/skewed recordedAt.
+    @PrePersist
+    void onCreate() {
+        this.recordedAt = Instant.now();
+    }
 }
