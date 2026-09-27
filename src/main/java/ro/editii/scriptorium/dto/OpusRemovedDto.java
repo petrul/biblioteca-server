@@ -9,8 +9,11 @@ import lombok.NoArgsConstructor;
  * Published once per opus after its source file disappears from the repo
  * (see AdminService.pruneRemovedTeis) - deliberately not a TeiDivDto: by
  * the time this is signalled, the opus's DB row is already gone, so there
- * is no real entity left to describe beyond the path consumers need to
- * purge their own copies (Lucene, Milvus) by.
+ * is no real entity left to describe beyond the path downstream stores
+ * keyed their content by. Note the "search data is precious" policy:
+ * consumers log the removal but RETAIN their stored content (vectors are
+ * manual-only to drop, see the vectorizer's /api/vector-store/remove-opus)
+ * - this event informs, it does not mandate a purge.
  */
 @Data
 @NoArgsConstructor

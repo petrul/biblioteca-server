@@ -20,8 +20,11 @@ import static org.junit.jupiter.api.Assertions.assertEquals
 /**
  * Pure Mockito unit test (no Spring context - AdminService has no
  * Spring-specific behavior of its own beyond @Service/@RequiredArgsConstructor
- * wiring) for pruneRemovedTeis() - the new "a source file disappeared from
- * the repo, purge everything derived from it" path this session added.
+ * wiring) for pruneRemovedTeis() - the "a source file disappeared from
+ * the repo" path. Per the search-data-is-precious policy this prunes the
+ * DB rows and emits the opusRemoved events, but never touches the Lucene
+ * index (nor, downstream, the vectorizer's stored vectors): dropping
+ * index/vector content is a manual-only operation.
  * reimportFresherTeis/reimportAllTeis/reimportFile are deliberately NOT
  * exercised here (unrelated to this change, already covered elsewhere) -
  * this test is specifically about the detection-of-absence + cascading
@@ -67,7 +70,7 @@ class AdminServicePruneRemovedTeisTest {
     }
 
     @Test
-    void purgesDbLuceneAndSignalsMilvusRemovalForAFileNoLongerOnDisk() {
+    void prunesDbAndSignalsRemovalButRetainsTheLuceneIndexForAFileNoLongerOnDisk() {
         final removedFile = teiFile(2L, "gone.xml")
         final opusOne = opus("conscience/gone-work-one")
         final opusTwo = opus("conscience/gone-work-two")
@@ -79,33 +82,16 @@ class AdminServicePruneRemovedTeisTest {
         adminService.pruneRemovedTeis(new NoWriter())
 
         Mockito.verify(teiFileDbService, Mockito.times(1)).deleteTeiFile("gone.xml")
-        Mockito.verify(luceneIndexService, Mockito.times(1)).removeOpus("conscience/gone-work-one")
-        Mockito.verify(luceneIndexService, Mockito.times(1)).removeOpus("conscience/gone-work-two")
+        // "Search data is precious": the removed book's Lucene documents
+        // are RETAINED - its urls 404 and unresolved hits are filtered at
+        // search time (see VectorUtils); dropping index content is a
+        // manual-only operation (LuceneIndexService.removeOpus).
+        Mockito.verifyNoInteractions(luceneIndexService)
 
         final ArgumentCaptor<OpusRemovedDto> captor = ArgumentCaptor.forClass(OpusRemovedDto)
         Mockito.verify(eventsPublisher, Mockito.times(2)).signalOpusRemoved(captor.capture())
         final signaledPaths = captor.getAllValues().collect { it.getPath() }.toSet()
         assertEquals(["conscience/gone-work-one", "conscience/gone-work-two"].toSet(), signaledPaths)
-    }
-
-    @Test
-    void aLuceneFailureForOneRemovedOpusDoesNotStopTheDbPruneOrTheMilvusSignalForIt() {
-        final removedFile = teiFile(3L, "gone-too.xml")
-        final opusOne = opus("gutenberg/flaky-opus")
-
-        Mockito.when(teiRepo.list()).thenReturn([])
-        Mockito.when(teiFileRepository.findAll()).thenReturn([removedFile])
-        Mockito.when(teiDivRepository.getOperaForTeiFileId(3L)).thenReturn([opusOne])
-        Mockito.doThrow(new RuntimeException("lucene is having a bad day"))
-                .when(luceneIndexService).removeOpus("gutenberg/flaky-opus")
-
-        adminService.pruneRemovedTeis(new NoWriter())
-
-        Mockito.verify(teiFileDbService, Mockito.times(1)).deleteTeiFile("gone-too.xml")
-
-        final ArgumentCaptor<OpusRemovedDto> captor = ArgumentCaptor.forClass(OpusRemovedDto)
-        Mockito.verify(eventsPublisher, Mockito.times(1)).signalOpusRemoved(captor.capture())
-        assertEquals("gutenberg/flaky-opus", captor.getValue().getPath())
     }
 
     @Test

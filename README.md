@@ -157,6 +157,28 @@ build and Docker publish. CI values (TeamCity/Vault) are injected as real
 environment variables, which always take precedence over `.env.<profile>`
 — the file is only a local-developer fallback.
 
+### Mocking in Groovy tests: prefer Groovy mocks over Mockito
+
+Mockito is fragile from Groovy — `when(...)` stubbing with closures/maps,
+argument confusion and the notorious `UnfinishedStubbingException` traps
+(calling a mock-returning helper inside `thenReturn(...` corrupts the
+stubbing state). Prefer, in this order:
+
+- **Map-coercion fakes for interfaces and entities** —
+  `[exists: { false }] as VectorCollection`; the map literal IS the fake.
+- **Hand-rolled Groovy fake classes for class-typed collaborators** —
+  a small inner class extending the real one (`super(null, null, ...)`)
+  with the handful of methods the code under test actually calls,
+  recording whatever the test needs to observe.
+- Real instances wherever cheap (a temp-dir LuceneIndexService, a plain
+  `JdbcTemplate`), which make the assertion behavioral rather than
+  interaction-based.
+
+Keep Mockito only where a Groovy alternative genuinely cannot express the
+need; when you do use it from a Groovy test, resolve every mock to a
+variable first and never build one inside another `when()/thenReturn()`
+chain.
+
 ## Docker
 
 ```bash
@@ -227,11 +249,42 @@ returning the same `HitDto` shape (`type` distinguishes them):
   field (`TextbaseAnalyzer`) that guarantees a diacritics-optional match
   regardless of language support.
 - **Vector/deep** (`.vector`, `GET /api/search/milvus`, `GET /api/search/ann`) —
-  embedding-based similarity search via Milvus. `VectorSearchAvailability`
-  checks the embedder and the Milvus collection once at startup and
+  embedding-based similarity search via the active vector store (qdrant by
+  default, milvus still supported — `vector.store`). `VectorSearchAvailability`
+  checks the embedder and the store once at startup and
   disables vector search gracefully for the rest of that run if either is
   unreachable — `/api/search/milvus`/`/api/search/ann` return empty
   results instead of throwing.
+
+#### Search data is precious: retention and reuse, manual-only drops
+
+Embeddings and Lucene documents take **days** to recompute for the corpus —
+they are assets, not disposable indexes. The policy, enforced end to end:
+
+- **No automatic flow drops search content.** A reimported book is
+  reindexed in place (`LuceneIndexService.reindexOpus` deletes only that
+  opus's own url-prefix documents and re-adds them); a book removed from
+  the repo keeps both its Lucene documents and its stored vectors
+  (`AdminService.pruneRemovedTeis` prunes the DB rows and emits the
+  `opusRemoved` event, but never touches the index; the vectorizer
+  receives the event, logs it and *retains* its vectors). The
+  manual-only escape hatches are `LuceneIndexService.removeOpus` /
+  `POST /api/admin/lucene/reindex` (full deliberate wipe-and-rebuild), and
+  the vectorizer's `POST /api/vector-store/remove-opus` / `reset`.
+- **Stale hits are filtered, not deleted.** A removed book's urls 404;
+  `UrlContentResolver` returns null on resolution failure and
+  `VectorUtils` drops null-content hits — the user never sees a dead
+  link, while the retained data stays recoverable until a manual
+  operation removes it. (Lucene hits are served from the index's own
+  stored content, so they keep working until the same manual cleanup.)
+- **Vectors are reused by sha256.** On reimport the vectorizer embeds
+  only paragraphs whose sha256 has no stored vector yet, and *repoints*
+  unchanged paragraphs to renamed urls without touching their embeddings
+  — see the vectorizer README's "Vectors are precious" section for the
+  full mechanics.
+- Covered by `LuceneReindexRetentionPolicyTest`,
+  `AdminServiceRetentionPolicyTest` (server) and `vector_reuse.spec.ts`
+  (vectorizer).
 
 Embeddings come from an `Embedder` (`.vector.Embedder`); the production
 default (`@Primary`) is `qwen3EmbeddingEmbedder` (Qwen3-Embedding-4B via

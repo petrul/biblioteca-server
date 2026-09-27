@@ -49,6 +49,11 @@ public class VectorUtils {
     public static List<VectorHit> searchHitsToHits(List<VectorSearchHit> hits, ContentResolver contentResolver) {
         return hits.stream()
                 .map(hit -> VectorHit.from(hit.url(), hit.score(), contentResolver.resolve(hit.url())))
+                // "Search data is precious": a hit whose content can no
+                // longer be resolved (its url 404s - removed/renamed-away
+                // book, deleted paragraph) is stale-but-retained data; it
+                // is NOT presented to the user as a dead link.
+                .filter(hit -> hit.getContent() != null && !hit.getContent().isBlank())
                 .toList();
     }
 

@@ -449,10 +449,14 @@ public class LuceneIndexService {
     /**
      * Purges just this one opus's documents (exact root match plus every
      * descendant div beneath it, same URL-prefix matching as reindexOpus's
-     * own delete step) - called from AdminService.pruneRemovedTeis once a
-     * source file has disappeared from the repo and there's no fresh
-     * content to add back, unlike reindexOpus which always follows its
-     * delete with an addIndexes() of freshly-derived documents.
+     * own delete step).
+     *
+     * "Search data is precious" policy: this is now a MANUAL-ONLY
+     * operation - no automatic flow calls it anymore (a book removed from
+     * the repo keeps its Lucene documents; its urls 404, and unresolved
+     * hits are filtered out at search time instead - see VectorUtils).
+     * Nothing drops index content on its own; this method stays available
+     * for an explicit, human-triggered cleanup.
      */
     public void removeOpus(String opusPath) {
         synchronized (this.rebuildLock) {

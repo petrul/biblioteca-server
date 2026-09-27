@@ -199,14 +199,19 @@ public class AdminService {
      * repo (removed from scriptorium-masters since it was last imported) -
      * something none of the reimport methods above ever check, since they
      * only ever walk files currently present in teiRepo.list() - and purges
-     * everything derived from it: the DB rows themselves
-     * (teiFileDbService.deleteTeiFile, which also drops now-orphaned
-     * authors), this file's opera from the Lucene index
-     * (LuceneIndexService.removeOpus), and a signalOpusRemoved event per
-     * removed opus so textbase-nestjs can drop its matching Milvus vectors
-     * too - the same "biblioteca-server is the sole source of truth, nothing
-     * downstream keeps its own opinion" pattern signalNewOpusImported
-     * already uses.
+     * the DB rows themselves (teiFileDbService.deleteTeiFile, which also
+     * drops now-orphaned authors), then emits a signalOpusRemoved event per
+     * removed opus so textbase-nestjs can log the removal.
+     *
+     * "Search data is precious" policy: the Lucene documents and the stored
+     * vectors of a removed book are deliberately NOT touched here - neither
+     * this prune, nor any other automatic flow, may drop index/vector
+     * content (see LuceneIndexService.removeOpus and the vectorizer's
+     * manual-only /api/vector-store/remove-opus). Stale rows surface
+     * through the URL resolution: the removal already 404s their urls, so
+     * search hits that can no longer be resolved are filtered out before
+     * being presented (VectorUtils) - the retained data stays recoverable
+     * until an explicitly manual operation removes it.
      *
      * Never runs as a side effect of a normal reimport - deliberately its
      * own entry point, called from TeiImportScheduler alongside
@@ -244,15 +249,9 @@ public class AdminService {
 
                 for (String opusPath : opusPaths) {
                     try {
-                        this.luceneIndexService.removeOpus(opusPath);
-                    } catch (RuntimeException e) {
-                        log.error("Failed to remove opus {} from the Lucene index after pruning {} - the DB "
-                                + "prune itself still succeeded", opusPath, teiFile.getFilename(), e);
-                    }
-                    try {
                         this.textbaseEventsPublisher.signalOpusRemoved(OpusRemovedDto.builder().path(opusPath).build());
                     } catch (RuntimeException e) {
-                        log.error("Failed to signal removal of opus {} - Milvus vectors for it may linger", opusPath, e);
+                        log.error("Failed to signal removal of opus {} - downstream consumers may miss it", opusPath, e);
                     }
                 }
             }
