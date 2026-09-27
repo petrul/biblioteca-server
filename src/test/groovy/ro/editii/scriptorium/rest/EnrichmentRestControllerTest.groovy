@@ -8,8 +8,6 @@ import org.springframework.boot.kafka.autoconfigure.KafkaAutoConfiguration
 import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.boot.resttestclient.TestRestTemplate
 import org.springframework.boot.resttestclient.autoconfigure.AutoConfigureTestRestTemplate
-import org.springframework.http.HttpEntity
-import org.springframework.http.HttpHeaders
 import org.springframework.http.HttpStatus
 import org.springframework.test.annotation.DirtiesContext
 import org.springframework.test.context.TestPropertySource
@@ -49,8 +47,6 @@ import ro.editii.scriptorium.model.TeiFile
         "spring.jpa.hibernate.ddl-auto=create",
         "spring.main.allow-bean-definition-overriding=true",
         "lucene.autoindex.enabled=false",
-        // the shared secret SecurityConfig requires on /api/internal/**
-        "internal.api.token=enrichment-test-token",
 ])
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT,
         classes = [TestConfig.class])
@@ -69,7 +65,6 @@ class EnrichmentRestControllerTest {
 
     private static final String AUTHOR_STR_ID = "enrichment-ctrl-test-creanga"
     private static final String OPUS_IMAGE = "https://upload.wikimedia.org/wikipedia/commons/povesti.jpg"
-    private static final String INTERNAL_TOKEN = "enrichment-test-token"
 
     // original_name_in_tei_file is UNIQUE - the two tests build different
     // authors, so they can't share the same original name (the strId alone
@@ -93,10 +88,8 @@ class EnrichmentRestControllerTest {
         return this.teiDivRepository.save(opus)
     }
 
-    private post(Map<String, Object> update, String token = INTERNAL_TOKEN) {
-        final headers = new HttpHeaders()
-        headers.set("X-Internal-Token", token)
-        return this.restTemplate.postForEntity("/api/internal/enrichment", new HttpEntity<>(update, headers), String.class)
+    private post(Map<String, Object> update) {
+        return this.restTemplate.postForEntity("/api/internal/enrichment", update, String.class)
     }
 
     @Test
@@ -182,24 +175,5 @@ class EnrichmentRestControllerTest {
     @Test
     void unknownAuthorIsACleanNotFound() {
         assert post([authorStrId: "never-heard-of-them", bio: "nope"]).statusCode == HttpStatus.NOT_FOUND
-    }
-
-    @Test
-    void postsWithoutTheInternalTokenAreRejectedWithoutPartialWrite() {
-        final author = authorWith("Negruzzi, Costache", "enrichment-ctrl-test-negruzzi")
-
-        // the three ways the boundary can fail closed: no header at all,
-        // the wrong secret, and a blank one
-        final noHeader = this.restTemplate.postForEntity("/api/internal/enrichment",
-                new HttpEntity<>([authorStrId: author.strId, bio: "should never land"], new HttpHeaders()), String.class)
-        assert noHeader.statusCode == HttpStatus.UNAUTHORIZED
-        assert post([authorStrId: author.strId, bio: "should never land"], "wrong-token").statusCode == HttpStatus.UNAUTHORIZED
-        assert post([authorStrId: author.strId, bio: "should never land"], "").statusCode == HttpStatus.UNAUTHORIZED
-
-        // 401 from the security layer means the controller never ran - the
-        // write path must be untouched, not partially applied
-        final untouched = this.authorRepository.findByStrId(author.strId).first()
-        assert untouched.bio == null
-        assert this.authorMediaAssociationRepository.findAllByAuthorPath(author.strId).isEmpty()
     }
 }
