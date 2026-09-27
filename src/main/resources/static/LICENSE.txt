@@ -1,0 +1,26 @@
+Biblioteca / Scriptorium.ro - Usage Terms
+==========================================
+
+This site publishes public-domain and freely-licensed literary texts for
+reading, linking, and citation.
+
+You may:
+  - Read, browse, and link to any individual page.
+  - Quote, cite, and reference individual texts for scientific, academic,
+    or personal research use.
+  - Retrieve a reasonable number of pages for such use (as a rule of
+    thumb: up to roughly a thousand page requests a day from one source).
+
+You may not, without prior written permission:
+  - Systematically download, scrape, or mirror the collection, in whole
+    or in large part.
+  - Use the content, or bulk-harvested copies of it, for commercial
+    purposes, including training or fine-tuning machine learning models.
+  - Redistribute a bulk copy of the collection.
+
+Automated access that ignores robots.txt, or that otherwise behaves like
+a bulk mirroring tool rather than an individual reader, may be blocked
+without notice.
+
+Questions or requests for a bulk-access license: contact the site owner
+via scriptorium.ro.

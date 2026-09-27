@@ -1,4 +1,15 @@
+# This library's content is free to browse, link to, and index one page
+# at a time - for individual, scientific, and research use. It is not
+# licensed for commercial use, and systematic/bulk downloading or mirroring
+# of the collection is not permitted. See /LICENSE.txt for the full terms.
+#
+# Well-behaved bots: a Crawl-delay below is enough to stay welcome here.
+# Bots that ignore it, or that exist specifically to mirror whole sites
+# (offline browsers, AI-training scrapers, generic SEO/data harvesters),
+# are blocked outright below.
+
 User-agent: *
+Crawl-delay: 60
 Disallow: /cgi-bin/
 #
 # robots.txt from http://www.wikipedia.org/ (edited)
@@ -108,5 +119,42 @@ Disallow: /
 # A capture bot, downloads gazillions of pages with no public benefit
 # http://www.webreaper.net/
 User-agent: WebReaper
+Disallow: /
+
+# AI-training / LLM-corpus crawlers. Full-text books at scale are exactly
+# the kind of content these exist to bulk-harvest for commercial model
+# training - not the individual/research use this site is licensed for.
+User-agent: GPTBot
+User-agent: ChatGPT-User
+User-agent: CCBot
+User-agent: Google-Extended
+User-agent: Applebot-Extended
+User-agent: Bytespider
+User-agent: ClaudeBot
+User-agent: Claude-Web
+User-agent: anthropic-ai
+User-agent: PerplexityBot
+User-agent: Perplexity-User
+User-agent: Amazonbot
+User-agent: Diffbot
+User-agent: YouBot
+User-agent: Omgilibot
+User-agent: FacebookBot
+User-agent: Meta-ExternalAgent
+User-agent: cohere-ai
+User-agent: AI2Bot
+User-agent: ImagesiftBot
+User-agent: Timpibot
+Disallow: /
+
+# Generic SEO/data-harvesting bots with no benefit to this site's readers,
+# known for high-volume, whole-site crawling.
+User-agent: AhrefsBot
+User-agent: SemrushBot
+User-agent: MJ12bot
+User-agent: DotBot
+User-agent: PetalBot
+User-agent: BLEXBot
+User-agent: DataForSeoBot
 Disallow: /
 
