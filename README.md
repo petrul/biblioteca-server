@@ -202,6 +202,18 @@ JSON at `/api/docs`, YAML at `/api/docs.yaml` — also checked into the repo
 as `textbase-swagger-api.json`); the integration suite parses the live
 YAML and verifies representative paths, responses, and internal references.
 
+Most `/api/drest/**` repositories exclude writes (`@RestResource(exported
+= false)` on `save`/`delete`) or exclude themselves from DREST entirely
+(child/association tables managed only through their parent's own
+service logic, or entities like `AppUser`/`ReadingProgress` that need
+real business logic - password handling, session scoping - generic CRUD
+would bypass). `AuthorRepository`, `TeiElemRepository`, and
+`TeiDivRepository` are the exception: full CRUD, including writes. That
+was a real risk while `/api/drest/**` was reachable from the internet;
+now that it never is (see "Public vs internal REST endpoints" below),
+biblioteca-nestjs can use these three directly instead of needing a
+dedicated write endpoint for everything it touches.
+
 `GET /{author}/{opus}/{...path}` (optionally suffixed `.txt`/`.xml`/`.json`/`.html`,
 or content-negotiated via `Accept`; no suffix returns the decorated,
 site-chrome HTML reader page — `DivController`) fetches one fragment, from
