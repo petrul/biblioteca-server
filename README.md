@@ -215,59 +215,58 @@ div. Depth counts the div's own addressable path segments, not raw TEI
 (common in odt→TEI conversions) never got its own path segment at import
 time and stays transparent here too.
 
-### Public vs internal REST endpoints (proposition)
+### Public vs internal REST endpoints
 
-This service has two disjoint audiences, and they should see two disjoint
-API surfaces. Browsers on the internet reach it through the Caddy reverse
-proxy (`biblioteca.scriptorium.ro`, ports 80/443 only — UFW keeps every
-other published port on LAN/VPN/docker); sibling services
-(`biblioteca-nestjs` above all) reach it over the trusted docker network
-directly (`http://server:8080` — `BIBLIOTECA_EXTERNAL_URL`, never the
-public hostname). App-level authentication answers "which signed-in
-user"; only network placement answers "which network gets to call this
-at all" — and for machine-to-machine calls the second is the real
-boundary, per the decision to keep `/api/internal` unauthenticated.
+**Decision: this server's entire REST API (`/api/**`) and `/actuator/*`
+are never reachable from the internet, no exceptions.** The only thing
+Caddy exposes on `biblioteca.scriptorium.ro` is the reading surface
+itself — `/`, `/app`, `/{author}/{opus}/{...path}` fragment URLs,
+TOC/search pages, `/quote` — none of which live under `/api/`. Every
+sibling service (`biblioteca-nestjs` included) reaches this API the same
+way: over the trusted docker network directly (`http://server:8080` —
+`BIBLIOTECA_EXTERNAL_URL`, never the public hostname). There is no
+`/api/public/**` carve-out on this server and there does not need to be
+one, because of the next point.
 
-**Public — the site's actual functionality, fine to serve through the proxy:**
+**biblioteca-reader's own server-side component is the only sanctioned
+bridge from a browser to this API (or to nestjs's).** Reader's frontend
+JS never calls `biblioteca.scriptorium.ro/api/**` directly - it calls its
+*own* origin (`/tb/api/**` for this server, `/vz/api/**` for nestjs), and
+reader's Node backend relays that to `BIBLIOTECA_SERVER_URL`/`NESTJS_URL`
+(internal addresses) server-side. That relay is where "what's public"
+actually gets decided - once, explicitly, in one place - rather than as a
+URL-naming convention every future endpoint on this server would have to
+remember to honor.
 
-- the reading surface: `/`, `/app`, `/{author}/{opus}/{...path}` fragment
-  URLs, TOC/search pages, `/quote`
-- `/api/drest/**` reads and searches — repository writes are disabled at
-  the method level (`@RestResource(exported = false)` on `save`/`delete`);
-  DREST here is read-only by design
-- `/api/admin/config` — the deliberate non-secret exception (shared
-  Kafka/vector-store/embedder names, never addresses or credentials)
-- the sign-in entry points `/api/users/register`, `/api/auth/google`, and
-  `/api/users/me` (which must answer while anonymous — that is how a
-  caller learns it is anonymous)
-- the system collections (by-repo/by-language/by-author) and per-user
-  `/api/collections/mine/**`, `/api/reading-progress/**` — reachable
-  publicly but gated per-user by authentication
-- `/admin/**` and `/api/admin/**` — reachable (a login page must be), but
-  gated to admin users
-- the OpenAPI surface itself (`/api/docs`, `/api/docs.html`,
-  `/api/docs.yaml`) — self-description is a feature, not a leak
+**A confirmed gap, not yet fixed**: as of this writing, reader's
+`/tb/*`/`/vz/*` relay (`server.ts`) is an *unconditional wildcard*
+forwarder - `app.get('/tb/*', ...)` relays any path after `/tb`, cookies
+included, and `/vz/*` does the same to nestjs, which has no auth on it at
+all. That means the relay itself currently defeats this whole policy:
+anyone on the internet can already reach `/tb/api/admin/**`,
+`/tb/actuator/**`, `/tb/api/internal/**`, or - the sharpest edge -
+`POST /vz/api/vector-store/reset` and `/vz/api/vector-store/remove-opus`,
+the explicit *manual-only* vector-drop endpoints, entirely
+unauthenticated. **The fix belongs in biblioteca-reader, not here**: the
+relay must become an explicit allowlist of the specific upstream paths
+reader's own frontend actually calls (`auth/google`, `auth/logout`,
+`users/me`, `reading-progress*`, `lucene/status`, `divs*`, `authors*`,
+`collections/system/repos`, `drest/teiDivs/search/findOpera`, `search/*`
+on the `/tb` side; `api/vectorizing*`, `api/status` on the `/vz` side),
+rejecting everything else - matching the same "default-blocked, explicit
+exception" posture as the Caddy rule below. Tracked, not yet applied.
 
-**Internal only — no reason for the internet to ever see these:**
-
-- `/api/internal/**` — the enrichment persistence boundary
-  (`EnrichmentRestController`). Its one caller is the nestjs worker,
-  already on the docker bridge; it is deliberately unauthenticated (the
-  trusted network is the boundary, same as the MySQL/Kafka/Qdrant
-  connections made on it) and idempotent/fail-soft by design, but that
-  trust must not extend past the proxy
-- `/actuator/health|info|metrics` — `show-details=always` prints
-  per-component DB/disk detail intended for an internal admin/watcher
-  audience
-
-**The proposed enforcement point is the proxy, not the app:** a Caddy
-block on the `biblioteca.scriptorium.ro` vhost that answers `404` for
-`/api/internal/*` and `/actuator/*`. Nothing breaks — the worker never
-uses the public hostname — and no deployment gains a shared-secret
-dependency. The app-level rules stay as they are: `permitAll` fallthrough
-on `/api/internal` documents "this is not a user endpoint", the proxy
-makes it true on the internet side. (Not yet applied — this section is
-the proposition; the Caddyfile change is the follow-up.)
+**Enforcement, in full:**
+1. Caddy on `biblioteca.scriptorium.ro`: no direct route to this
+   server's or nestjs's `/api/*` or `/actuator/*` at all - only the
+   reading-surface routes and reader's own `/app/*`, `/tb/*`, `/vz/*`
+   handle blocks exist.
+2. Inside reader: `/tb/*` and `/vz/*` become explicit allowlists (see
+   above), not wildcard passthroughs - this is the actual public/private
+   boundary, enforced once, in reader's own code.
+3. App-level auth on this server (admin gating, per-user checks) stays
+   exactly as-is underneath both of the above - it answers "which
+   signed-in user", not "which network may call this at all".
 
 ### TEI processing
 
