@@ -81,10 +81,36 @@ public class AppConfig {
             throw new IllegalArgumentException(
                     "Invalid repo.tei.repos entry; expected url|basepath|filespec: " + spec);
         }
-        return new RepoSpec(
-                parts[0],
-                parts.length > 1 ? parts[1] : "",
-                parts.length > 2 && !parts[2].isBlank() ? parts[2] : null);
+        String url = parts[0];
+        String basePath = parts.length > 1 ? parts[1] : "";
+        String fileSpec = parts.length > 2 && !parts[2].isBlank() ? parts[2] : null;
+
+        // Accept the intuitive legacy form `/corpus/**/*.xml` as well as
+        // the explicit `url|basepath|filespec` form.  Without this split the
+        // glob is treated as the repository directory and TeiDirRepoImpl
+        // quite correctly rejects it as "not a dir".
+        if (fileSpec == null && !isRemote(url)) {
+            int wildcard = firstWildcard(url);
+            if (wildcard >= 0) {
+                int slash = url.lastIndexOf('/', wildcard);
+                if (slash > 0) {
+                    // Keep the directory as the repository root and retain
+                    // the complete relative glob as its filter.
+                    fileSpec = url.substring(slash + 1);
+                    url = url.substring(0, slash);
+                    basePath = "";
+                }
+            }
+        }
+        return new RepoSpec(url, basePath, fileSpec);
+    }
+
+    private static int firstWildcard(String value) {
+        int star = value.indexOf('*');
+        int question = value.indexOf('?');
+        if (star < 0) return question;
+        if (question < 0) return star;
+        return Math.min(star, question);
     }
 
     private record RepoSpec(String url, String basePath, String fileSpec) {}

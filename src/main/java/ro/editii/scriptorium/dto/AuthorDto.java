@@ -34,6 +34,10 @@ public class AuthorDto  {
     // prefered display name; if null, computed from firstName and lastName by method getVisualName()
     String displayName;
     String description; // remove
+    // Present (possibly null) so the biblioteca-nestjs enrichment worker
+    // can tell already-enriched authors from enrichment candidates
+    // without a second query - see EnrichmentRestController.
+    String bio;
     OpusDto[] opera;
     String image_href;
 
@@ -45,6 +49,7 @@ public class AuthorDto  {
                 .firstName(author.getFirstName())
 //                .originalNameInTeiFile(author.getOriginalNameInTeiFile())
                 .displayName(author.getVisualName())
+                .bio(author.getBio())
 //                .description(author.getDescription())
                 .build();
     }

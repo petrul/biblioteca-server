@@ -7,12 +7,13 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import ro.editii.scriptorium.Globals;
 import ro.editii.scriptorium.Util;
+import ro.editii.scriptorium.dao.AuthorRepository;
 import ro.editii.scriptorium.dao.TeiDivRepository;
 import ro.editii.scriptorium.dao.TeiFileRepository;
 import ro.editii.scriptorium.dto.OpusRemovedDto;
-import ro.editii.scriptorium.enrichment.EnrichmentService;
 import ro.editii.scriptorium.kafka.TextbaseEventsPublisher;
 import ro.editii.scriptorium.model.Author;
+import ro.editii.scriptorium.model.Languages;
 import ro.editii.scriptorium.model.TeiDiv;
 import ro.editii.scriptorium.model.TeiFile;
 import ro.editii.scriptorium.search.lucene.LuceneIndexService;
@@ -37,7 +38,7 @@ public class AdminService {
     final TeiFileDbService teiFileDbService;
     final JdbcTemplate jdbcTemplate;
     final LuceneIndexService luceneIndexService;
-    final EnrichmentService enrichmentService;
+    final AuthorRepository authorRepository;
     final TextbaseEventsPublisher textbaseEventsPublisher;
 
     @Value("${lucene.incremental.enabled:true}")
@@ -54,10 +55,12 @@ public class AdminService {
      *   Lucene entries would otherwise linger (wrong content, or content
      *   for divs that no longer exist) until someone remembers to
      *   trigger a full rebuild by hand.
-     * - Kicks off best-effort author bio / opus summary enrichment
-     *   (EnrichmentService) - a no-op once either already has one, so
-     *   this only ever actually does anything the first time a given
-     *   author/opus is seen.
+     * - Backfills Author.nativeLanguage from the imported file's own
+     *   detected language - the one cheap, DB-local remnant of the
+     *   enrichment that moved out to the biblioteca-nestjs worker. The
+     *   external part (author bio, opus summary, structured facts,
+     *   images, via Wikipedia/Wikidata) is that worker's daily sweep
+     *   now, persisted back through EnrichmentRestController.
      *
      * Both are wrapped so a hiccup in either NEVER aborts or rolls back
      * the DB import itself - same reasoning as one bad paragraph not
@@ -81,18 +84,29 @@ public class AdminService {
         }
 
         try {
-            final List<Author> authors = teiFile.getAuthors();
-            final List<String> workTitles = opera.stream().map(TeiDiv::getHead).filter(h -> h != null && !h.isBlank()).toList();
-            for (Author author : authors) {
-                this.enrichmentService.backfillNativeLanguageIfMissing(author, teiFile.getLanguage());
-                this.enrichmentService.enrichAuthorAsync(author, workTitles, teiFile.getLanguage());
-            }
-            for (TeiDiv opus : opera) {
-                this.enrichmentService.enrichOpusAsync(opus);
+            for (Author author : teiFile.getAuthors()) {
+                backfillNativeLanguageIfMissing(author, teiFile.getLanguage());
             }
         } catch (RuntimeException e) {
-            log.error("Failed to kick off AI enrichment for {} - the TEI import itself still succeeded", filename, e);
+            log.error("Failed to backfill author native language for {} - the TEI import itself still succeeded", filename, e);
         }
+    }
+
+    /**
+     * Most authors write in exactly one language - backfills
+     * Author.nativeLanguage from the opus's own detected TeiFile.language,
+     * since nothing else detects this independently. Cheap and
+     * synchronous (unlike the external enrichment calls the nestjs worker
+     * now owns), and unconditional - runs even if this author was
+     * already enriched under the old, language-less behavior.
+     */
+    private void backfillNativeLanguageIfMissing(Author author, Languages language) {
+        if (author.getNativeLanguage() != null || language == null) return;
+        this.authorRepository.findById(author.getId()).ifPresent(a -> {
+            if (a.getNativeLanguage() != null) return;
+            a.setNativeLanguage(language);
+            this.authorRepository.save(a);
+        });
     }
 
     /**

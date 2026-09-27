@@ -114,7 +114,7 @@ class AdminServiceRetentionPolicyTest {
         luceneIndexService.reindexOpus(opus)
         assertEquals(1, luceneIndexService.search("content", 1000).size())
 
-        // jdbcTemplate and enrichmentService are never touched on this
+        // jdbcTemplate and authorRepository are never touched on this
         // path - null is safe and, better than a mock, makes any future
         // usage on this path fail this test loudly instead of silently
         // passing against a fake.

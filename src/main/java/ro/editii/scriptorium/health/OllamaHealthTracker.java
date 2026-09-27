@@ -6,10 +6,10 @@ import java.time.Duration;
 
 /**
  * Shared across every Ollama-backed dependency (OllamaEmbedder's 3
- * configured models AND EnrichmentService's generation calls) - they
- * all hit the same physical Ollama instance/GPU, so a stuck generate
- * call is just as good evidence the embed endpoint will hang too, and
- * vice versa. One flag, not one per model.
+ * configured models) - they all hit the same physical Ollama
+ * instance/GPU, so a stuck generate call is just as good evidence the
+ * embed endpoint will hang too, and vice versa. One flag, not one per
+ * model.
  */
 @Component
 public class OllamaHealthTracker {

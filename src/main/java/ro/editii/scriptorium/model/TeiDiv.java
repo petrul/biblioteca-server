@@ -32,12 +32,11 @@ public class TeiDiv extends TeiElem {
     @EqualsAndHashCode.Include
     String head;
 
-    // Auto-generated (EnrichmentService, async after import) - only
-    // ever meaningful on an opus (root) div, same reasoning as
+    // Auto-generated (the biblioteca-nestjs enrichment worker, async) -
+    // only ever meaningful on an opus (root) div, same reasoning as
     // Author.bio: a trusted source (Wikipedia's summary API) when this
-    // work has a page there, else the search engine's own snippets.
-    // Null until enrichment has run once; a later reimport never
-    // overwrites an existing value.
+    // work has a page there. Null until enrichment has run once; a later
+    // reimport never overwrites an existing value.
     @Lob @ToString.Exclude
     String summary;
 

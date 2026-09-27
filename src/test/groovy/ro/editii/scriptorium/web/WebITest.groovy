@@ -84,13 +84,10 @@ import static ro.editii.scriptorium.TestUtils.TEI_ELEM
         // overrides the test-wide lucene.incremental.enabled=false that
         // build.gradle's tasks.withType(Test) sets for every profile.
         "lucene.incremental.enabled=true",
-        // Inherits application-ci.properties's enrichment.enabled=false -
-        // this class's many reimports (relocationWorks,
-        // destroyAllExistingAndReimportAllTeis, @AfterEach's own
-        // full-corpus recovery reimport, etc.) would otherwise each fire
-        // real Ollama/SearXNG enrichment calls as an untested side effect.
-        // AuthorWorkEnrichmentTest is the one test in the whole suite that
-        // exercises that real integration, in its own isolated context.
+        // The external enrichment calls moved to the biblioteca-nestjs
+        // worker (persisted back via EnrichmentRestController), so this
+        // class's many reimports no longer make any real
+        // Ollama/SearXNG/Wikipedia calls as an untested side effect.
 ])
 @SpringBootTest(
         webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT,
@@ -422,8 +419,9 @@ class WebITest {
         assert creanga.nativeLanguage == ro.editii.scriptorium.model.Languages.RO
     }
 
-    // aiEnrichmentEventuallyFillsInARealAuthorBioAndOpusSummary() moved to
-    // AuthorWorkEnrichmentTest - see that class's doc comment for why.
+    // The bio/summary enrichment itself no longer happens in this server
+    // (the biblioteca-nestjs worker owns it) - its persistence boundary
+    // is covered by EnrichmentRestControllerTest.
 
     @Test
     void exportedOpenApiYamlIsValidAndInternallyConsistent() {

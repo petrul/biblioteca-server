@@ -6,7 +6,7 @@ import org.mockito.Mockito
 import org.springframework.jdbc.core.JdbcTemplate
 import ro.editii.scriptorium.dao.TeiDivRepository
 import ro.editii.scriptorium.dao.TeiFileRepository
-import ro.editii.scriptorium.enrichment.EnrichmentService
+import ro.editii.scriptorium.dao.AuthorRepository
 import ro.editii.scriptorium.kafka.TextbaseEventsPublisher
 import ro.editii.scriptorium.model.TeiDiv
 import ro.editii.scriptorium.scheduled.NoWriter
@@ -35,11 +35,11 @@ class AdminServicePruneOrphanedElemsTest {
     final TeiFileDbService teiFileDbService = Mockito.mock(TeiFileDbService)
     final JdbcTemplate jdbcTemplate = Mockito.mock(JdbcTemplate)
     final LuceneIndexService luceneIndexService = Mockito.mock(LuceneIndexService)
-    final EnrichmentService enrichmentService = Mockito.mock(EnrichmentService)
+    final AuthorRepository authorRepository = Mockito.mock(AuthorRepository)
     final TextbaseEventsPublisher eventsPublisher = Mockito.mock(TextbaseEventsPublisher)
 
     final AdminService adminService = new AdminService(teiRepo, teiFileRepository, teiDivRepository,
-            teiFileDbService, jdbcTemplate, luceneIndexService, enrichmentService, eventsPublisher)
+            teiFileDbService, jdbcTemplate, luceneIndexService, authorRepository, eventsPublisher)
 
     static TeiDiv orphanOpus(long id) {
         final div = new TeiDiv()

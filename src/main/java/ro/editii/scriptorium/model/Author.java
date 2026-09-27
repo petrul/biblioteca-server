@@ -84,12 +84,12 @@ public class Author implements Comparable<Author>, Serializable {
     @Lob @ToString.Exclude
     Blob avatar;
 
-    // Auto-generated (EnrichmentService, async after import) - a short
-    // biography synthesized from a trusted source (Wikipedia's own REST
-    // summary API when this author has a page there, else the search
-    // engine's own snippets as a fallback - see enrichAuthorAsync). Null
-    // until enrichment has actually run once; never overwritten by a
-    // later reimport once set, so a manual edit here survives.
+    // Auto-generated (the biblioteca-nestjs enrichment worker, async) -
+    // a short biography taken as-is from a trusted source (Wikipedia's
+    // own REST summary API when this author has a page there - see that
+    // worker's EnrichmentService). Null until enrichment has actually
+    // run once; never overwritten by a later reimport once set, so a
+    // manual edit here survives.
     @Lob @ToString.Exclude
     String bio;
 
@@ -100,19 +100,15 @@ public class Author implements Comparable<Author>, Serializable {
     String bioSourceUrl;
 
     // Most authors write in exactly one language - backfilled
-    // opportunistically (EnrichmentService) from whichever opus of
-    // theirs happens to get imported/enriched first, since nothing
-    // detects this independently yet. Drives which language the
-    // enrichment search itself runs in (a native-language query finds
-    // much better source material than an English one - see the
-    // Skala Eresou/Eminescu Greek-vs-English search comparison this was
-    // based on).
+    // opportunistically (AdminService, right after import) from
+    // whichever opus of theirs happens to get imported first, since
+    // nothing else detects this independently yet.
     @Enumerated(EnumType.STRING)
     Languages nativeLanguage;
 
-    // Auto-generated alongside bio (EnrichmentService, same call, same
-    // "only ever set once" one-shot rule) - free-text rather than a
-    // parsed date, since the source material often only gives an
+    // Auto-generated alongside bio (the biblioteca-nestjs enrichment
+    // worker, same "only ever set once" one-shot rule) - free-text rather
+    // than a parsed date, since the source material often only gives an
     // approximate or partial date (a bare year, "c. 1837") and a strict
     // date type would just reject those instead of storing them.
     @Column(length = 100)
