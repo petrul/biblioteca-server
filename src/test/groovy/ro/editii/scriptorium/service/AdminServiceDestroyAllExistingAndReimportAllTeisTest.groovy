@@ -14,6 +14,7 @@ import ro.editii.scriptorium.TestConfig
 import ro.editii.scriptorium.Util
 import ro.editii.scriptorium.dao.TeiDivRepository
 import ro.editii.scriptorium.kafka.TextbaseEventsPublisher
+import ro.editii.scriptorium.service.LanguageDetectionService
 import ro.editii.scriptorium.scheduled.NoWriter
 import ro.editii.scriptorium.tei.TeiDirRepoImpl
 import ro.editii.scriptorium.tei.TeiRepo
@@ -59,6 +60,17 @@ class AdminServiceDestroyAllExistingAndReimportAllTeisTest {
     @Autowired TeiDivRepository teiDivRepository
 
     @MockitoBean TextbaseEventsPublisher textbaseEventsPublisher
+
+    // Lingua eagerly loads an n-gram model per language at first detection
+    // (see LanguageDetectionService) - GBs of heap for the ~18 languages of
+    // the Languages enum, which OOMs a memory-tight CI agent (observed on
+    // srv2: OutOfMemoryError in fastutil's Object2FloatOpenHashMap mid-
+    // model-load, then every Tomcat poller starved). This test exercises
+    // the destroy/reimport mechanics, not language detection - null
+    // language on import is tolerated (per-language Lucene fields and the
+    // author nativeLanguage backfill just skip), so mock the detector and
+    // keep the multi-GB models out of the test JVM entirely.
+    @MockitoBean LanguageDetectionService languageDetectionService
 
     @Test
     void destroyAllExistingAndReimportAllTeisReimportsEveryFileFirstToLast() {
