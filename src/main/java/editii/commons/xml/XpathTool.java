@@ -139,11 +139,25 @@ public class XpathTool {
     }
 
 
+    // XPathFactory.newInstance() does JDK service-provider discovery
+    // (scanning the classpath's META-INF/services) on every call - cheap
+    // once, but this app calls _applyXpath() once per TeiElem, so a full
+    // corpus reimport (~167k elements) used to pay that classpath scan
+    // roughly 167k times over. Lazily created once per XpathTool instance
+    // (one per parsed TEI file - see TeiElem.parseTeiFile's cache_parsedFiles)
+    // and reused for every subsequent xpath string against that same file;
+    // neither XPath nor XPathExpression is documented thread-safe, but
+    // every caller of _applyXpath already goes through this method's own
+    // `synchronized` guard, so reuse here introduces no new concurrency risk.
+    private XPath xpath;
+
     public synchronized Object _applyXpath(String str_xpath, QName qname) throws XPathExpressionException {
-        final XPathFactory xPathfactory = XPathFactory.newInstance();
-        final XPath xpath = xPathfactory.newXPath();
-        xpath.setNamespaceContext(this.namespaceContext);
-        final XPathExpression expr = xpath.compile(str_xpath);
+        if (this.xpath == null) {
+            final XPathFactory xPathfactory = XPathFactory.newInstance();
+            this.xpath = xPathfactory.newXPath();
+            this.xpath.setNamespaceContext(namespaceContext);
+        }
+        final XPathExpression expr = this.xpath.compile(str_xpath);
         final Object result = expr.evaluate(root, qname);
         return result;
     }
