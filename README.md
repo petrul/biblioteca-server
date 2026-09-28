@@ -138,9 +138,7 @@ The canonical environment variable names expected by the application are:
 | `EMBEDDER_URL` | Ollama/embedder URL, including port |
 | `TEI_REPOS` | Comma-separated local or Git-backed TEI repository specifications |
 | `KAFKA_BROKERS` | Kafka broker address or comma-separated broker addresses |
-| `DB_URL` | JDBC URL of the Derby Network Server instance (host, port, database name) - engine-agnostic name on purpose, was `MYSQL_URL` |
-| `DB_USER` | Database user - separate from `DB_URL` (not embedded in it, unlike the old MySQL URL) |
-| `DB_PASSWORD` | Database password - see `DB_USER` |
+| `DB_URL` | JDBC URL of the Derby Network Server instance (host, port, database name) with the credentials embedded as Derby connection attributes (`;user=...;password=...`) - engine-agnostic name on purpose, was `MYSQL_URL` |
 | `WORK_DIR` | Persistent application work directory; the application uses its `cache/` subdirectory for caches |
 | `BIBLIOTECA_EXTERNAL_URL` | Public/base URL advertised by the application |
 | `GOOGLE_OAUTH_CLIENT_ID` | Optional Google OAuth client ID |
@@ -235,7 +233,8 @@ docker run -d -p 1527:1527 -v <data-dir>:/var/lib/derby \
 
 Credentials are required (the entrypoint refuses to start without them and configures
 Derby's BUILTIN authentication so the one configured user is the only account that
-can connect), and `DB_URL` then points at `jdbc:derby://<host>:1527/<db>;create=true`.
+can connect), and `DB_URL` then points at
+`jdbc:derby://<host>:1527/<db>;create=true;user=<user>;password=<password>`.
 
 The image is tagged with the Derby version it serves, kept in sync with the
 `derbyclient` dependency in `build.gradle` on purpose - never pinned independently:

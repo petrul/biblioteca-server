@@ -551,13 +551,17 @@ tasks.withType(ProcessForkOptions).configureEach { task ->
             addFallback('MILVUS_URL', addressFrom('MILVUS_HOST', 'MILVUS_PORT'))
             addFallback('EMBEDDER_URL', addressFrom('EMBEDDER_HOST', 'EMBEDDER_PORT'))
 
-            // DB_URL carries no credentials (see application.properties) -
-            // DB_USER/DB_PASSWORD are separate, plain fallback values, no
-            // synthesis needed for those two.
+            // DB_URL carries the credentials as Derby connection attributes
+            // (see application.properties) - one value, nothing else to
+            // synthesize for the database.
             final dbHost = addressFrom('DB_HOST', 'DB_PORT')
             final dbName = props.getProperty('DB_NAME')
             if (dbHost != null && dbName != null) {
-                addFallback('DB_URL', "jdbc:derby://${dbHost}/${dbName};create=true")
+                final dbUser = props.getProperty('DB_USER')
+                final dbPassword = props.getProperty('DB_PASSWORD')
+                final creds = (dbUser != null && dbPassword != null)
+                        ? ";user=${dbUser};password=${dbPassword}" : ''
+                addFallback('DB_URL', "jdbc:derby://${dbHost}/${dbName};create=true${creds}")
             }
             println "> Applied ${fallbackCount} local fallback value(s) from ${envFile.name} to task '${task.name}'"
         }
@@ -571,9 +575,7 @@ tasks.withType(ProcessForkOptions).configureEach { task ->
                     ['EMBEDDER_URL'],
                     ['TEI_REPOS'],
                     ['KAFKA_BROKERS'],
-                    ['DB_URL'],
-                    ['DB_USER'],
-                    ['DB_PASSWORD']
+                    ['DB_URL']
             ]
             final missingKeys = requiredKeys.findAll { alternatives ->
                 alternatives.every { System.getenv(it) == null && props.getProperty(it) == null }

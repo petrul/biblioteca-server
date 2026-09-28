@@ -18,10 +18,12 @@ public class RunStuffOnStartup {
     public CommandLineRunner printJdbcUrlCLR(DataSource dataSource) {
         return args -> {
             try {
-                // DB_URL carries no credentials (see application.properties -
-                // spring.datasource.username/password are separate
-                // properties now), so the URL itself is safe to print as-is.
-                final String url = dataSource.getConnection().getMetaData().getURL();
+                // DB_URL carries the credentials as Derby connection
+                // attributes (;user=...;password=..., see application.
+                // properties) - redact their values before printing, only
+                // the attribute names stay in the log line.
+                final String url = dataSource.getConnection().getMetaData().getURL()
+                        .replaceAll("(?i)(user|password)=[^;]*", "$1=***");
                 System.out.println("jdbc url: " + url);
             } catch (SQLException e) {
                 throw new RuntimeException(e);

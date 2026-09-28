@@ -129,7 +129,7 @@ task :'check-env', [:task_profile] do |_task, args|
     # pass-store entries not yet renamed keep working.
     'dev' => [
       %w[VECTORSTORE_URL MILVUS_URL],
-      'EMBEDDER_URL', 'TEI_REPOS', 'KAFKA_BROKERS', 'DB_URL', 'DB_USER', 'DB_PASSWORD', 'WORK_DIR',
+      'EMBEDDER_URL', 'TEI_REPOS', 'KAFKA_BROKERS', 'DB_URL', 'WORK_DIR',
       'BIBLIOTECA_EXTERNAL_URL'
     ],
     'ci' => [
@@ -137,11 +137,11 @@ task :'check-env', [:task_profile] do |_task, args|
       %w[EMBEDDER_URL EMBEDDER_ADDRESS],
       %w[TEI_REPOS],
       %w[KAFKA_BROKERS KAFKA_SERVERS],
-      %w[DB_URL], %w[DB_USER], %w[DB_PASSWORD]
+      %w[DB_URL]
     ],
     'prod' => [
       %w[VECTORSTORE_URL MILVUS_URL],
-      'EMBEDDER_URL', 'TEI_REPOS', 'KAFKA_BROKERS', 'DB_URL', 'DB_USER', 'DB_PASSWORD'
+      'EMBEDDER_URL', 'TEI_REPOS', 'KAFKA_BROKERS', 'DB_URL'
     ]
   }
   # Profile names are deliberately free-form: a developer's machine name
