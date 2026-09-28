@@ -32,12 +32,12 @@ class ParseTeiFileIntoMemDbTest {
     @BeforeEach
     void before() {
 
-        this.jdbcTemplate.update("SET FOREIGN_KEY_CHECKS = 0")
-        this.jdbcTemplate.update("truncate table tei_file_authors")
-        this.jdbcTemplate.update("truncate table author")
-        this.jdbcTemplate.update("truncate table ${TestUtils.TEI_ELEM}")
-        this.jdbcTemplate.update("truncate table tei_file")
-        this.jdbcTemplate.update("SET FOREIGN_KEY_CHECKS = 1")
+        // DELETE FROM, not TRUNCATE + SET FOREIGN_KEY_CHECKS - see
+        // AdminService.destroyAllExistingAndReimportAllTeis's own comment.
+        this.jdbcTemplate.update("DELETE FROM tei_file_authors")
+        this.jdbcTemplate.update("DELETE FROM author")
+        this.jdbcTemplate.update("DELETE FROM ${TestUtils.TEI_ELEM}")
+        this.jdbcTemplate.update("DELETE FROM tei_file")
 
         assert countTableRows(this.jdbcTemplate, "author") == 0
         assert countTableRows(this.jdbcTemplate, "tei_file_authors") == 0

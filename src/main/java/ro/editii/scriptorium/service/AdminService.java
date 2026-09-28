@@ -325,10 +325,15 @@ public class AdminService {
 
             // Leftovers: orphaned rows with no (reachable) root. Nothing
             // can navigate to these, so a bulk delete is safe and final.
+            // Portable form of MySQL's multi-table "DELETE e FROM tei_elem e
+            // LEFT JOIN tei_file f ON f.id = e.tei_file_id WHERE f.id IS
+            // NULL" (Derby has no multi-table DELETE at all) - the OR
+            // tei_file_id IS NULL clause preserves the LEFT JOIN's exact
+            // semantics (a plain NOT IN alone would silently miss null
+            // tei_file_id rows, which the LEFT JOIN caught).
             final int leftovers = this.jdbcTemplate.update(
-                    "DELETE e FROM " + Util.TEI_ELEM + " e"
-                            + " LEFT JOIN tei_file f ON f.id = e.tei_file_id"
-                            + " WHERE f.id IS NULL");
+                    "DELETE FROM " + Util.TEI_ELEM
+                            + " WHERE tei_file_id IS NULL OR tei_file_id NOT IN (SELECT id FROM tei_file)");
 
             if (pruned > 0 || leftovers > 0) {
                 log.info("Orphan sweep: {} opera trees and {} leftover elems removed", pruned, leftovers);
@@ -341,12 +346,20 @@ public class AdminService {
         synchronized (Globals.IMPORT_TEIS_WORKING) {
             writeLn(logActivity, "will first destroy existing data...");
 
-            this.jdbcTemplate.update("SET FOREIGN_KEY_CHECKS = 0");
-            this.jdbcTemplate.update("truncate table tei_file_authors");
-            this.jdbcTemplate.update("truncate table author");
-            this.jdbcTemplate.update("truncate table " + Util.TEI_ELEM);
-            this.jdbcTemplate.update("truncate table tei_file");
-            this.jdbcTemplate.update("SET FOREIGN_KEY_CHECKS = 1");
+            // DELETE FROM, not TRUNCATE: Derby refuses to TRUNCATE any table
+            // referenced by an enabled FK constraint outright, including
+            // tei_elem's own self-reference (parent_id -> tei_elem) - and
+            // there is no Derby equivalent of MySQL's SET FOREIGN_KEY_CHECKS
+            // to work around that with. Deleting every row of a
+            // self-referencing table in one statement is fine (Derby, like
+            // standard SQL, checks constraints at statement end, not
+            // per-row) - the order below still respects the real FKs
+            // between these four tables (tei_file_authors and tei_elem
+            // both reference tei_file, so tei_file must go last).
+            this.jdbcTemplate.update("DELETE FROM tei_file_authors");
+            this.jdbcTemplate.update("DELETE FROM author");
+            this.jdbcTemplate.update("DELETE FROM " + Util.TEI_ELEM);
+            this.jdbcTemplate.update("DELETE FROM tei_file");
 
             List<TeiFile> allExistingTeiFiles = this.teiFileRepository.findAll();
             writeLn(logActivity, "will first destroy existing...");

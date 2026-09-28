@@ -21,13 +21,15 @@ public class TestUtils {
     }
 
     public static void truncateAllTables(JdbcTemplate jt) {
-        jt.update("SET FOREIGN_KEY_CHECKS = 0");
-        jt.update("truncate table tei_file_authors");
-        jt.update("truncate table author");
-        jt.update("truncate table " + TEI_ELEM);
-        jt.update("truncate table tei_file");
-        jt.update("truncate table relocation");
-        jt.update("SET FOREIGN_KEY_CHECKS = 1");
+        // DELETE FROM, not TRUNCATE + SET FOREIGN_KEY_CHECKS - see
+        // AdminService.destroyAllExistingAndReimportAllTeis's own comment
+        // for why (Derby has no FK-check-disable, and refuses to TRUNCATE
+        // tei_elem outright due to its self-reference).
+        jt.update("DELETE FROM tei_file_authors");
+        jt.update("DELETE FROM author");
+        jt.update("DELETE FROM " + TEI_ELEM);
+        jt.update("DELETE FROM tei_file");
+        jt.update("DELETE FROM relocation");
 
         assert countTableRows(jt, "author") == 0;
         assert countTableRows(jt, "tei_file_authors") == 0;

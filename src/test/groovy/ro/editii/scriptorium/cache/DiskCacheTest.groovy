@@ -1,6 +1,5 @@
 package ro.editii.scriptorium.cache
 
-import com.mysql.cj.util.TestUtils
 import groovy.transform.CompileStatic
 import org.apache.commons.io.FileUtils
 import org.junit.jupiter.api.AfterEach
