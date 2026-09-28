@@ -4,6 +4,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import ro.editii.scriptorium.dao.ReadingProgressRepository;
+import ro.editii.scriptorium.dto.ReadingProgressDto;
 import ro.editii.scriptorium.model.AppUser;
 import ro.editii.scriptorium.model.ReadingProgress;
 import ro.editii.scriptorium.model.TeiDiv;
@@ -29,19 +30,20 @@ public class ReadingProgressService {
     public ReadingProgress save(AppUser user, String divPath) {
         final TeiDiv div = resolveDiv(divPath);
         final TeiDiv opus = div.getOpus();
+        final String opusPath = opus.getCompletePath();
 
         final ReadingProgress existing = this.readingProgressRepository
-                .findByUserAndOpus(user, opus)
+                .findByUserAndOpusPath(user, opusPath)
                 .orElse(null);
 
         if (existing != null) {
             // A genuinely new div starts at its own top; re-saving the SAME
             // div (e.g. "Continue Reading" resuming exactly where a reader
             // left off) must not wipe the scroll position they're resuming to.
-            if (!existing.getDiv().equals(div)) {
+            if (!existing.getDivPath().equals(divPath)) {
                 existing.setScrollFraction(0.0);
             }
-            existing.setDiv(div);
+            existing.setDivPath(divPath);
             existing.setUpdatedAt(new Timestamp(System.currentTimeMillis()));
             existing.setTouchCount(existing.getTouchCount() + 1);
             return this.readingProgressRepository.save(existing);
@@ -49,8 +51,8 @@ public class ReadingProgressService {
 
         return this.readingProgressRepository.save(ReadingProgress.builder()
                 .user(user)
-                .opus(opus)
-                .div(div)
+                .opusPath(opusPath)
+                .divPath(divPath)
                 .build());
     }
 
@@ -62,9 +64,9 @@ public class ReadingProgressService {
      */
     @Transactional
     public ReadingProgress addAttention(AppUser user, String opusPath, long secondsDelta) {
-        final TeiDiv opus = resolveDiv(opusPath);
+        resolveDiv(opusPath); // validates the path resolves to a real div before touching the row
         final ReadingProgress existing = this.readingProgressRepository
-                .findByUserAndOpus(user, opus)
+                .findByUserAndOpusPath(user, opusPath)
                 .orElseThrow(() -> new IllegalArgumentException(
                         "no reading progress yet for this work - open a chapter before reporting attention"));
 
@@ -85,13 +87,13 @@ public class ReadingProgressService {
      */
     @Transactional
     public ReadingProgress updateScrollPosition(AppUser user, String opusPath, String divPath, double scrollFraction) {
-        final TeiDiv opus = resolveDiv(opusPath);
+        resolveDiv(opusPath); // validates the path resolves to a real div before touching the row
         final ReadingProgress existing = this.readingProgressRepository
-                .findByUserAndOpus(user, opus)
+                .findByUserAndOpusPath(user, opusPath)
                 .orElseThrow(() -> new IllegalArgumentException(
                         "no reading progress yet for this work - open a chapter before reporting scroll position"));
 
-        if (!existing.getDiv().getCompletePath().equals(divPath)) {
+        if (!existing.getDivPath().equals(divPath)) {
             return existing;
         }
 
@@ -101,8 +103,8 @@ public class ReadingProgressService {
 
     @Transactional(readOnly = true)
     public Optional<ReadingProgress> get(AppUser user, String opusPath) {
-        final TeiDiv opus = resolveDiv(opusPath);
-        return this.readingProgressRepository.findByUserAndOpus(user, opus);
+        resolveDiv(opusPath); // validates the path resolves to a real div before querying
+        return this.readingProgressRepository.findByUserAndOpusPath(user, opusPath);
     }
 
     @Transactional(readOnly = true)
@@ -115,5 +117,22 @@ public class ReadingProgressService {
         if (!(elem instanceof TeiDiv div))
             throw new IllegalArgumentException("path does not resolve to a div/chapter: " + divPath);
         return div;
+    }
+
+    /**
+     * Resolves the current div's head for display (divPath is the entity's
+     * only stored reference now - see its own doc comment) and builds the
+     * DTO. A stale path (the div was renamed/removed since this row was
+     * last saved) resolves to a null head rather than failing the whole
+     * listing - the row itself is still meaningful (touchCount, attention).
+     */
+    public ReadingProgressDto toDto(ReadingProgress progress) {
+        String divHead = null;
+        try {
+            divHead = resolveDiv(progress.getDivPath()).getHead();
+        } catch (RuntimeException ignored) {
+            // stale path - see method doc above
+        }
+        return ReadingProgressDto.from(progress, divHead);
     }
 }

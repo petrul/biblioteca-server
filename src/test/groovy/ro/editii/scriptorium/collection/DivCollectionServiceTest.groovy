@@ -110,7 +110,7 @@ class DivCollectionServiceTest {
         final item = this.divCollectionService.addDiv(this.user, DivCollection.FAVORITES_NAME, this.opus.completePath)
 
         assert item.kind == DivCollectionItem.Kind.DIV
-        assert item.div.id == this.opus.id
+        assert item.divPath == this.opus.completePath
 
         final favorites = this.divCollectionService.getCollection(this.user, DivCollection.FAVORITES_NAME)
         assert favorites.items.any { it.id == item.id }

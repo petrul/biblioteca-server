@@ -75,7 +75,7 @@ public class DivCollectionService {
         return this.divCollectionItemRepository.save(DivCollectionItem.builder()
                 .collection(collection)
                 .kind(DivCollectionItem.Kind.DIV)
-                .div(div)
+                .divPath(div.getCompletePath())
                 .build());
     }
 
@@ -91,7 +91,7 @@ public class DivCollectionService {
         return this.divCollectionItemRepository.save(DivCollectionItem.builder()
                 .collection(collection)
                 .kind(DivCollectionItem.Kind.FRAGMENT)
-                .div(div)
+                .divPath(div.getCompletePath())
                 .fragmentStart(start)
                 .fragmentEnd(end)
                 .build());
@@ -119,7 +119,8 @@ public class DivCollectionService {
         return this.addDiv(owner, DivCollection.FAVORITES_NAME, divPath);
     }
 
-    private TeiDiv resolveDiv(String divPath) {
+    /** Public: DivCollectionRestController's own toDto also needs to resolve items' divPath back to a live TeiDiv. */
+    public TeiDiv resolveDiv(String divPath) {
         final TeiElem elem = this.divService.getByPath(divPath);
         if (!(elem instanceof TeiDiv div))
             throw new IllegalArgumentException("path does not resolve to a div/chapter: " + divPath);

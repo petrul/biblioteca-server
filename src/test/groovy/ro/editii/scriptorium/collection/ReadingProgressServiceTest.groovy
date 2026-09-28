@@ -115,8 +115,8 @@ class ReadingProgressServiceTest {
 
         final saved = this.readingProgressService.get(this.user, this.opus.completePath)
         assert saved.isPresent()
-        assert saved.get().div.id == firstChapter.id
-        assert saved.get().opus.id == this.opus.id
+        assert saved.get().divPath == firstChapter.completePath
+        assert saved.get().opusPath == this.opus.completePath
     }
 
     @Test
@@ -129,7 +129,7 @@ class ReadingProgressServiceTest {
 
         final saved = this.readingProgressService.get(user, this.opus.completePath)
         assert saved.isPresent()
-        assert saved.get().div.id == this.chapterDivs[1].id
+        assert saved.get().divPath == this.chapterDivs[1].completePath
 
         // still exactly one row for this (user, opus) - not two
         assert this.readingProgressService.listAll(user).size() == 1
@@ -145,8 +145,8 @@ class ReadingProgressServiceTest {
 
         final all = this.readingProgressService.listAll(user)
         assert all.size() == 2
-        assert all.any { it.opus.id == this.opus.id && it.div.id == this.chapterDivs[0].id }
-        assert all.any { it.opus.id == this.secondOpus.id && it.div.id == this.secondOpus.id }
+        assert all.any { it.opusPath == this.opus.completePath && it.divPath == this.chapterDivs[0].completePath }
+        assert all.any { it.opusPath == this.secondOpus.completePath && it.divPath == this.secondOpus.completePath }
     }
 
     @Test
@@ -165,14 +165,14 @@ class ReadingProgressServiceTest {
         this.readingProgressService.save(user, this.chapterDivs[0].completePath)
         final firstSave = this.readingProgressService.get(user, this.opus.completePath).get()
         assert firstSave.touchCount == 1
-        assert !ReadingProgressDto.from(firstSave).read
+        assert !this.readingProgressService.toDto(firstSave).read
 
         this.readingProgressService.save(user, this.chapterDivs[1].completePath)
         this.readingProgressService.save(user, this.chapterDivs[0].completePath)
 
         final thirdSave = this.readingProgressService.get(user, this.opus.completePath).get()
         assert thirdSave.touchCount == 3
-        assert ReadingProgressDto.from(thirdSave).read
+        assert this.readingProgressService.toDto(thirdSave).read
     }
 
     @Test
@@ -249,7 +249,7 @@ class ReadingProgressServiceTest {
         this.readingProgressService.updateScrollPosition(user, this.opus.completePath, this.chapterDivs[0].completePath, 0.9d)
 
         final saved = this.readingProgressService.get(user, this.opus.completePath).get()
-        assert saved.div.id == this.chapterDivs[1].id
+        assert saved.divPath == this.chapterDivs[1].completePath
         assert saved.scrollFraction == 0.0d
     }
 

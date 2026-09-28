@@ -24,11 +24,15 @@ public class ReadingProgressDto {
     long attentionSeconds;
     double scrollFraction;
 
-    public static ReadingProgressDto from(ReadingProgress progress) {
+    // divHead is resolved by the caller (ReadingProgressService.toDto) -
+    // opusPath/divPath are the entity's own stored fields now, but the
+    // head text isn't stored (it can change independently of the path),
+    // so it always needs a fresh lookup.
+    public static ReadingProgressDto from(ReadingProgress progress, String divHead) {
         return ReadingProgressDto.builder()
-                .opusPath(progress.getOpus().getCompletePath())
-                .divPath(progress.getDiv().getCompletePath())
-                .divHead(progress.getDiv().getHead())
+                .opusPath(progress.getOpusPath())
+                .divPath(progress.getDivPath())
+                .divHead(divHead)
                 .updatedAt(progress.getUpdatedAt())
                 .touchCount(progress.getTouchCount())
                 .read(progress.getTouchCount() >= READ_THRESHOLD_TOUCHES)

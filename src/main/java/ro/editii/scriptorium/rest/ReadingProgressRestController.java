@@ -56,7 +56,7 @@ public class ReadingProgressRestController {
     @GetMapping
     public List<ReadingProgressDto> mine(Authentication authentication) {
         return this.readingProgressService.listAll(currentUser(authentication)).stream()
-                .map(ReadingProgressDto::from)
+                .map(this.readingProgressService::toDto)
                 .toList();
     }
 
@@ -65,7 +65,7 @@ public class ReadingProgressRestController {
     public ReadingProgressDto one(Authentication authentication, @RequestParam String opusPath) {
         try {
             return this.readingProgressService.get(currentUser(authentication), opusPath)
-                    .map(ReadingProgressDto::from)
+                    .map(this.readingProgressService::toDto)
                     .orElse(null);
         } catch (IllegalArgumentException e) {
             RestUtil.throw400(e.getMessage());
@@ -77,7 +77,7 @@ public class ReadingProgressRestController {
     @PutMapping
     public ReadingProgressDto save(Authentication authentication, @RequestBody SaveRequest request) {
         try {
-            return ReadingProgressDto.from(
+            return this.readingProgressService.toDto(
                     this.readingProgressService.save(currentUser(authentication), request.getDivPath()));
         } catch (IllegalArgumentException e) {
             RestUtil.throw400(e.getMessage());
@@ -94,7 +94,7 @@ public class ReadingProgressRestController {
     @PutMapping("/attention")
     public ReadingProgressDto addAttention(Authentication authentication, @RequestBody AttentionRequest request) {
         try {
-            return ReadingProgressDto.from(this.readingProgressService.addAttention(
+            return this.readingProgressService.toDto(this.readingProgressService.addAttention(
                     currentUser(authentication), request.getOpusPath(), request.getSecondsDelta()));
         } catch (IllegalArgumentException e) {
             RestUtil.throw400(e.getMessage());
@@ -111,7 +111,7 @@ public class ReadingProgressRestController {
     @PutMapping("/scroll")
     public ReadingProgressDto updateScrollPosition(Authentication authentication, @RequestBody ScrollRequest request) {
         try {
-            return ReadingProgressDto.from(this.readingProgressService.updateScrollPosition(
+            return this.readingProgressService.toDto(this.readingProgressService.updateScrollPosition(
                     currentUser(authentication), request.getOpusPath(), request.getDivPath(), request.getScrollFraction()));
         } catch (IllegalArgumentException e) {
             RestUtil.throw400(e.getMessage());

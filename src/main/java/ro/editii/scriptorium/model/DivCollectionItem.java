@@ -5,7 +5,6 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
-import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
@@ -52,8 +51,11 @@ public class DivCollectionItem implements Serializable {
     @Enumerated(EnumType.STRING)
     Kind kind;
 
-    @ManyToOne(optional = false, fetch = FetchType.EAGER)
-    TeiDiv div;
+    // The div's stable path, not a @ManyToOne TeiDiv reference - a
+    // re-import assigns every TeiDiv a fresh generated id, which would
+    // silently orphan this row (see ReadingProgress.opusPath's own doc
+    // comment for the same reasoning).
+    String divPath;
 
     // Only set for kind=FRAGMENT - see class doc.
     String fragmentStart;

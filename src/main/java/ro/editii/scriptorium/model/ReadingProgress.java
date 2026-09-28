@@ -9,6 +9,7 @@ import jakarta.persistence.Id;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import jakarta.persistence.UniqueConstraint;
+import jakarta.persistence.Column;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -31,7 +32,7 @@ import java.util.Date;
 @Data
 @Builder @NoArgsConstructor @AllArgsConstructor
 @JsonInclude(JsonInclude.Include.NON_NULL)
-@Table(uniqueConstraints = @UniqueConstraint(columnNames = {"user_id", "opus_id"}))
+@Table(uniqueConstraints = @UniqueConstraint(columnNames = {"user_id", "opus_path"}))
 public class ReadingProgress implements Serializable {
 
     @Id
@@ -44,16 +45,21 @@ public class ReadingProgress implements Serializable {
     @EqualsAndHashCode.Exclude
     AppUser user;
 
-    // The work's own root div - a stable per-work key, resolved from
-    // TeiElem.getOpus() at save time so callers only ever need to know the
-    // specific div they're currently on, not its opus separately.
-    @ManyToOne(optional = false)
-    TeiDiv opus;
+    // The work's own root div's stable path (not a @ManyToOne TeiDiv
+    // reference - a re-import assigns every TeiDiv a fresh generated id,
+    // which would silently orphan this row; the path survives a reimport
+    // as long as the opus isn't itself renamed, same tradeoff
+    // DivMediaAssociation.divPath already accepts). Resolved from
+    // TeiElem.getOpus() at save time so callers only ever need to know
+    // the specific div they're currently on, not its opus separately.
+    @Column(nullable = false)
+    String opusPath;
 
-    // The specific division the reader is currently on - not necessarily a
-    // leaf (nothing here requires that), just whatever div they last had open.
-    @ManyToOne(optional = false)
-    TeiDiv div;
+    // The specific division the reader is currently on, by path - not
+    // necessarily a leaf (nothing here requires that), just whatever div
+    // they last had open. Same not-a-FK reasoning as opusPath above.
+    @Column(nullable = false)
+    String divPath;
 
     @Builder.Default
     Timestamp updatedAt = new Timestamp(new Date().getTime());

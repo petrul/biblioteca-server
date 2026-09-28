@@ -20,12 +20,16 @@ public class DivCollectionItemDto {
     List<String> fragmentText; // resolved quote paragraphs - FRAGMENT items only
     Timestamp addedAt;
 
-    public static DivCollectionItemDto from(DivCollectionItem item, List<String> resolvedFragmentText) {
+    // divHead isn't stored on the entity (divPath is - see its own doc
+    // comment), so the caller resolves it fresh (null if the path has
+    // gone stale since this item was added - same tolerance
+    // DivCollectionRestController.toDto already applies to fragmentText).
+    public static DivCollectionItemDto from(DivCollectionItem item, String divHead, List<String> resolvedFragmentText) {
         return DivCollectionItemDto.builder()
                 .id(item.getId())
                 .kind(item.getKind().name())
-                .divPath(item.getDiv().getCompletePath())
-                .divHead(item.getDiv().getHead())
+                .divPath(item.getDivPath())
+                .divHead(divHead)
                 .fragmentStart(item.getFragmentStart())
                 .fragmentEnd(item.getFragmentEnd())
                 .fragmentText(resolvedFragmentText)

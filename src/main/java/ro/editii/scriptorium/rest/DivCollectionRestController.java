@@ -71,22 +71,33 @@ public class DivCollectionRestController {
     }
 
     private DivCollectionItemDto toDto(DivCollectionItem item) {
+        // The stored divPath may have gone stale (the div was renamed or
+        // removed since this item was added) - a resolution failure here
+        // is not fatal, same tolerance as the fragment-resolution catch
+        // below: the item is still listed, just without a live head/text.
+        TeiDiv div = null;
+        try {
+            div = this.divCollectionService.resolveDiv(item.getDivPath());
+        } catch (Exception e) {
+            log.warn("Could not resolve item {}'s divPath {}: {}", item.getId(), item.getDivPath(), e.getMessage());
+        }
+
         List<String> fragmentText = null;
-        if (item.getKind() == DivCollectionItem.Kind.FRAGMENT) {
+        if (div != null && item.getKind() == DivCollectionItem.Kind.FRAGMENT) {
             try {
                 fragmentText = this.fragmentResolutionService
-                        .resolve(item.getDiv(), item.getFragmentStart(), item.getFragmentEnd())
+                        .resolve(div, item.getFragmentStart(), item.getFragmentEnd())
                         .getParagraphs();
             } catch (Exception e) {
                 // The underlying div's content may have changed (reimport)
                 // since this item was added - don't fail the whole listing
                 // over one now-broken fragment.
                 log.warn("Could not re-resolve stored fragment (item {}, div {}, {}..{}): {}",
-                        item.getId(), item.getDiv().getCompletePath(),
+                        item.getId(), item.getDivPath(),
                         item.getFragmentStart(), item.getFragmentEnd(), e.getMessage());
             }
         }
-        return DivCollectionItemDto.from(item, fragmentText);
+        return DivCollectionItemDto.from(item, div != null ? div.getHead() : null, fragmentText);
     }
 
     // ---- /mine ----
