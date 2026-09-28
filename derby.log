@@ -1,0 +1,13 @@
+----------------------------------------------------------------
+Mon Sep 28 12:08:38 EEST 2026:
+Booting Derby version The Apache Software Foundation - Apache Derby - 10.17.1.0 - (1913217): instance a816c00e-01a0-e745-fa5d-000001ea52d8 
+on database directory memory:/home/apps/work/biblioteca/biblioteca-server/myDb with class loader jdk.internal.loader.ClassLoaders$AppClassLoader@341d43cd 
+Loaded from file:/home/apps/.gradle/caches/modules-2/files-2.1/org.apache.derby/derby/10.17.1.0/e90e61e8ee731614a9bafd3d81155e09fff5e80c/derby-10.17.1.0.jar
+java.vendor=Oracle Corporation
+java.runtime.version=25.0.4+7-LTS-189
+user.dir=/home/apps/work/biblioteca/biblioteca-server
+os.name=Linux
+os.arch=amd64
+os.version=7.0.0-30-generic
+derby.system.home=null
+Database Class Loader started - derby.database.classpath=''

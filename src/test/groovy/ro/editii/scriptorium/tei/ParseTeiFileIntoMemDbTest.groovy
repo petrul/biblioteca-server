@@ -117,7 +117,7 @@ class ParseTeiFileIntoMemDbTest {
         this.teifileParser.parse(tei, Languages.RU)
         assert countTeiElem() == 2
 
-        final list = this.jdbcTemplate.queryForList("select head from $TEI_ELEM;", String.class)
+        final list = this.jdbcTemplate.queryForList("select head from $TEI_ELEM", String.class)
         list.each {p it}
         assert list.find {it.contains('[')} == null
     }
@@ -160,9 +160,9 @@ class ParseTeiFileIntoMemDbTest {
         this.teifileParser.parse(tei, Languages.ES)
 
         assert countTeiElem() > 0
-        assert this.jdbcTemplate.queryForList("select head from $TEI_ELEM;", String.class).size() > 0
+        assert this.jdbcTemplate.queryForList("select head from $TEI_ELEM", String.class).size() > 0
 
-        final list = this.jdbcTemplate.queryForList("select head from $TEI_ELEM;", String.class)
+        final list = this.jdbcTemplate.queryForList("select head from $TEI_ELEM", String.class)
         assert list.size() == 2
         assert list.first() == 'La princesse Flora'
         assert list.find {it.contains('[')} == null
@@ -185,7 +185,7 @@ class ParseTeiFileIntoMemDbTest {
         """)
         this.teifileParser.parse(tei, Languages.ES)
 
-        final parsedHead = this.jdbcTemplate.queryForList("select head from ${TestUtils.TEI_ELEM};", String.class)[0]
+        final parsedHead = this.jdbcTemplate.queryForList("select head from ${TestUtils.TEI_ELEM}", String.class)[0]
         assert parsedHead == 'Cuvânt înainte.'
     }
 
@@ -226,11 +226,11 @@ class ParseTeiFileIntoMemDbTest {
         this.teifileParser.parse(tei, Languages.LA)
 
         assert 1 == countTeiElem()
-        assert "Pula calului" ==  this.jdbcTemplate.queryForList("select head from ${TEI_ELEM};", String.class).get(0)
+        assert "Pula calului" ==  this.jdbcTemplate.queryForList("select head from ${TEI_ELEM}", String.class).get(0)
     }
 
     protected int countTeiElem() {
-        this.jdbcTemplate.queryForObject("select count(*) from ${TEI_ELEM};", Integer.class)
+        this.jdbcTemplate.queryForObject("select count(*) from ${TEI_ELEM}", Integer.class)
     }
 
     @Test
@@ -249,7 +249,7 @@ class ParseTeiFileIntoMemDbTest {
         this.teifileParser.parse(tei, Languages.BG)
 
         assert 1 == countTeiElem()
-        assert "Pula calului" ==  this.jdbcTemplate.queryForList("select head from tei_elem;", String.class).get(0)
+        assert "Pula calului" ==  this.jdbcTemplate.queryForList("select head from tei_elem", String.class).get(0)
 
     }
 
