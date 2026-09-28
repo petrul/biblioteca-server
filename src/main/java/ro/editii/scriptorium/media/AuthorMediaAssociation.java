@@ -20,6 +20,6 @@ public class AuthorMediaAssociation {
     String authorPath; // we'll identify a div by its path
 
     @ManyToOne
-    @JoinColumn(name = "media_ref")
+    @JoinColumn(name = "media_ref", referencedColumnName = "url", columnDefinition = "VARCHAR(500)")
     MediaRef mediaRef;
 }

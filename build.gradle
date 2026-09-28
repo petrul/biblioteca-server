@@ -172,6 +172,12 @@ def static getGitLatestCommit() {
 processResources {
     // interested particularly in application.properties and version.properties
 //    println "version.properties var expansion ..."
+    // Spring renders the banner before @PropertySource(version.properties)
+    // is registered, so ${app.version} cannot be resolved at runtime. Bake
+    // the Gradle project version into the banner while processing resources.
+    filesMatching("**/banner.txt") {
+        filter { line -> line.replace('${app.version}', project.version.toString()) }
+    }
     filesMatching("**/version.properties") {
         final prop = [
             "buildnumber" : System.getenv()['BUILD_NUMBER'],

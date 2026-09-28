@@ -2,6 +2,7 @@ package ro.editii.scriptorium.media;
 
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
+import jakarta.persistence.Column;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.Size;
 import lombok.AllArgsConstructor;
@@ -17,7 +18,9 @@ import org.springframework.beans.BeanUtils;
 @Data @AllArgsConstructor @Builder @NoArgsConstructor
 public class MediaRef {
 
-    @Id @Size(max=500)
+    @Id
+    @Column(name = "url", length = 500)
+    @Size(max=500)
     String  url;
 
     @Size(max=200)
