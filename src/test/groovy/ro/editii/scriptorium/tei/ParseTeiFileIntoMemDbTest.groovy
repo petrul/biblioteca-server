@@ -18,7 +18,7 @@ import static ro.editii.scriptorium.TestUtils.TEI_ELEM
 
 @TestPropertySource(properties=[
         "spring.datasource.url=jdbc:derby:memory:myDb;create=true",
-        "spring.datasource.driver-class-name=org.apache.derby.jdbc.EmbeddedDriver",
+        "spring.datasource.driver-class-name=org.apache.derby.iapi.jdbc.AutoloadedDriver",
         "spring.jpa.database-platform=org.hibernate.community.dialect.DerbyDialect",
         "spring.jpa.hibernate.ddl-auto = create",
         "spring.main.allow-bean-definition-overriding=true"])

@@ -38,7 +38,7 @@ class GTestUtil {
 
     static String[] DERBY_INMEM_TEST_DB_PROPS = [
             "spring.datasource.url=jdbc:derby:memory:myDb;create=true",
-            "spring.datasource.driver-class-name=org.apache.derby.jdbc.EmbeddedDriver",
+            "spring.datasource.driver-class-name=org.apache.derby.iapi.jdbc.AutoloadedDriver",
             "spring.jpa.database-platform=org.hibernate.community.dialect.DerbyDialect",
             "spring.jpa.hibernate.ddl-auto = update"]
 
