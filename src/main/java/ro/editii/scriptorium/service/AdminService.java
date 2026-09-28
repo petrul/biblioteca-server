@@ -342,6 +342,11 @@ public class AdminService {
         }
     }
 
+    /**
+     * this is an endpoint that should not be called except in situation where the db is completely unhealthy from some
+     * unidentified back. it basically resets the app db, truncates everything and re-'compiles' the TeiDiv information
+     * from the TEI XML's in the TEI repo.
+     */
     public void destroyAllExistingAndReimportAllTeis(Writer logActivity, boolean iUnderstandThatThisIsAPotentiallyDangerousOperation) {
         synchronized (Globals.IMPORT_TEIS_WORKING) {
             writeLn(logActivity, "will first destroy existing data...");

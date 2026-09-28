@@ -24,7 +24,8 @@ def load_profile_env(task_profile)
   unless File.file?(loader)
     raise "Password-store environment loader not found: #{loader}"
   end
-  output, status = Open3.capture2('bash', '-c', "source #{Shellwords.escape(loader)} #{Shellwords.escape(task_profile)} && env -0")
+  profile_path = "biblioteca/#{task_profile}"
+  output, status = Open3.capture2('bash', '-c', "source #{Shellwords.escape(loader)} #{Shellwords.escape(profile_path)} && env -0")
   raise "Could not load biblioteca/#{task_profile} from pass store" unless status.success?
   output.split("\0").each do |entry|
     key, value = entry.split('=', 2)
@@ -38,6 +39,18 @@ def load_profile_env(task_profile)
 end
 
 IMAGE_NAME    = "editii/biblioteca-server"
+
+def resolve_test_selectors(filter)
+  needle = filter.to_s.downcase
+  Dir.glob('src/test/**/*.{groovy,java}').filter_map do |path|
+    source = File.read(path)
+    package = source[/^\s*package\s+([\w.]+)/, 1]
+    klass = File.basename(path, '.*')
+    fqcn = package ? "#{package}.#{klass}" : klass
+    next unless fqcn.downcase.include?(needle) || klass.downcase.include?(needle)
+    fqcn
+  end.uniq
+end
 
 version = File.read("build.gradle")[/^\s*version\s*=\s*['"]([^'"]+)['"]/, 1]
 
@@ -102,16 +115,7 @@ task :itest, [:task_profile, :test_filter] do |_task, args|
   if test_filter && !test_filter.empty?
     # Same friendly, case-insensitive filename filter as rake test - e.g.
     # `rake itest[dev,SearchITest]` runs only the matching test classes.
-    needle = test_filter.downcase
-    matches = Dir.glob('src/test/**/*.{groovy,java}').select do |path|
-      File.basename(path, '.*').downcase.include?(needle)
-    end
-    selectors = matches.map do |path|
-      source = File.read(path)
-      package = source[/^\s*package\s+([\w.]+)/, 1]
-      klass = File.basename(path, '.*')
-      package ? "#{package}.#{klass}" : klass
-    end.uniq
+    selectors = resolve_test_selectors(test_filter)
     abort "No test matches '#{test_filter}'" if selectors.empty?
     selector = selectors.map { |name| " --tests '#{name}'" }.join
   end
@@ -226,20 +230,36 @@ task :test, [:task_profile, :test_filter] do |_task, args|
     if test_filter && !test_filter.empty?
       # Resolve the friendly filter case-insensitively against test source
       # filenames, then pass Gradle the exact fully-qualified class names.
-      needle = test_filter.downcase
-      matches = Dir.glob('src/test/**/*.{groovy,java}').select do |path|
-        File.basename(path, '.*').downcase.include?(needle)
-      end
-      selectors = matches.map do |path|
-        source = File.read(path)
-        package = source[/^\s*package\s+([\w.]+)/, 1]
-        klass = File.basename(path, '.*')
-        package ? "#{package}.#{klass}" : klass
-      end.uniq
+      selectors = resolve_test_selectors(test_filter)
       abort "No test matches '#{test_filter}'" if selectors.empty?
       selector = selectors.map { |name| " --tests '#{name}'" }.join
     end
     sh "#{GRADLE} -Pprofile=#{task_profile} test#{selector}"
+end
+
+desc "List discovered test classes without running them"
+task :tests do
+  files = Dir.glob('src/test/**/*.{groovy,java}').sort
+  if files.empty?
+    puts 'No tests found under src/test'
+    next
+  end
+
+  files.each do |path|
+    source = File.read(path)
+    package = source[/^\s*package\s+([\w.]+)/, 1]
+    klass = File.basename(path, '.*')
+    # Gradle/Groovy test source trees also contain fixtures, configuration
+    # classes and helper types. List runnable test classes, not those support
+    # sources, which conventionally end in Test or ITest.
+    next unless klass.match?(/(?:Test|ITest)$/)
+    name = package ? "#{package}.#{klass}" : klass
+    tags = source.scan(/@Tag\(\s*["']([^"']+)["']\s*\)/).flatten.uniq
+    suffix = tags.empty? ? '' : " [#{tags.join(', ')}]"
+    puts "#{name}#{suffix}"
+  end
+  listed = files.count { |path| File.basename(path, '.*').match?(/(?:Test|ITest)$/) }
+  puts "#{listed} test class(es)"
 end
 
 task :run, [:task_profile] do |_task, args|
