@@ -134,18 +134,23 @@ task :'check-env', [:task_profile] do |_task, args|
     'dev' => [
       %w[VECTORSTORE_URL MILVUS_URL],
       'EMBEDDER_URL', 'TEI_REPOS', 'KAFKA_BROKERS', 'DB_URL', 'WORK_DIR',
-      'BIBLIOTECA_EXTERNAL_URL'
+      'BIBLIOTECA_EXTERNAL_URL', 'ADMIN_USERS', 'GOOGLE_OAUTH_CLIENT_ID',
+      'OLLAMA_URL'
     ],
     'ci' => [
       %w[VECTORSTORE_URL MILVUS_URL MILVUS_ADDRESS],
       %w[EMBEDDER_URL EMBEDDER_ADDRESS],
       %w[TEI_REPOS],
       %w[KAFKA_BROKERS KAFKA_SERVERS],
-      %w[DB_URL]
+      %w[DB_URL],
+      'ADMIN_USERS', 'GOOGLE_OAUTH_CLIENT_ID', 'BIBLIOTECA_EXTERNAL_URL',
+      'OLLAMA_URL', 'WORK_DIR'
     ],
     'prod' => [
       %w[VECTORSTORE_URL MILVUS_URL],
-      'EMBEDDER_URL', 'TEI_REPOS', 'KAFKA_BROKERS', 'DB_URL'
+      'EMBEDDER_URL', 'TEI_REPOS', 'KAFKA_BROKERS', 'DB_URL', 'WORK_DIR',
+      'BIBLIOTECA_EXTERNAL_URL', 'ADMIN_USERS', 'GOOGLE_OAUTH_CLIENT_ID',
+      'OLLAMA_URL'
     ]
   }
   # Profile names are deliberately free-form: a developer's machine name
