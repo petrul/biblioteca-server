@@ -151,13 +151,26 @@ public class XpathTool {
     // `synchronized` guard, so reuse here introduces no new concurrency risk.
     private XPath xpath;
 
+    // Same reasoning, bigger win: xpath.compile() itself (string parse +
+    // expression-tree build) is the expensive part of _applyXpath, and the
+    // xpath strings callers pass are a small, endlessly repeated set (the
+    // parser asks the same "head"/"text" style queries for every element
+    // of every file), so a file's tool instance compiled the same
+    // expressions thousands of times over. Cached per instance - correct
+    // under the same `synchronized` guard as the XPath above.
+    private java.util.Map<String, XPathExpression> compiledXpaths = new java.util.HashMap<>();
+
     public synchronized Object _applyXpath(String str_xpath, QName qname) throws XPathExpressionException {
         if (this.xpath == null) {
             final XPathFactory xPathfactory = XPathFactory.newInstance();
             this.xpath = xPathfactory.newXPath();
             this.xpath.setNamespaceContext(namespaceContext);
         }
-        final XPathExpression expr = this.xpath.compile(str_xpath);
+        XPathExpression expr = this.compiledXpaths.get(str_xpath);
+        if (expr == null) {
+            expr = this.xpath.compile(str_xpath);
+            this.compiledXpaths.put(str_xpath, expr);
+        }
         final Object result = expr.evaluate(root, qname);
         return result;
     }
