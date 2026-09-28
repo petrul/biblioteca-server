@@ -41,8 +41,9 @@ import static org.mockito.ArgumentMatchers.argThat
  * the bug exactly as it manifested.
  */
 @TestPropertySource(properties = [
-        "spring.datasource.url=jdbc:h2:mem:googleSignInWhoAmIITestDb;DB_CLOSE_DELAY=-1;MODE=MySQL;DATABASE_TO_LOWER=TRUE;CASE_INSENSITIVE_IDENTIFIERS=TRUE",
-        "spring.jpa.database-platform=org.hibernate.dialect.H2Dialect",
+        "spring.datasource.url=jdbc:derby:memory:googleSignInWhoAmIITestDb;create=true",
+        "spring.datasource.driver-class-name=org.apache.derby.jdbc.EmbeddedDriver",
+        "spring.jpa.database-platform=org.hibernate.community.dialect.DerbyDialect",
         "spring.main.allow-bean-definition-overriding=true",
         "spring.jpa.hibernate.ddl-auto=create",
 ])

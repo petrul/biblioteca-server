@@ -288,7 +288,13 @@ dependencies {
     testImplementation('org.springframework.boot:spring-boot-starter-kafka-test')
     testImplementation('org.springframework.boot:spring-boot-starter-restclient-test')
     testImplementation('org.springframework.boot:spring-boot-starter-webmvc-test')
-    testImplementation group: 'com.h2database', name: 'h2', version: '2.1.214'
+    // Embedded Derby engine, for tests only - the app itself is a pure
+    // Network Server client (see runtimeOnly derbyclient above) and never
+    // links the embedded engine, but tests use jdbc:derby:memory:... URLs
+    // (see each @TestPropertySource / GTestUtil's in-memory props), which
+    // only the embedded driver (not derbyclient, which only accepts
+    // jdbc:derby://... URLs) can open - was h2.
+    testImplementation 'org.apache.derby:derby:10.17.1.0'
     // Validates real serialized Kafka event DTOs against asyncapi.yml's
     // own schemas (AsyncApiContractTest) - the same "does the checked-in
     // spec actually match what we produce" check

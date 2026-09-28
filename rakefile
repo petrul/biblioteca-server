@@ -201,6 +201,13 @@ task :test, [:task_profile, :test_filter] do |_task, args|
     task_profile = args[:task_profile] || profile
     test_filter = args[:test_filter]
     load_profile_env(task_profile)
+    # Fail fast, before spending minutes on a test run, if the pass store
+    # is out of sync with what the app actually expects (exactly what
+    # happened tonight: application.properties/build.gradle moved from
+    # MYSQL_URL to DB_URL/DB_USER/DB_PASSWORD, but nothing forced the pass
+    # store itself to be checked until a test run failed confusingly deep
+    # into Spring context startup).
+    Rake::Task['check-env'].invoke(task_profile)
     puts "Running unit and integration tests..."
     selector = ''
     if test_filter && !test_filter.empty?
