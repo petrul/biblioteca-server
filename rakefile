@@ -144,7 +144,14 @@ task :'check-env', [:task_profile] do |_task, args|
       'EMBEDDER_URL', 'TEI_REPOS', 'KAFKA_BROKERS', 'DB_URL', 'DB_USER', 'DB_PASSWORD'
     ]
   }
-  expected = required.fetch(task_profile) { raise "Unknown profile '#{task_profile}' (expected dev, ci, or prod)" }
+  # Profile names are deliberately free-form: a developer's machine name
+  # (zmeu, yoga, ...) is as valid a profile as dev/ci/prod, backed by its
+  # own pass-store section (biblioteca/<name> - see load_profile_env).
+  # The three known names keep their environment-specific lists (ci
+  # accepts legacy alias names, dev adds the bare-metal WORK_DIR /
+  # BIBLIOTECA_EXTERNAL_URL); any other name is held to dev's list - the
+  # superset a bare-metal machine profile genuinely needs.
+  expected = required.fetch(task_profile, required['dev'])
   missing = expected.reject do |entry|
     keys = entry.is_a?(Array) ? entry : [entry]
     keys.any? { |key| ENV[key] && !ENV[key].strip.empty? }
