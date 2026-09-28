@@ -9,10 +9,8 @@
     </teiHeader>
     <text>
         <body>
-            <head>Second Opus</head>
-            <author>Second,Author</author>
-            <subtitle>1902</subtitle>
-            <div>
+            <div type="div1">
+                <head>Second Opus</head>
                 <p>omega paragraph content</p>
             </div>
         </body>

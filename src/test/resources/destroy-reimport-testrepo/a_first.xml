@@ -9,10 +9,8 @@
     </teiHeader>
     <text>
         <body>
-            <head>First Opus</head>
-            <author>First,Author</author>
-            <subtitle>1901</subtitle>
-            <div>
+            <div type="div1">
+                <head>First Opus</head>
                 <p>alpha paragraph content</p>
             </div>
         </body>
