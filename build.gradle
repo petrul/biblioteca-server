@@ -244,6 +244,15 @@ dependencies {
     implementation('com.github.ben-manes.caffeine:caffeine')
 
     implementation group: 'commons-cli', name: 'commons-cli', version: '1.4'
+    // Spring Boot's dependency management pins EVERY Derby artifact at its
+    // own (older) derby.version - 10.16.1.1 at Boot 4.1.0. The explicit
+    // versions on derbyclient/derby below win for those two, but their
+    // transitive derbyshared still gets the BOM's 10.16.1.1 - a mixed
+    // version set Derby refuses (observed in CI: the tests' embedded
+    // driver, org.apache.derby.jdbc.EmbeddedDriver, fails to load because
+    // derby 10.17 cannot link against derbyshared 10.16). Overriding the
+    // one BOM property keeps every Derby artifact aligned.
+    ext['derby.version'] = '10.17.1.0'
     // Derby Network Server client - was mysql:mysql-connector-java. Just
     // the client jar: this app is a client of a standalone Derby Network
     // Server (see docker/biblioteca's derby service), never embedded.
