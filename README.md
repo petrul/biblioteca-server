@@ -136,7 +136,9 @@ The canonical environment variable names expected by the application are:
 | `EMBEDDER_URL` | Ollama/embedder URL, including port |
 | `TEI_REPOS` | Comma-separated local or Git-backed TEI repository specifications |
 | `KAFKA_BROKERS` | Kafka broker address or comma-separated broker addresses |
-| `MYSQL_URL` | JDBC URL containing the database host, port, name, user, and password |
+| `DB_URL` | JDBC URL of the Derby Network Server instance (host, port, database name) - engine-agnostic name on purpose, was `MYSQL_URL` |
+| `DB_USER` | Database user - separate from `DB_URL` (not embedded in it, unlike the old MySQL URL) |
+| `DB_PASSWORD` | Database password - see `DB_USER` |
 | `WORK_DIR` | Persistent application work directory; the application uses its `cache/` subdirectory for caches |
 | `BIBLIOTECA_EXTERNAL_URL` | Public/base URL advertised by the application |
 | `GOOGLE_OAUTH_CLIENT_ID` | Optional Google OAuth client ID |

@@ -123,7 +123,7 @@ task :'check-env', [:task_profile] do |_task, args|
     # pass-store entries not yet renamed keep working.
     'dev' => [
       %w[VECTORSTORE_URL MILVUS_URL],
-      'EMBEDDER_URL', 'TEI_REPOS', 'KAFKA_BROKERS', 'MYSQL_URL', 'WORK_DIR',
+      'EMBEDDER_URL', 'TEI_REPOS', 'KAFKA_BROKERS', 'DB_URL', 'DB_USER', 'DB_PASSWORD', 'WORK_DIR',
       'BIBLIOTECA_EXTERNAL_URL'
     ],
     'ci' => [
@@ -131,11 +131,11 @@ task :'check-env', [:task_profile] do |_task, args|
       %w[EMBEDDER_URL EMBEDDER_ADDRESS],
       %w[TEI_REPOS],
       %w[KAFKA_BROKERS KAFKA_SERVERS],
-      %w[MYSQL_URL MYSQL_JDBC_URL]
+      %w[DB_URL], %w[DB_USER], %w[DB_PASSWORD]
     ],
     'prod' => [
       %w[VECTORSTORE_URL MILVUS_URL],
-      'EMBEDDER_URL', 'TEI_REPOS', 'KAFKA_BROKERS', 'MYSQL_URL'
+      'EMBEDDER_URL', 'TEI_REPOS', 'KAFKA_BROKERS', 'DB_URL', 'DB_USER', 'DB_PASSWORD'
     ]
   }
   expected = required.fetch(task_profile) { raise "Unknown profile '#{task_profile}' (expected dev, ci, or prod)" }

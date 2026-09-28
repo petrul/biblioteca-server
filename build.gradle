@@ -241,7 +241,10 @@ dependencies {
     implementation('com.github.ben-manes.caffeine:caffeine')
 
     implementation group: 'commons-cli', name: 'commons-cli', version: '1.4'
-    implementation 'mysql:mysql-connector-java:8.0.26'
+    // Derby Network Server client - was mysql:mysql-connector-java. Just
+    // the client jar: this app is a client of a standalone Derby Network
+    // Server (see docker/biblioteca's derby service), never embedded.
+    runtimeOnly 'org.apache.derby:derbyclient:10.17.1.0'
 
 	implementation group: 'commons-io', name: 'commons-io', version: '2.6'
     implementation group: 'org.apache.commons', name: 'commons-collections4', version: '4.4'
@@ -525,17 +528,13 @@ tasks.withType(ProcessForkOptions).configureEach { task ->
             addFallback('MILVUS_URL', addressFrom('MILVUS_HOST', 'MILVUS_PORT'))
             addFallback('EMBEDDER_URL', addressFrom('EMBEDDER_HOST', 'EMBEDDER_PORT'))
 
-            final mysqlHost = addressFrom('MYSQL_HOST', 'MYSQL_PORT')
-            final mysqlDb = props.getProperty('MYSQL_DB')
-            final mysqlUser = props.getProperty('MYSQL_USER')
-            final mysqlPassword = props.getProperty('MYSQL_PASSWORD')
-            if ([mysqlHost, mysqlDb, mysqlUser, mysqlPassword].every { it != null }) {
-                final encode = { String value -> URLEncoder.encode(value, StandardCharsets.UTF_8) }
-                addFallback('MYSQL_URL',
-                        "jdbc:mysql://${mysqlHost}/${mysqlDb}" +
-                        "?user=${encode(mysqlUser)}&password=${encode(mysqlPassword)}" +
-                        '&autoReconnect=true&useSSL=false&noAccessToProcedureBodies=true' +
-                        '&serverTimezone=Europe/Bucharest&useTimezone=false&allowPublicKeyRetrieval=true')
+            // DB_URL carries no credentials (see application.properties) -
+            // DB_USER/DB_PASSWORD are separate, plain fallback values, no
+            // synthesis needed for those two.
+            final dbHost = addressFrom('DB_HOST', 'DB_PORT')
+            final dbName = props.getProperty('DB_NAME')
+            if (dbHost != null && dbName != null) {
+                addFallback('DB_URL', "jdbc:derby://${dbHost}/${dbName};create=true")
             }
             println "> Applied ${fallbackCount} local fallback value(s) from ${envFile.name} to task '${task.name}'"
         }
@@ -549,7 +548,9 @@ tasks.withType(ProcessForkOptions).configureEach { task ->
                     ['EMBEDDER_URL'],
                     ['TEI_REPOS'],
                     ['KAFKA_BROKERS'],
-                    ['MYSQL_URL']
+                    ['DB_URL'],
+                    ['DB_USER'],
+                    ['DB_PASSWORD']
             ]
             final missingKeys = requiredKeys.findAll { alternatives ->
                 alternatives.every { System.getenv(it) == null && props.getProperty(it) == null }
