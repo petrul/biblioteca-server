@@ -572,6 +572,89 @@ For a concrete task, the fastest orientation path is usually: find the
 REST controller in `rest`/`web` for the endpoint you care about, then
 follow its injected service into the matching package above.
 
+## Bugs & performance debt (rethink later)
+
+Findings from the 2026-09-28 pass over the reimport pipeline (measured
+against a live full-corpus import into a fresh Derby - the "why is
+reimport slow" question). Kept here so the open items can be rethought
+deliberately, not fixed by drive-by.
+
+### Fixed at the time (in `editii.commons.xml.XpathTool`)
+
+- `_applyXpath` created a fresh `XPathFactory`/`XPath` per call: JDK
+  service-provider discovery paid once per TeiElem, ~167k times per full
+  reimport. Now one lazily-created `XPath` per tool instance, reused
+  under the method's existing `synchronized` guard.
+- `_applyXpath` also **compiled** its xpath string on every call
+  (`xpath.compile`), and the callers pass a small, endlessly repeated
+  set of strings - thousands of identical compilations per file. Now a
+  per-instance `Map<String, XPathExpression>` cache, same guard. The
+  compile was the dominant per-element cost of the parser.
+
+### Open - correctness
+
+1. **`XpathTool.getXPath`'s positional bracket is only correct for
+   `div` elements.** The bracket is computed as `[nrPreviousDivs + 1]`
+   (counting previous siblings *named div*), but XPath's `[n]` predicate
+   counts *same-name* siblings:
+   - a `<p>` preceded by two `<div>` siblings would get `p[3]`, when it
+     is really the 1st `p` (`p[1]`);
+   - an element with same-name siblings but no preceding `div` siblings
+     gets **no** bracket at all - an ambiguous path that `xpath_one`
+     would reject ("more than exactly one elem").
+   Latent today: only `div`s get paths stored (`TeifileParser.parcurge_rec`
+   calls `getXPathRelativeTo` for divs only, where the div-counting
+   happens to be correct). **Fixing it changes the stored-path scheme** -
+   every `tei_elem.xpath` already in the DB follows the current (div-
+   relative) convention, so a fix requires deciding whether stored paths
+   migrate or a new, differently-named field starts fresh.
+
+2. **`CustomNodeList.item(i)` has no bounds check** - an `i >= size`
+   index would throw `IndexOutOfBoundsException` instead of the
+   `NodeList` contract's null. Internal use only today.
+
+3. **`getXPath`/`getXPathRelativeTo` are `static synchronized`** on
+   pure functions - a needless global lock. Harmless single-threaded
+   (the import runs on one scheduler thread); pure contention overhead
+   the day any parallel import exists. Removing the `synchronized` is
+   safe (the methods share no mutable state), but concurrent DOM
+   traversal safety is the caller's business either way.
+
+### Open - performance (why a full reimport is slow)
+
+Measured against the live prod import (fresh Derby, full corpus):
+
+1. **Per-opus Lucene reindex dominates the visible cadence** -
+   ~7ms per paragraph (node copy + prune + XSLT text derivation + index
+   add); a 5,895-paragraph opus costs ~41s, which is the gap between
+   successive "will import" log lines (~70s/file average). The XSLT side
+   is already optimal (ThreadLocal-cached `Transformer` in
+   `ControllerTool`); the cost is the per-paragraph node copy/prune/
+   transform pipeline itself. Embarrassingly parallel per paragraph -
+   the biggest single lever if a parallel import is ever wanted.
+
+2. **The fresher sweep re-lists and re-queries the whole corpus every
+   cycle** - `reimportFresherTeis` runs every 15s (autoimport profile)
+   and does ~2,939 individual `getByFilename` queries + file stats per
+   sweep against Derby. A batched `findByFilenameIn(list)` would cut
+   the sweep to a handful of queries.
+
+3. **URL-fragment generation does a DB round-trip per candidate** -
+   `compute_unique_head_url_fragment` calls
+   `teiDivRepository.findOperaForAuthorStrId` per candidate fragment
+   until one is free; a fresh import with common titles pays it per
+   candidate.
+
+4. **`getXPath` is O(siblings x depth) per call** - full previous+next
+   sibling walks at every recursion level. Only used for divs today
+   (few per file), so tolerable; would matter for any per-paragraph
+   use.
+
+5. **Hibernate insert batching is configured (`jdbc.batch_size=100`)
+   but unverified** during a live import - worth confirming the batch
+   actually accumulates (Derby's identity-column generation can force
+   per-row round-trips, which would explain part of the insert time).
+
 ## Background
 
 Originally named `scriptorium-repo`. The design goal from the start was a
