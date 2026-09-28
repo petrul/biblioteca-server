@@ -36,3 +36,4 @@
 # Built frontend apps dropped into webapp for static serving (node_modules,
 # Angular/Ionic build output, .angular cache) - generated, not source. #
 src/main/webapp/
+derby.log
