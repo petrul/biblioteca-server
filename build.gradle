@@ -225,6 +225,20 @@ dependencies {
 	// DerbyDialect isn't in hibernate-core (unlike the old MySQLDialect) -
 	// Hibernate 6+ moved less-common dialects into this separate module.
 	implementation('org.hibernate.orm:hibernate-community-dialects:7.4.1.Final')
+	// Same minimal role as wavelen-market-data's own Flyway adoption: ddl-auto
+	// (application.properties) keeps doing the routine day-to-day schema
+	// work, Flyway is only for the rare fix-forward migration when
+	// Hibernate's auto-DDL leaves something broken behind. Pinned below
+	// Spring Boot's own BOM-managed version (12.4.0 at Boot 4.1.0)
+	// deliberately: that version dropped Apache Derby support entirely
+	// (confirmed by actually booting against it - "FlywayException:
+	// Unsupported Database: Apache Derby 10.17" - Derby was moved behind
+	// Flyway's paid Enterprise tier at some point after 9.x). Just the
+	// bare flyway-core artifact, not the spring-boot-starter-flyway
+	// wrapper - Spring Boot's FlywayAutoConfiguration only needs
+	// Flyway.class on the classpath to activate, regardless of which
+	// artifact put it there.
+	implementation('org.flywaydb:flyway-core:9.22.3')
 	implementation('org.springframework.boot:spring-boot-starter-data-rest')
 	implementation('org.springframework.boot:spring-boot-starter-web')
 	implementation('org.springframework.boot:spring-boot-starter-restclient')
