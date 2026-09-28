@@ -6,6 +6,8 @@ import org.flywaydb.core.api.migration.Context;
 import java.sql.DatabaseMetaData;
 import java.sql.ResultSet;
 import java.sql.Statement;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Locale;
 
 /**
@@ -20,9 +22,42 @@ public class V1__Align_media_reference_columns extends BaseJavaMigration {
         String product = metadata.getDatabaseProductName().toLowerCase(Locale.ROOT);
         boolean derby = product.contains("derby");
 
+        List<String> recreate = new ArrayList<>();
+        try (ResultSet keys = metadata.getImportedKeys(null, null, "AUTHOR_MEDIA")) {
+            while (keys.next()) {
+                if ("MEDIA_REF".equalsIgnoreCase(keys.getString("PKTABLE_NAME"))) {
+                    String name = keys.getString("FK_NAME");
+                    String child = keys.getString("FKCOLUMN_NAME");
+                    String parent = keys.getString("PKCOLUMN_NAME");
+                    try (Statement s = context.getConnection().createStatement()) {
+                        s.execute("ALTER TABLE AUTHOR_MEDIA DROP CONSTRAINT " + name);
+                    }
+                    recreate.add("ALTER TABLE AUTHOR_MEDIA ADD CONSTRAINT " + name
+                            + " FOREIGN KEY (" + child + ") REFERENCES MEDIA_REF (" + parent + ")");
+                }
+            }
+        }
+        try (ResultSet keys = metadata.getImportedKeys(null, null, "DIV_MEDIA")) {
+            while (keys.next()) {
+                if ("MEDIA_REF".equalsIgnoreCase(keys.getString("PKTABLE_NAME"))) {
+                    String name = keys.getString("FK_NAME");
+                    String child = keys.getString("FKCOLUMN_NAME");
+                    String parent = keys.getString("PKCOLUMN_NAME");
+                    try (Statement s = context.getConnection().createStatement()) {
+                        s.execute("ALTER TABLE DIV_MEDIA DROP CONSTRAINT " + name);
+                    }
+                    recreate.add("ALTER TABLE DIV_MEDIA ADD CONSTRAINT " + name
+                            + " FOREIGN KEY (" + child + ") REFERENCES MEDIA_REF (" + parent + ")");
+                }
+            }
+        }
+
         alterIfColumnExists(context, metadata, "MEDIA_REF", "URL", derby);
         alterIfColumnExists(context, metadata, "AUTHOR_MEDIA", "MEDIA_REF", derby);
         alterIfColumnExists(context, metadata, "DIV_MEDIA", "MEDIA_REF", derby);
+        try (Statement s = context.getConnection().createStatement()) {
+            for (String sql : recreate) s.execute(sql);
+        }
     }
 
     private static void alterIfColumnExists(Context context, DatabaseMetaData metadata,
