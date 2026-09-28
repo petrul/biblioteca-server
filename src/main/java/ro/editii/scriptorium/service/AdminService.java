@@ -228,9 +228,9 @@ public class AdminService {
      * until an explicitly manual operation removes it.
      *
      * Never runs as a side effect of a normal reimport - deliberately its
-     * own entry point, called from TeiImportScheduler alongside
-     * reimportFresherTeis (autoimport profile) and exposed for manual use
-     * at POST /api/admin/teirepos/pruneRemoved.
+     * own entry point, called hourly from TeiImportScheduler (autoimport
+     * profile) and exposed for manual use at POST
+     * /api/admin/teirepos/pruneRemoved.
      */
     public void pruneRemovedTeis(Writer logActivity) {
         synchronized (Globals.IMPORT_TEIS_WORKING) {

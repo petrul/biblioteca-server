@@ -31,24 +31,32 @@ public class TeiImportScheduler {
     @Scheduled(fixedRate = 15 * 1000)
     public void importTeis() {
         synchronized (Globals.IMPORT_TEIS_WORKING) {
-            // Independent try/catches: a failure in one half (a poison file
-            // aborting reimportFresherTeis outside its per-file handler,
-            // say) must not starve the other - a prune that never gets its
-            // turn leaves stale rows for vanished corpus files forever.
-            // The prune runs FIRST: it's a quick DB pass, while the reimport
-            // can hold this lock for hours on a large corpus - running the
-            // prune second meant stale rows (whose opera break the Lucene
-            // auto-build, among other things) survived a whole import pass
-            // before their cleanup even started.
-            try {
-                adminService.pruneRemovedTeis(new NoWriter());
-            } catch (RuntimeException e) {
-                log.error("Scheduled prune of removed TEIs failed - will retry next cycle", e);
-            }
             try {
                 adminService.reimportFresherTeis(new NoWriter());
             } catch (RuntimeException e) {
                 log.error("Scheduled reimport of fresher TEIs failed - will retry next cycle", e);
+            }
+        }
+    }
+
+    /**
+     * Hourly sweep of TeiFiles whose source file vanished from the repos
+     * (see AdminService.pruneRemovedTeis), with a first run a minute after
+     * boot so a DB carrying stale rows is cleaned promptly. Its own
+     * schedule rather than a rider on the 15s import cycle: the prune is a
+     * quick DB pass but still a full corpus walk (teiRepo.list +
+     * findAll), needlessly constant at 15s - same cadence reasoning as the
+     * orphan-elem sweep below. Both share IMPORT_TEIS_WORKING with the
+     * reimport, so a long import pass delays the prune (and vice versa)
+     * by at most one cycle each.
+     */
+    @Scheduled(fixedDelay = 60 * 60 * 1000, initialDelay = 60 * 1000)
+    public void pruneRemovedTeis() {
+        synchronized (Globals.IMPORT_TEIS_WORKING) {
+            try {
+                adminService.pruneRemovedTeis(new NoWriter());
+            } catch (RuntimeException e) {
+                log.error("Scheduled prune of removed TEIs failed - will retry next cycle", e);
             }
         }
     }
