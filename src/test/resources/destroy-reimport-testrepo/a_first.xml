@@ -1,0 +1,20 @@
+<TEI xmlns="http://www.tei-c.org/ns/1.0">
+    <teiHeader>
+        <fileDesc>
+            <titleStmt>
+                <title>title</title>
+                <author>First Author</author>
+            </titleStmt>
+        </fileDesc>
+    </teiHeader>
+    <text>
+        <body>
+            <head>First Opus</head>
+            <author>First,Author</author>
+            <subtitle>1901</subtitle>
+            <div>
+                <p>alpha paragraph content</p>
+            </div>
+        </body>
+    </text>
+</TEI>

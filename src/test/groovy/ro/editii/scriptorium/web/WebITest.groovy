@@ -35,7 +35,6 @@ import ro.editii.scriptorium.dao.TeiDivRepository
 import ro.editii.scriptorium.kafka.TextbaseEventsPublisher
 import ro.editii.scriptorium.model.Languages
 import ro.editii.scriptorium.model.TeiDiv
-import ro.editii.scriptorium.scheduled.NoWriter
 import ro.editii.scriptorium.service.AdminService
 import ro.editii.scriptorium.service.DivService
 import ro.editii.scriptorium.tei.TeiRepo
@@ -963,9 +962,9 @@ class WebITest {
         return opera.first()
     }
 
-    @Test
-    void destroyAllExistingAndReimportAllTeis() {
-        this.adminService.destroyAllExistingAndReimportAllTeis(
-                new NoWriter(), true)
-    }
+    // destroyAllExistingAndReimportAllTeis() moved to
+    // AdminServiceDestroyAllExistingAndReimportAllTeisTest.groovy: it
+    // never needed the shared 4-file/6MB testrepo fixture, just *a* repo
+    // to destroy and reimport, and riding on this class's fixture cost
+    // ~84s per run for a test that had zero assertions of its own.
 }

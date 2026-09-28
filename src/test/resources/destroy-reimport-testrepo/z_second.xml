@@ -1,0 +1,20 @@
+<TEI xmlns="http://www.tei-c.org/ns/1.0">
+    <teiHeader>
+        <fileDesc>
+            <titleStmt>
+                <title>title</title>
+                <author>Second Author</author>
+            </titleStmt>
+        </fileDesc>
+    </teiHeader>
+    <text>
+        <body>
+            <head>Second Opus</head>
+            <author>Second,Author</author>
+            <subtitle>1902</subtitle>
+            <div>
+                <p>omega paragraph content</p>
+            </div>
+        </body>
+    </text>
+</TEI>
