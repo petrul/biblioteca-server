@@ -86,6 +86,12 @@ task :'ci-graalvm' => [:clean] do
   Rake::Task['docker:publish'].invoke
 end
 
+desc "The Derby Network Server image's own CI pipeline (docker/derby): build it and publish it to the registry"
+task :'derby-ci' do
+  Rake::Task['docker:derby:build'].invoke
+  Rake::Task['docker:derby:publish'].invoke
+end
+
 desc "Run integration-test tagged tests against the integration dependencies"
 task :itest, [:task_profile, :test_filter] do |_task, args|
   task_profile = args[:task_profile] || profile
