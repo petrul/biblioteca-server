@@ -3,7 +3,7 @@
 # exists on Docker Hub, so this fetches the exact jars from Maven Central -
 # same DERBY_VERSION biblioteca-server's own derbyclient dependency uses
 # (build.gradle), kept in sync deliberately, not pinned independently.
-FROM eclipse-temurin:21-jre
+FROM eclipse-temurin:25-jre-noble
 
 ARG DERBY_VERSION=10.17.1.0
 WORKDIR /opt/derby
