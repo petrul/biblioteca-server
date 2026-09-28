@@ -324,4 +324,33 @@ namespace :docker do
 
         puts "==> Successfully published #{target_tag}!"
     end
+
+    # The standalone Apache Derby Network Server image (docker/derby) - the
+    # database this app runs on, kept buildable in-repo because no official
+    # Derby image exists on Docker Hub. Versioned by the Derby version it
+    # serves, parsed from build.gradle's derbyclient dependency so the image
+    # and the client can never drift apart (docker/derby's own DERBY_VERSION
+    # ARG follows the same rule - see its header comment).
+    namespace :derby do
+        DERBY_IMAGE_NAME = "editii/biblioteca-derby"
+        derby_version = File.read('build.gradle')[/derbyclient:([^']+)'/, 1]
+        raise 'no derbyclient version found in build.gradle' unless derby_version
+
+        desc "Build the Derby Network Server image, tagged with the Derby version"
+        task :build do
+            local_tag = "#{DERBY_IMAGE_NAME}:#{derby_version}"
+            puts "==> Building Derby Network Server image (#{local_tag})..."
+            sh "docker build --build-arg DERBY_VERSION=#{derby_version} -f docker/derby/Dockerfile -t #{local_tag} docker/derby"
+        end
+
+        desc "Build and publish the Derby Network Server image to the local registry"
+        task :publish => [:build] do
+            target_tag = "#{LOCAL_REGISTRY}/#{DERBY_IMAGE_NAME}:#{derby_version}"
+            puts "==> Pushing image to #{LOCAL_REGISTRY}..."
+            sh "docker tag #{DERBY_IMAGE_NAME}:#{derby_version} #{target_tag}"
+            sh "docker push #{target_tag}"
+
+            puts "==> Successfully published #{target_tag}!"
+        end
+    end
 end

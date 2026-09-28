@@ -188,6 +188,31 @@ chain.
 ./gradlew docker-publish    # also push to the mini.local:5000 registry
 ```
 
+### Apache Derby Network Server image
+
+`docker/derby/` builds a standalone [Apache Derby](https://db.apache.org/derby/) Network
+Server container - the database this app expects (`DB_URL`, see the environment
+variables table above). No official Derby image exists on Docker Hub, so this is the
+buildable source of truth: anyone can stand up their own Derby server with
+
+```bash
+docker build -f docker/derby/Dockerfile -t biblioteca-derby docker/derby
+docker run -d -p 1527:1527 -v <data-dir>:/var/lib/derby \
+    -e DB_USER=... -e DB_PASSWORD=... biblioteca-derby
+```
+
+Credentials are required (the entrypoint refuses to start without them and configures
+Derby's BUILTIN authentication so the one configured user is the only account that
+can connect), and `DB_URL` then points at `jdbc:derby://<host>:1527/<db>;create=true`.
+
+The image is tagged with the Derby version it serves, kept in sync with the
+`derbyclient` dependency in `build.gradle` on purpose - never pinned independently:
+
+```bash
+rake docker:derby:build     # build editii/biblioteca-derby:<derby-version> locally
+rake docker:derby:publish   # also push to the mini.local:5000 registry
+```
+
 ---
 
 ## Architecture
