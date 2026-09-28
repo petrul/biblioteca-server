@@ -222,6 +222,9 @@ dependencies {
 	// resolves (7.4.1.Final today) because Boot does not manage this
 	// artifact itself.
 	implementation('org.hibernate.orm:hibernate-graalvm:7.4.1.Final')
+	// DerbyDialect isn't in hibernate-core (unlike the old MySQLDialect) -
+	// Hibernate 6+ moved less-common dialects into this separate module.
+	implementation('org.hibernate.orm:hibernate-community-dialects:7.4.1.Final')
 	implementation('org.springframework.boot:spring-boot-starter-data-rest')
 	implementation('org.springframework.boot:spring-boot-starter-web')
 	implementation('org.springframework.boot:spring-boot-starter-restclient')
