@@ -36,10 +36,12 @@ clean, shareable "quote card" with no site chrome, ready to embed in an
 
 ## Quickstart
 
-Prerequisites: Java 25, a reachable MySQL instance, and at least one
+Prerequisites: Java 25, a reachable Apache Derby Network Server instance
+(`DB_URL`, see the environment variables table below - built by
+`docker/derby`, see the Docker section), and at least one
 configured local or Git-backed repository containing TEI XML (or source
 documents such as Markdown or FODT for a later conversion step — see
-[TEI processing](#tei-processing)). Milvus, Ollama/sentence-transformers, and
+[TEI processing](#tei-processing)). A vector store, Ollama/sentence-transformers, and
 Kafka are needed for the full feature set (vector search, async vectorization)
 but aren't required just to boot and browse the corpus — see [Search](#search)
 for what degrades gracefully without them.
@@ -180,6 +182,36 @@ Keep Mockito only where a Groovy alternative genuinely cannot express the
 need; when you do use it from a Groovy test, resolve every mock to a
 variable first and never build one inside another `when()/thenReturn()`
 chain.
+
+## Running bare-metal (dev)
+
+Every service of the trio has a `rake run` task that starts it bare-metal with
+its pass-store profile environment - this is the way to run the dev stack
+outside containers (edit sources, restart in seconds):
+
+```bash
+# biblioteca-server: gradle bootRun on :8080. Profile = rake run[profile],
+# PROFILE=<profile> or the machine's short hostname (the pass store's
+# biblioteca/<hostname> section). SPRING_PROFILES_ACTIVE adds the
+# autoimport scheduler (corpus import + per-opus Lucene reindex) and the
+# dev profile (dev- prefixed vector collection):
+SPRING_PROFILES_ACTIVE=autoimport,dev rake run
+
+# biblioteca-nestjs: nest start on :3000 (dev pass profile) - the Kafka
+# consumer and the vectorizer, reusing already-stored vectors by sha256:
+rake run
+
+# biblioteca-reader: tsx server.ts + Vite on :3333 (profile from the
+# machine's hostname; the rakefile maps GOOGLE_OAUTH_CLIENT_ID to
+# VITE_GOOGLE_CLIENT_ID so Google One-Tap works):
+rake run
+```
+
+The services talk over the host network: server :8080 (BIBLIOTECA_EXTERNAL_URL),
+nestjs :3000, reader :3333 (what Caddy's test.scriptorium.ro vhost proxies).
+The database is the shared Derby Network Server from the deps stacks
+(DB_URL/DB_USER/DB_PASSWORD from the same pass-store section); WORK_DIR is the
+profile's own, so the Lucene index resumes across restarts.
 
 ## Docker
 
