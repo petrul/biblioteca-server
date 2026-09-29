@@ -375,6 +375,11 @@ class CustomNodeList implements NodeList {
 
     @Override
     public Node item(int i) {
+        // NodeList's own contract: out-of-range returns null, not an
+        // exception (org.w3c.dom.NodeList#item's javadoc) - was an
+        // unchecked list.get(i), throwing IndexOutOfBoundsException instead.
+        if (i < 0 || i >= list.size())
+            return null;
         return list.get(i);
     }
 
