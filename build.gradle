@@ -382,6 +382,16 @@ tasks.withType(Test).configureEach {
     // distinct context configuration from earlier classes stays cached for
     // the JVM's lifetime (~19 Hikari pools were resident at OOM time).
     systemProperty 'spring.test.context.cache.maxSize', '4'
+    // Opt-in Java Flight Recorder profiling of a test fork:
+    // $ ./gradlew -Pprofile=zmeu -Pjfr=/tmp/webitest.jfr integrationTest --tests '*WebITest'
+    // ... or the same through rake (which loads the profile env itself):
+    // $ TEST_JFR=/tmp/webitest.jfr rake itest[zmeu,WebITest]
+    // Records CPU (ExecutionSample) + allocation sampling (settings=profile);
+    // inspect with `jfr summary` / `jfr print --events jdk.ObjectAllocationSample`.
+    final jfrTarget = System.getenv('TEST_JFR') ?: (project.findProperty('jfr') ?: null)
+    if (jfrTarget) {
+        jvmArgs "-XX:StartFlightRecording=filename=${jfrTarget},settings=profile,dumponexit=true"
+    }
     // $ ./gradlew -Pprofile=ci test   (resolveProfile() below; the rakefile
     // always passes -Pprofile=<profile> this same way). Plain `test`/
     // `unittest`/`integrationTest` with nothing set default to 'ci' - the
