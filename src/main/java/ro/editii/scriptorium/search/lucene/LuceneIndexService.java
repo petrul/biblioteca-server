@@ -24,6 +24,7 @@ import org.apache.lucene.search.ScoreDoc;
 import org.apache.lucene.search.SearcherManager;
 import org.apache.lucene.search.TermQuery;
 import org.apache.lucene.search.TopDocs;
+import org.apache.lucene.store.ByteBuffersDirectory;
 import org.apache.lucene.store.Directory;
 import org.apache.lucene.store.FSDirectory;
 import org.springframework.beans.factory.annotation.Value;
@@ -55,16 +56,38 @@ import java.util.Comparator;
 import java.util.stream.Stream;
 
 /**
- * Full-text search over the corpus, at paragraph granularity (same grain as
- * the Milvus vector index's tb_paras_* collections - see VectorConfig) since
- * that's the unit a reader actually wants a hit to point at.
+ * Full-text search over the corpus, indexed at LEAF DIV granularity (a div
+ * with no child divs - typically a chapter/section) rather than per
+ * paragraph. This deliberately differs from the Milvus/Qdrant vector
+ * index's paragraph-level grain (see VectorConfig): indexing per paragraph
+ * meant one Lucene Document per paragraph (~167k for the full corpus),
+ * each paying its own node-copy/prune/XSLT-derivation cost - the dominant
+ * cost of a full reimport (see biblioteca-server/README.md's "Bugs &
+ * performance debt"). Leaf divs cut that document count by roughly the
+ * div-to-paragraph ratio (tens of paragraphs per leaf div, typically).
+ * Semantic (vector) search stays paragraph-precise; full-text search is
+ * coarser - two different search engines surfacing excerpts at their own
+ * natural grain is fine, not a bug to reconcile.
+ *
+ * A leaf-div-level hit's stored content is every one of its paragraphs'
+ * derived text concatenated - good enough for BM25 scoring and highlight
+ * context, but too coarse to deep-link precisely. search() recovers
+ * paragraph precision lazily, only for the (small) set of returned hits:
+ * it re-runs the same parsed Query against a throwaway in-memory index
+ * built from just that div's own paragraphs (paragraphToDocument, the
+ * same per-paragraph shape this class used exclusively before) to find
+ * which specific paragraph actually matched, and returns that paragraph's
+ * url/content instead of the div's. Cheap - a handful of paragraphs, not
+ * the whole corpus - and reuses the query's own analyzer/stemming/boost
+ * behavior exactly rather than hand-rolling term matching.
  *
  * Body text isn't stored relationally (see TeiElem.getNode()), so building
  * the index means re-deriving each paragraph's text the same way ann() does
  * for a single element: TeiElem -> toElemInfo() -> ControllerTool's XSLT
  * transform. Unlike Milvus (which stores no text, only vectors, and
  * resolves content separately at query time via ContentResolver), Lucene
- * stores the text itself, so a search hit needs no second resolution step.
+ * stores the text itself, so a search hit needs no second resolution step
+ * beyond the paragraph-recovery above.
  *
  * A full rebuild (rebuildIndex(), CREATE mode) still re-derives text for
  * the whole corpus - that part's unavoidable - but is no longer all-or-
@@ -290,9 +313,11 @@ public class LuceneIndexService {
 
     /**
      * Walks every opus (root TeiDiv, see TeiDivRepository.findOpera) from
-     * startPage onward and indexes each of its paragraphs
-     * (DivService.getParagraphs already walks the whole work's Toc,
-     * sub-chapters included). One bad paragraph (e.g. an XSLT transform
+     * startPage onward and indexes each of its LEAF divs - DivService.
+     * getToc already walks the whole work's Toc depth-first, sub-chapters
+     * included; TeiElem.isLeaf() picks out the divs with no child divs
+     * (see this class's own doc comment for why leaf-div, not paragraph,
+     * is the indexing unit). One bad leaf div (e.g. an XSLT transform
      * failure) is logged and skipped rather than aborting the whole build -
      * same reasoning as the per-message isolation used elsewhere for
      * batch/streaming work. An opus whose TEI source has vanished from the
@@ -336,9 +361,9 @@ public class LuceneIndexService {
                     }
                     for (TeiDiv opus : opera) {
                         final long opusStartNanos = System.nanoTime();
-                        final List<TeiElem> paragraphs;
+                        final List<TeiDiv> leafDivs;
                         try {
-                            paragraphs = this.divService.getParagraphs(opus);
+                            leafDivs = leafDivsOf(opus);
                         } catch (TeiResourceNotFoundException e) {
                             // The opus's TEI source is gone from the repos
                             // but its rows are still in the DB - the prune
@@ -355,9 +380,9 @@ public class LuceneIndexService {
                             this.rebuildProcessedOpera.incrementAndGet();
                             continue;
                         }
-                        for (TeiElem para : paragraphs) {
+                        for (TeiDiv leafDiv : leafDivs) {
                             try {
-                                final Document doc = toDocument(para);
+                                final Document doc = leafDivToDocument(leafDiv);
                                 if (doc != null) {
                                     writer.addDocument(doc);
                                     indexed++;
@@ -365,8 +390,8 @@ public class LuceneIndexService {
                                 }
                             } catch (Exception e) {
                                 skipped++;
-                                log.warn("Skipping paragraph while building the Lucene index ({}): {}",
-                                        safeCompletePath(para), e.getMessage());
+                                log.warn("Skipping leaf div while building the Lucene index ({}): {}",
+                                        safeCompletePath(leafDiv), e.getMessage());
                             }
                         }
                         cooldownAfter(opusStartNanos);
@@ -396,7 +421,7 @@ public class LuceneIndexService {
             this.refreshSearcherAfterCommit();
 
             watch.stop();
-            log.info("Built Lucene index from page {}: {} paragraphs indexed, {} skipped, {} opera skipped (missing source), took {}",
+            log.info("Built Lucene index from page {}: {} leaf divs indexed, {} skipped, {} opera skipped (missing source), took {}",
                     startPage, indexed, skipped, skippedOpera, watch);
             return indexed;
         }
@@ -508,16 +533,16 @@ public class LuceneIndexService {
                 // to read the source directory, so it fails outright if
                 // tempWriter is still holding it open at that point.
                 try (IndexWriter tempWriter = new IndexWriter(tempDirectory, new IndexWriterConfig(this.analyzer))) {
-                    for (TeiElem para : this.divService.getParagraphs(opus)) {
+                    for (TeiDiv leafDiv : leafDivsOf(opus)) {
                         try {
-                            final Document doc = toDocument(para);
+                            final Document doc = leafDivToDocument(leafDiv);
                             if (doc != null) {
                                 tempWriter.addDocument(doc);
                                 indexed++;
                             }
                         } catch (Exception e) {
-                            log.warn("Skipping paragraph while reindexing opus {} ({}): {}",
-                                    opusPath, safeCompletePath(para), e.getMessage());
+                            log.warn("Skipping leaf div while reindexing opus {} ({}): {}",
+                                    opusPath, safeCompletePath(leafDiv), e.getMessage());
                         }
                     }
                     tempWriter.commit();
@@ -551,7 +576,7 @@ public class LuceneIndexService {
             }
 
             watch.stop();
-            log.info("Reindexed opus {}: {} paragraphs, took {}", opusPath, indexed, watch);
+            log.info("Reindexed opus {}: {} leaf divs, took {}", opusPath, indexed, watch);
             return indexed;
         } catch (IOException e) {
             throw new RuntimeException("Failed to reindex opus " + opusPath, e);
@@ -574,7 +599,66 @@ public class LuceneIndexService {
         }
     }
 
-    private Document toDocument(TeiElem para) {
+    /**
+     * Every leaf div (TeiElem.isLeaf() - no child divs) beneath opus, in
+     * document order - DivService.getToc already walks the whole work's
+     * Toc depth-first, sub-chapters included, and is itself cached
+     * (Caffeine + DiskCache - see DivService.getToc), so this costs
+     * nothing extra beyond the getParagraphs() calls buildIndex/
+     * reindexOpus already made before this change.
+     */
+    private List<TeiDiv> leafDivsOf(TeiDiv opus) {
+        final List<TeiDiv> leaves = new ArrayList<>();
+        for (TeiDiv div : this.divService.getToc(opus.getId())) {
+            if (div.isLeaf())
+                leaves.add(div);
+        }
+        return leaves;
+    }
+
+    /**
+     * The main index's document for one leaf div: every one of its own
+     * paragraphs' derived text, concatenated - see this class's own doc
+     * comment for why leaf-div (not paragraph) is the indexing unit, and
+     * how search() recovers paragraph precision for a hit afterward.
+     */
+    private Document leafDivToDocument(TeiDiv leafDiv) {
+        final List<TeiElem> paragraphs = this.divService.getParagraphs(leafDiv);
+        final StringBuilder combined = new StringBuilder();
+        for (TeiElem para : paragraphs) {
+            final String text = this.controllerTool.teiElemToString(para.toElemInfo());
+            if (text == null || text.isBlank())
+                continue;
+            if (!combined.isEmpty())
+                combined.append("\n\n");
+            combined.append(text);
+        }
+        if (combined.isEmpty())
+            return null;
+
+        final String head = leafDiv.getHead();
+        final Languages language = documentLanguage(leafDiv);
+
+        final Document doc = new Document();
+        doc.add(new StringField(FIELD_URL, leafDiv.getCompletePath(), Field.Store.YES));
+        doc.add(new TextField(FIELD_CONTENT, combined.toString(), Field.Store.YES));
+        addPerLanguageField(doc, FIELD_CONTENT, combined.toString(), language);
+        if (head != null && !head.isBlank()) {
+            doc.add(new TextField(FIELD_HEAD, head, Field.Store.YES));
+            addPerLanguageField(doc, FIELD_HEAD, head, language);
+        }
+        return doc;
+    }
+
+    /**
+     * The per-paragraph document shape this class used exclusively before
+     * leaf-div indexing - kept for search()'s query-time paragraph
+     * recovery, which builds a throwaway in-memory index of just one
+     * matched div's own paragraphs using this exact same shape, so the
+     * original query resolves to a precise paragraph the same way it
+     * always did.
+     */
+    private Document paragraphToDocument(TeiElem para) {
         final String text = this.controllerTool.teiElemToString(para.toElemInfo());
         if (text == null || text.isBlank())
             return null;
