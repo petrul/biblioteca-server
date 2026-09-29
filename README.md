@@ -535,8 +535,8 @@ exists. `V2__Switch_identity_columns_to_pooled_sequences` moved every
 entity's id generation from `IDENTITY` to a pooled `SEQUENCE`
 (`allocationSize=50`) so Hibernate's JDBC insert batching actually
 batches (`IDENTITY` categorically defeats batching regardless of
-`jdbc.batch_size` — see "Bugs & performance debt" below); each sequence
-is seeded to start above its table's current max id at migration time.
+`jdbc.batch_size`); each sequence is seeded to start above its table's
+current max id at migration time.
 
 **Known gap, found 2026-09-29:** that "seed above current max id" logic
 has a read-then-seed race on any table under concurrent writes —
@@ -553,8 +553,9 @@ three were fixed manually in prod: Derby has no
 `CREATE SEQUENCE` with the same `INCREMENT BY`, reseeded with real
 headroom (`max(id) + 10000`, not `+1`). The migration code itself is
 still unfixed — any future fresh deploy under concurrent write load can
-reproduce this; see "Bugs & performance debt" below. Also worth noting:
-the actual 0.9.10 release image runs a third migration,
+reproduce this (`sql/check_sequences.groovy` re-checks every
+sequence-backed table on demand, see `sql/README.md`). Also worth
+noting: the actual 0.9.10 release image runs a third migration,
 `V3__Reseed_id_sequences_above_existing_rows`, that does **not** exist
 in this checkout of `main` (no file, no commit) — it apparently only
 ever landed on the `v0.9.10` release branch and was never merged back;
@@ -609,95 +610,6 @@ Every package lives under `ro.editii.scriptorium.*`:
 For a concrete task, the fastest orientation path is usually: find the
 REST controller in `rest`/`web` for the endpoint you care about, then
 follow its injected service into the matching package above.
-
-## Bugs & performance debt (rethink later)
-
-Findings from the 2026-09-28 pass over the reimport pipeline (measured
-against a full-corpus import into a fresh Derby - the "why is reimport
-slow" question). Kept here so the open items can be rethought
-deliberately, not fixed by drive-by.
-
-### Fixed at the time (in `editii.commons.xml.XpathTool`)
-
-- `_applyXpath` created a fresh `XPathFactory`/`XPath` per call: JDK
-  service-provider discovery paid once per TeiElem, ~167k times per full
-  reimport. Now one lazily-created `XPath` per tool instance, reused
-  under the method's existing `synchronized` guard.
-- `_applyXpath` also **compiled** its xpath string on every call
-  (`xpath.compile`), and the callers pass a small, endlessly repeated
-  set of strings - thousands of identical compilations per file. Now a
-  per-instance `Map<String, XPathExpression>` cache, same guard. The
-  compile was the dominant per-element cost of the parser.
-- `getXPath` used to count preceding `div` siblings for every node's
-  positional selector. XPath positions count siblings with the same
-  expanded name; it now does that directly, including when a TEI element
-  uses a different namespace prefix. The sibling scan also no longer
-  allocates temporary lists or takes a global lock.
-- `CustomNodeList.item(i)` had no bounds check - an `i >= size` index
-  threw `IndexOutOfBoundsException` instead of the `NodeList` contract's
-  null. Internal use only, but now returns null like the interface
-  promises.
-
-### Open - performance (why a full reimport is slow)
-
-Measured against a full-corpus import into a fresh Derby:
-
-1. **Per-opus Lucene reindex still dominates a reimport's per-file
-   cadence, even after the leaf-div redesign** - re-measured post
-   leaf-div/XPath fixes against a handful of real, size-varied corpus
-   files (not the old paragraph-indexed run's numbers, which predate
-   every fix this session): Lucene reindexing is consistently
-   ~260-490ms per leaf div indexed (30 leaf divs / 393KB file: 14.7s;
-   51 leaf divs / 1.2MB file: 13.3s; smaller files scale down
-   accordingly), and remains 85-95% of that file's total reimport time
-   in every non-trivial sample. Leaf-div grain reduced the *document
-   count* Lucene has to `addDocument()` (the original goal), but did
-   **not** reduce the dominant cost, which was never Lucene's own
-   indexing overhead - it's deriving every constituent paragraph's text
-   (node copy + prune + XSLT transform) that a leaf div's Document still
-   has to do in full, same total work as the old per-paragraph scheme,
-   just batched into fewer Documents. The XSLT side is already optimal
-   (ThreadLocal-cached `Transformer` in `ControllerTool`); the real lever
-   left is the per-paragraph node copy/prune/transform pipeline itself,
-   not the indexing grain.
-
-2. **`getXPath` is O(siblings x depth) per call** - full previous+next
-   sibling walks at every recursion level. Only used for divs today
-   (few per file), so tolerable; would matter for any per-paragraph
-   use.
-
-(Resolved since: the fresher sweep's per-file `getByFilename` N+1 -
-`reimportFresherTeis`/`reimportAllTeis` now fetch every filename/timestamp
-in one query. URL-fragment generation's per-candidate DB round-trip -
-`compute_unique_head_url_fragment` now fetches the used-fragments set
-once per div and checks candidates against it in memory. Hibernate insert
-batching - every entity's `@GeneratedValue` switched from `IDENTITY`
-(which categorically disabled batching regardless of `jdbc.batch_size`)
-to a pooled `SEQUENCE`, via a Flyway migration that seeds each new
-sequence above its table's current max id.)
-
-### Open - correctness
-
-- **Sequence-seeding race, found 2026-09-29 in prod.** The batching fix
-  above (pooled `SEQUENCE`s via `V2`) reads each table's max id and then
-  creates its sequence as two separate statements - any table under
-  concurrent writes during that window can have its real max id race
-  past the snapshot, so the freshly seeded sequence starts inside
-  already-used id space. `opus_vectorizing_stat` hit this right after a
-  prod deploy (biblioteca-nestjs writes to it continuously): `23505`
-  duplicate-key spam for ~15 minutes, self-healed only because
-  Hibernate's pooled optimizer burned through enough wasted 50-id blocks
-  to climb past the stale seed. A full audit of every sequence-backed
-  table found two more silently unsafe the same way, not yet hit by
-  traffic - `app_user_seq` and `author_media_seq`, both seeded at
-  exactly the existing max id (an immediate collision on the very next
-  insert). All three fixed manually in prod (`DROP`/`CREATE SEQUENCE`
-  with real headroom - `max(id) + 10000`, not `+1` - see "Persistence,
-  caching, messaging" above); the migration code itself is still
-  unfixed, so a future fresh deploy under write load can reproduce this.
-  Also: the actual 0.9.10 release runs a `V3__Reseed_id_sequences_above_existing_rows`
-  migration that isn't in this `main` checkout (branch-only, never
-  merged back) - needs pulling forward regardless of the race fix.
 
 ## Background
 
