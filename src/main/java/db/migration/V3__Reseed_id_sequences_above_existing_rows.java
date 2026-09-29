@@ -74,11 +74,13 @@ public class V3__Reseed_id_sequences_above_existing_rows extends BaseJavaMigrati
             if (nextValue <= maxId) {
                 final long restartWith = maxId + 1;
                 try (Statement statement = context.getConnection().createStatement()) {
-                    // Derby has no ALTER SEQUENCE (ERROR 42X01): a reseed is
-                    // DROP + CREATE with START WITH strictly above max(id) -
-                    // the same INCREMENT the entity mapping declares, so
-                    // Hibernate's pooled optimizer keeps its block math.
-                    statement.execute("DROP SEQUENCE " + sequence);
+                    // Derby has no ALTER SEQUENCE (ERROR 42X01), and its
+                    // DROP SEQUENCE demands an explicit RESTRICT. A reseed
+                    // is DROP ... RESTRICT + CREATE with START WITH strictly
+                    // above max(id) - the same INCREMENT the entity mapping
+                    // declares, so Hibernate's pooled optimizer keeps its
+                    // block math.
+                    statement.execute("DROP SEQUENCE " + sequence + " RESTRICT");
                     statement.execute("CREATE SEQUENCE " + sequence
                             + " START WITH " + restartWith
                             + " INCREMENT BY " + ALLOCATION_SIZE);
