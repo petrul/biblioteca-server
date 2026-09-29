@@ -324,27 +324,32 @@ public class TeiElem implements Comparable<TeiElem>, Serializable  {
     }
 
     /**
-     * retrieves language information as described in the TEI file, if any
+     * retrieves language information as described in the TEI file, if any.
+     *
+     * The teiHeader lives outside this element, so these queries run
+     * against the cached parsed document (parseTeiFile()), never against
+     * getNode()'s detached deep copy: an absolute /tei:TEI/... path
+     * resolves against the copy's empty owner document and returns
+     * nothing - the old getNode()-rooted form silently never matched
+     * under any engine, Xalan included.
      */
     @JsonIgnore
     public String getTeiLanguage() {
-        final Node node = this.getNode();
-        final XpathTool xp = new XpathTool(node);
-        return xp.xpath("/tei:TEI/tei:teiHeader//tei:profileDesc//tei:language");
+        return parseTeiFile().xpath("/tei:TEI/tei:teiHeader//tei:profileDesc//tei:language");
     }
 
     @JsonIgnore
     public String getLicense() {
-        final Node node = getNode();
-        return new XpathTool(node).xpath("/tei:TEI/tei:teiHeader//tei:publicationStmt");
+        return parseTeiFile().xpath("/tei:TEI/tei:teiHeader//tei:publicationStmt");
     }
 
     @JsonIgnore
     public Node getSourceDesc() {
-        final Node node = getNode();
-        final NodeList nodes = new XpathTool(node).applyXpathForNodeSet("/tei:TEI/tei:teiHeader//tei:sourceDesc");
+        final NodeList nodes = parseTeiFile().applyXpathForNodeSet("/tei:TEI/tei:teiHeader//tei:sourceDesc");
         if (nodes.getLength() > 0)
-            return nodes.item(0);
+            // deep copy: the parsed document is the shared per-file cache -
+            // callers must not be able to mutate it (same rule as getNode())
+            return DomTool.deepCopy(nodes.item(0));
         else
             return null;
     }
