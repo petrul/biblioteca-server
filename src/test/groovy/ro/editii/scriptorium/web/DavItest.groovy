@@ -2,6 +2,7 @@ package ro.editii.scriptorium.web
 
 import org.apache.commons.io.output.NullWriter
 import org.junit.jupiter.api.BeforeAll
+import org.junit.jupiter.api.Tag
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestInstance
 import org.springframework.beans.factory.annotation.Autowired
@@ -38,6 +39,7 @@ import static ro.editii.scriptorium.TestUtils.TEI_ELEM
         classes = [TestConfig.class])
 @EnableAutoConfiguration(exclude = [KafkaAutoConfiguration.class])
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
+@Tag("integration-test")
 class DavItest {
 
     @LocalServerPort int port
