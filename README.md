@@ -595,12 +595,10 @@ deliberately, not fixed by drive-by.
   expanded name; it now does that directly, including when a TEI element
   uses a different namespace prefix. The sibling scan also no longer
   allocates temporary lists or takes a global lock.
-
-### Open - correctness
-
-1. **`CustomNodeList.item(i)` has no bounds check** - an `i >= size`
-   index would throw `IndexOutOfBoundsException` instead of the
-   `NodeList` contract's null. Internal use only today.
+- `CustomNodeList.item(i)` had no bounds check - an `i >= size` index
+  threw `IndexOutOfBoundsException` instead of the `NodeList` contract's
+  null. Internal use only, but now returns null like the interface
+  promises.
 
 ### Open - performance (why a full reimport is slow)
 
