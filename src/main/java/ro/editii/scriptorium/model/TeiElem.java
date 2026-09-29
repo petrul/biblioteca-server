@@ -64,6 +64,17 @@ public class TeiElem implements Comparable<TeiElem>, Serializable  {
     @EqualsAndHashCode.Include
     protected String xpath;
 
+    /**
+     *  positional DOM path ("2/3/7": the 1-based child index at each level
+     *  from the parsed document's root, all node kinds counted - the same
+     *  semantics as nth, but the full chain from the document). A
+     *  resolution fast path for getNode() that needs no XPath engine:
+     *  computed once at import (TeifileParser, right next to xpath).
+     *  null for rows imported before this column existed - getNode()
+     *  falls back to the xpath evaluation for those.
+     */
+    protected String domPath;
+
     @Enumerated(EnumType.STRING)
     Languages lang;
 
@@ -135,6 +146,18 @@ public class TeiElem implements Comparable<TeiElem>, Serializable  {
             throw new IllegalStateException("you must set a TeiRepo in order to retrieve the file content of teiFile");
 
         final XpathTool xpathTool = parseTeiFile();
+
+        // Fast path: positional resolution, no XPath engine involved. The
+        // name check turns a stale path (document edited since import)
+        // into a fallback to the xpath below, which then reports a moved
+        // or missing element with its familiar IllegalStateException -
+        // instead of the path silently resolving to a wrong node.
+        final String domPath = this.getDomPath();
+        if (domPath != null) {
+            final Node resolved = XpathTool.resolveDomPath(xpathTool.getRoot(), domPath);
+            if (resolved != null && (this.getName() == null || this.getName().equals(resolved.getLocalName())))
+                return this._node = DomTool.deepCopy(resolved);
+        }
 
         String xpath_expr = TEI_TEXT_BODY + this.getXpath();
         if (xpath_expr.endsWith("/")) // remove trailing "/"

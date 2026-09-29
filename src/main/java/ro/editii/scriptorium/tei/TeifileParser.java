@@ -258,6 +258,9 @@ public class TeifileParser {
 
             final String xpath = XpathTool.getXPathRelativeTo(node, TEI_BODY_XPATH_PREFIX);
             div.setXpath(xpath);
+            // positional fast path for TeiElem.getNode() - see its own comment;
+            // computed here, where the DOM is already walked anyway
+            div.setDomPath(XpathTool.getDomPath(node));
 
             if (parentDiv != null)
                 parentDiv.addChild(div);
