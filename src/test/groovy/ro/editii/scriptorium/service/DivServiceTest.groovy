@@ -1,6 +1,7 @@
 package ro.editii.scriptorium.service
 
 import editii.commons.xml.XpathTool
+import groovy.transform.CompileStatic
 import jakarta.persistence.EntityManager
 import jakarta.persistence.PersistenceContext
 import org.junit.jupiter.api.Assertions
@@ -22,6 +23,7 @@ import ro.editii.scriptorium.InMemoryTeiRepo
 import ro.editii.scriptorium.TestConfig
 import ro.editii.scriptorium.TestUtils
 import ro.editii.scriptorium.cache.CacheMan
+import ro.editii.scriptorium.cache.DiskCache
 import ro.editii.scriptorium.cache.DiskCaches
 import ro.editii.scriptorium.model.Languages
 import ro.editii.scriptorium.model.TeiDiv
@@ -100,11 +102,19 @@ class DivServiceTest {
 
     }
 
-    @Test
+    // @CompileStatic - without it, Groovy's dynamic dispatch treats
+    // obj[stringKey] = value (== obj.putAt(stringKey, value)) as a
+    // property-style indexed setter instead of DiskCache's own generic
+    // putAt(Object, Object) method, since the class isn't a GroovyObject
+    // and the key happens to be a String - fails with
+    // MissingPropertyException before ever reaching DiskCache. Static
+    // compilation binds directly to the declared method instead (see
+    // DiskCacheTest.putAt(), the same fix for the same reason).
+    @Test @CompileStatic
     void binaryObjectsAreReadFromTheCacheUsingTheirQualifiedKey() {
-        final expected = [1, 2, 3] as byte[]
-        final cacheKey = 'cantemir_descrierea_moldovei_d3e1954'
-        final binaryCache = this.diskCaches.getCacheBinaryObject()
+        final byte[] expected = [1, 2, 3] as byte[]
+        final String cacheKey = 'cantemir_descrierea_moldovei_d3e1954'
+        final DiskCache binaryCache = this.diskCaches.getCacheBinaryObject()
         binaryCache.putAt(cacheKey, expected)
 
         assert this.divService.getBinaryObject('cantemir', 'descrierea_moldovei', 'd3e1954') == expected
