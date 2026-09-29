@@ -98,9 +98,11 @@ public class VectorSearchAvailability {
      * Cadence: one interval is the worst-case window in which search
      * requests still go through to a dead Milvus (and degrade per-request
      * instead - see VectorTextSearchService/ann()'s catch blocks), while
-     * the check itself is two cheap gRPC reads. A minute is far off the
-     * 15s import cycle's cadence on purpose: this state practically never
-     * changes, so there is nothing to gain from checking it any faster.
+     * the check itself is two cheap gRPC reads. A minute is deliberately
+     * unhurried, independent of whatever the TEI import cycle's own
+     * cadence happens to be (TeiImportScheduler): this state practically
+     * never changes, so there is nothing to gain from checking it any
+     * faster.
      */
     @Scheduled(initialDelay = 60 * 1000, fixedDelay = 60 * 1000)
     public void recheckAvailability() {

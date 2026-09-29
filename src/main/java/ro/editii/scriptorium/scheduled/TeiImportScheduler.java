@@ -28,7 +28,13 @@ public class TeiImportScheduler {
     final TeiRepo teiRepo;
     final AdminService adminService;
 
-    @Scheduled(fixedRate = 15 * 1000)
+    // 60s, not 15s: still fast enough for a live-editing feedback loop
+    // (edit a TEI file, see it reflected shortly after) without polling
+    // four times as often as actually useful - a full repo listing +
+    // fresher-check on every tick, even after batching away its N+1
+    // query (see AdminService.reimportFresherTeis), is still a full
+    // corpus walk every cycle.
+    @Scheduled(fixedRate = 60 * 1000)
     public void importTeis() {
         synchronized (Globals.IMPORT_TEIS_WORKING) {
             try {
@@ -43,9 +49,9 @@ public class TeiImportScheduler {
      * Hourly sweep of TeiFiles whose source file vanished from the repos
      * (see AdminService.pruneRemovedTeis), with a first run a minute after
      * boot so a DB carrying stale rows is cleaned promptly. Its own
-     * schedule rather than a rider on the 15s import cycle: the prune is a
+     * schedule rather than a rider on the 60s import cycle: the prune is a
      * quick DB pass but still a full corpus walk (teiRepo.list +
-     * findAll), needlessly constant at 15s - same cadence reasoning as the
+     * findAll), needlessly constant at 60s - same cadence reasoning as the
      * orphan-elem sweep below. Both share IMPORT_TEIS_WORKING with the
      * reimport, so a long import pass delays the prune (and vice versa)
      * by at most one cycle each.
@@ -66,7 +72,7 @@ public class TeiImportScheduler {
      * vanished out-of-band - see AdminService.pruneOrphanedElems), with a
      * first run a minute after boot so a DB carrying orphans is cleaned
      * promptly. Rare by construction (raw SQL on prod is the only known
-     * cause), so an hourly cadence - not the 15s import cycle, whose
+     * cause), so an hourly cadence - not the 60s import cycle, whose
      * anti-join over the whole elem table would be needlessly constant.
      */
     @Scheduled(fixedDelay = 60 * 60 * 1000, initialDelay = 60 * 1000)

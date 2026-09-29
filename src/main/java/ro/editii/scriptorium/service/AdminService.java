@@ -265,7 +265,7 @@ public class AdminService {
 
                 // Per-file isolation: one failing file must not abort the
                 // prune of every file after it in the same run (and, called
-                // from the scheduler every 15s, forever after) - a single
+                // hourly from the scheduler, forever after) - a single
                 // bad row would otherwise keep all removed files' cleanup
                 // from ever completing.
                 try {
