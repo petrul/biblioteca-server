@@ -5,6 +5,7 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.PrePersist;
+import jakarta.persistence.SequenceGenerator;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -32,7 +33,8 @@ import java.time.Instant;
 public class OpusVectorizingStat {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "opus_vectorizing_stat_seq")
+    @SequenceGenerator(name = "opus_vectorizing_stat_seq", sequenceName = "opus_vectorizing_stat_seq", allocationSize = 50)
     @Comment("Surrogate primary key.")
     Long id;
 

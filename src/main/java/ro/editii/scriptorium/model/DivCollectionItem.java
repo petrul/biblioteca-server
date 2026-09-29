@@ -9,6 +9,7 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.ManyToOne;
+import jakarta.persistence.SequenceGenerator;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -36,7 +37,8 @@ import java.util.Date;
 public class DivCollectionItem implements Serializable {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "div_collection_item_seq")
+    @SequenceGenerator(name = "div_collection_item_seq", sequenceName = "div_collection_item_seq", allocationSize = 50)
     Long id;
 
     // Excluded from equals/hashCode/toString - it's the back-reference of

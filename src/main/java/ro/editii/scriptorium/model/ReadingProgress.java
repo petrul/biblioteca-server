@@ -7,6 +7,7 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.ManyToOne;
+import jakarta.persistence.SequenceGenerator;
 import jakarta.persistence.Table;
 import jakarta.persistence.UniqueConstraint;
 import jakarta.persistence.Column;
@@ -36,7 +37,8 @@ import java.util.Date;
 public class ReadingProgress implements Serializable {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "reading_progress_seq")
+    @SequenceGenerator(name = "reading_progress_seq", sequenceName = "reading_progress_seq", allocationSize = 50)
     Long id;
 
     @ManyToOne(optional = false)

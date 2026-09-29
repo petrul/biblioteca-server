@@ -23,8 +23,10 @@ import ro.editii.scriptorium.tei.TeiRepo;
 import java.io.File;
 import java.io.IOException;
 import java.io.Writer;
+import java.sql.Timestamp;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 
@@ -122,16 +124,16 @@ public class AdminService {
     public void reimportFresherTeis(Writer logActivity) {
         synchronized (Globals.IMPORT_TEIS_WORKING) {
             final List<String> filenames = teiRepo.list();
+            final Map<String, Timestamp> existingTimestamps = fetchExistingTimestamps();
 
             for (String filename : filenames) {
                 final File file = teiRepo.getFile(filename);
-                final Optional<TeiFile> optionalTeiFile = this.teiFileRepository.getByFilename(filename);
-                if (optionalTeiFile.isPresent()
-                        && optionalTeiFile.get().getTimestamp().getTime() > file.lastModified()) {
+                final Timestamp existingTimestamp = existingTimestamps.get(filename);
+                if (existingTimestamp != null && existingTimestamp.getTime() > file.lastModified()) {
                     // do nothing if already imported and file is not fresher than import
                     continue;
                 } else {
-                    if (optionalTeiFile.isPresent()) {
+                    if (existingTimestamp != null) {
                         log.info("will delete existing import for {} ", filename);
                         writeLn(logActivity, "will delete existing import for " + filename);
                         this.teiFileDbService.deleteTeiFile(filename);
@@ -150,6 +152,20 @@ public class AdminService {
                 }
             }
         }
+    }
+
+    /**
+     * One query for the whole corpus instead of one getByFilename per file -
+     * see TeiFileRepository.findAllFilenamesAndTimestamps for why. Snapshot
+     * taken once per sweep; each filename in a repo listing appears at most
+     * once, so entries this same sweep deletes/reimports are never
+     * re-consulted afterward.
+     */
+    private Map<String, Timestamp> fetchExistingTimestamps() {
+        return this.teiFileRepository.findAllFilenamesAndTimestamps().stream()
+                .collect(java.util.stream.Collectors.toMap(
+                        TeiFileRepository.FilenameAndTimestamp::getFilename,
+                        TeiFileRepository.FilenameAndTimestamp::getTimestamp));
     }
 
     public void reimportFile(String filename, Writer logActivity) {
@@ -179,19 +195,18 @@ public class AdminService {
         synchronized (Globals.IMPORT_TEIS_WORKING) {
             writeLn(logActivity, "will now import ...");
             List<String> filenames = teiRepo.list();
+            final Map<String, Timestamp> existingTimestamps = fetchExistingTimestamps();
 
             for (String filename : filenames) {
                 File file = teiRepo.getFile(filename);
-                Optional<TeiFile> optionalTeiFile = this.teiFileRepository.getByFilename(filename);
-                if (optionalTeiFile.isPresent()
-                        && optionalTeiFile.get().getTimestamp().getTime() > file.lastModified()) {
+                final Timestamp existingTimestamp = existingTimestamps.get(filename);
+                if (existingTimestamp != null && existingTimestamp.getTime() > file.lastModified()) {
                     // do nothing if already imported and file is not fresher than import
                     continue;
                 } else {
-                    if (optionalTeiFile.isPresent()) {
+                    if (existingTimestamp != null) {
                         log.info("will delete existing import for {} ", filename);
                         writeLn(logActivity, "will delete existing import for " + filename);
-                        TeiFile teiFile = optionalTeiFile.get();
                         this.teiFileDbService.deleteTeiFile(filename);
                     }
 

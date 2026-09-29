@@ -8,6 +8,7 @@ import org.springframework.stereotype.Repository;
 import ro.editii.scriptorium.model.TeiDiv;
 import ro.editii.scriptorium.model.TeiFile;
 
+import java.sql.Timestamp;
 import java.util.List;
 import java.util.Optional;
 
@@ -19,6 +20,23 @@ public interface TeiFileRepository extends JpaRepository<TeiFile, Long> {
     Optional<TeiFile> getByFilename(String filename);
 
     List<TeiFile> findByRepoName(String repoName);
+
+    /** Just enough to know whether/when a filename was last imported - see FilenameAndTimestamp. */
+    interface FilenameAndTimestamp {
+        String getFilename();
+        Timestamp getTimestamp();
+    }
+
+    /**
+     * Backs reimportFresherTeis/reimportAllTeis's "is this file already
+     * imported, and is the import stale" check - a full corpus repo listing
+     * (thousands of files) used to pay one getByFilename query per file
+     * (which, via TeiFile's eager authors association, was really a query
+     * plus a join fetch per file). One query for the whole corpus instead,
+     * projected down to just the two columns that decision actually needs.
+     */
+    @Query("select tf.filename as filename, tf.timestamp as timestamp from TeiFile tf")
+    List<FilenameAndTimestamp> findAllFilenamesAndTimestamps();
 
     @Query("select distinct tf.repoName from TeiFile tf where tf.repoName is not null")
     List<String> findDistinctRepoNames();

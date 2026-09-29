@@ -12,6 +12,7 @@ import jakarta.persistence.Id;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.OneToMany;
 import jakarta.persistence.OrderBy;
+import jakarta.persistence.SequenceGenerator;
 import jakarta.persistence.Table;
 import jakarta.persistence.UniqueConstraint;
 import jakarta.validation.constraints.Size;
@@ -51,7 +52,8 @@ public class DivCollection implements Serializable {
     public static final int NAME_MAX_LENGTH = 200;
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "div_collection_seq")
+    @SequenceGenerator(name = "div_collection_seq", sequenceName = "div_collection_seq", allocationSize = 50)
     Long id;
 
     @ManyToOne(optional = false, fetch = FetchType.EAGER)

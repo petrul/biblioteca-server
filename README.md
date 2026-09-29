@@ -621,21 +621,22 @@ Measured against a full-corpus import into a fresh Derby:
    sweep against Derby. A batched `findByFilenameIn(list)` would cut
    the sweep to a handful of queries.
 
-3. **URL-fragment generation does a DB round-trip per candidate** -
-   `compute_unique_head_url_fragment` calls
-   `teiDivRepository.findOperaForAuthorStrId` per candidate fragment
-   until one is free; a fresh import with common titles pays it per
-   candidate.
-
-4. **`getXPath` is O(siblings x depth) per call** - full previous+next
+3. **`getXPath` is O(siblings x depth) per call** - full previous+next
    sibling walks at every recursion level. Only used for divs today
    (few per file), so tolerable; would matter for any per-paragraph
    use.
 
-5. **Hibernate insert batching is configured (`jdbc.batch_size=100`)
-   but unverified** during a live import - worth confirming the batch
-   actually accumulates (Derby's identity-column generation can force
-   per-row round-trips, which would explain part of the insert time).
+4. **Hibernate insert batching is configured (`jdbc.batch_size=100`)
+   but disabled** - every `@GeneratedValue` uses `IDENTITY`, which
+   categorically defeats Hibernate's JDBC batching regardless of
+   `batch_size` (a well-known JPA limitation: IDENTITY needs the
+   generated key back immediately after each individual insert). Fixing
+   this for real means switching to `SEQUENCE` with an `allocationSize`,
+   a physical schema change, not a config toggle.
+
+(Resolved since: URL-fragment generation's per-candidate DB round-trip -
+`compute_unique_head_url_fragment` now fetches the used-fragments set
+once per div and checks candidates against it in memory.)
 
 ## Background
 

@@ -21,7 +21,8 @@ import java.util.List;
 public class TeiFile implements Serializable, Comparable<TeiFile> {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "tei_file_seq")
+    @SequenceGenerator(name = "tei_file_seq", sequenceName = "tei_file_seq", allocationSize = 50)
     Long id;
 
     @Column(unique = true) @ToString.Include

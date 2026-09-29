@@ -46,7 +46,8 @@ public class TeiElem implements Comparable<TeiElem>, Serializable  {
     public static final String TEI_TEXT_BODY = "/tei:TEI/tei:text[1]/tei:body";
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "tei_elem_seq")
+    @SequenceGenerator(name = "tei_elem_seq", sequenceName = "tei_elem_seq", allocationSize = 50)
     @EqualsAndHashCode.Include
     Long id;
 

@@ -13,7 +13,9 @@ import lombok.NoArgsConstructor;
 @Entity
 public class DivMediaAssociation {
 
-    @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Id
+    @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "div_media_seq")
+    @SequenceGenerator(name = "div_media_seq", sequenceName = "div_media_seq", allocationSize = 50)
     Long id;
 
     @Column(name="div_path", length = 1000)

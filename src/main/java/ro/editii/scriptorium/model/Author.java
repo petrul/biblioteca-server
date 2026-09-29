@@ -45,7 +45,8 @@ public class Author implements Comparable<Author>, Serializable {
     }
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "author_seq")
+    @SequenceGenerator(name = "author_seq", sequenceName = "author_seq", allocationSize = 50)
     Long id;
 
     /**

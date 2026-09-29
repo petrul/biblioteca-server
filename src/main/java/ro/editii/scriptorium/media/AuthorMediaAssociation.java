@@ -13,7 +13,9 @@ import lombok.NoArgsConstructor;
 @Entity
 public class AuthorMediaAssociation {
 
-    @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Id
+    @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "author_media_seq")
+    @SequenceGenerator(name = "author_media_seq", sequenceName = "author_media_seq", allocationSize = 50)
     Long id;
 
     @Column(name="author_path", length = 1000)
