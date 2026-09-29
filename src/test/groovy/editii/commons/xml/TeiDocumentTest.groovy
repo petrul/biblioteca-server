@@ -113,11 +113,15 @@ class TeiDocumentTest {
         def textsAgain = nodeList2Collection(new XpathTool(headNode, true).applyXpathForNodeSet(".//text()"))
 
         /*
-            assert the 'bug'. after removeChild is called, the './/text()' xpath does not work as expected
-            for some reason. the workaround we use is to actually do a select by recursively diving
-            into the DOM
+            TB-214, historical: with the JDK's internal Xalan as the XPath
+            engine (the silent XPathFactory.newInstance() fallback before
+            XpathTool pinned Saxon), a DOM mutation like removeChild left
+            Xalan's DTM stale, so './/text()' here returned a single text
+            node. Saxon evaluates against the live DOM and returns the
+            correct two. The recursive workaround below is kept because
+            production code still uses it.
          */
-        assert textsAgain.size() == 1
+        assert textsAgain.size() == 2
 
         // ... and this is the workaround we will use in the code
         NodeList nodeList = XpathTool.from(headNode, true).select( (Node it) -> it.nodeType == Node.TEXT_NODE)

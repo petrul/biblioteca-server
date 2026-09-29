@@ -9,7 +9,6 @@ import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.ParserConfigurationException;
 import javax.xml.transform.Transformer;
 import javax.xml.transform.TransformerException;
-import javax.xml.transform.TransformerFactory;
 import javax.xml.transform.TransformerFactoryConfigurationError;
 import javax.xml.transform.dom.DOMSource;
 import javax.xml.transform.stream.StreamResult;
@@ -37,7 +36,11 @@ public class DomTool {
 
         Transformer transformer;
         try {
-            transformer = TransformerFactory.newInstance().newTransformer();
+            // Saxon explicitly, not TransformerFactory.newInstance(): that
+            // only finds Saxon via Saxon-HE's META-INF/services entry, the
+            // same classpath-discovery scheme that left _applyXpath() on the
+            // JDK's internal Xalan for years. Pinned here like XsltTool does.
+            transformer = new net.sf.saxon.TransformerFactoryImpl().newTransformer();
             transformer.transform(new DOMSource(node), new StreamResult(os));
         } catch (TransformerFactoryConfigurationError | TransformerException e) {
             throw new RuntimeException(e);
