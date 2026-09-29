@@ -29,7 +29,7 @@ A structured digital library that serves classical and philosophical texts
 If you want to link to, embed, or programmatically fetch a *specific
 passage* of a classical text — not "the book," not even "the chapter," but
 the exact sentence someone is quoting — most digital libraries can't give
-you a stable URL for that. Textbase can, at every granularity from a whole
+you a stable URL for that. Biblioteca can, at every granularity from a whole
 work down to a character offset, and it can render that selection as a
 clean, shareable "quote card" with no site chrome, ready to embed in an
 `<iframe>` elsewhere.
@@ -92,7 +92,7 @@ local and Git-backed sources are treated uniformly after checkout.
 ```bash
 git clone <this repo>
 cd biblioteca-server
-cp .env.example .env.dev   # then fill in your MySQL/TEI-repo/etc values
+cp .env.example .env.dev   # then fill in your Derby/TEI-repo/etc values
 ./gradlew bootRun -x test  # -Pdev is the default profile; add -Pci/-Pprod for others
 ```
 
@@ -518,12 +518,50 @@ lose text.
 
 ### Persistence, caching, messaging
 
-`.dao`, `.model`, `.dto` — Spring Data JPA over MySQL, with a local
-Caffeine + on-disk (`cache.dir`) cache layer (`.cache`). `.kafka` handles
-scheduled/async work (`.scheduled`) — notably notifying `biblioteca-nestjs`
-(a separate repo) of new/reimported opera so it can vectorize them.
+`.dao`, `.model`, `.dto` — Spring Data JPA over Apache Derby (Network
+Server mode; `DB_URL` was `MYSQL_URL` before the engine switch, see the
+environment variables table above), with a local Caffeine + on-disk
+(`cache.dir`) cache layer (`.cache`). `.kafka` handles scheduled/async
+work (`.scheduled`) — notably notifying `biblioteca-nestjs` (a separate
+repo) of new/reimported opera so it can vectorize them.
 `KafkaProps.java` has the real topic names (`biblioteca_*` prefix); this
 service is the sole producer of every one of them.
+
+Schema evolution is Hibernate `ddl-auto=update` for routine column/table
+changes, with Flyway (`src/main/java/db/migration`, Java-based
+migrations) reserved for the rare fix-forward migration `ddl-auto` can't
+express on its own — see each migration class's own comment for why it
+exists. `V2__Switch_identity_columns_to_pooled_sequences` moved every
+entity's id generation from `IDENTITY` to a pooled `SEQUENCE`
+(`allocationSize=50`) so Hibernate's JDBC insert batching actually
+batches (`IDENTITY` categorically defeats batching regardless of
+`jdbc.batch_size` — see "Bugs & performance debt" below); each sequence
+is seeded to start above its table's current max id at migration time.
+
+**Known gap, found 2026-09-29:** that "seed above current max id" logic
+has a read-then-seed race on any table under concurrent writes —
+`opus_vectorizing_stat` (biblioteca-nestjs posts to it continuously) hit
+exactly this right after a prod deploy: `23505` duplicate-key spam for
+~15 minutes, which only self-healed because Hibernate's pooled optimizer
+burned through enough wasted id blocks to climb past the stale seed. A
+follow-up audit of every sequence-backed table found two more silently
+unsafe the same way, not yet hit by real traffic — `app_user_seq` and
+`author_media_seq`, both seeded at exactly the existing max id (an
+immediate collision on the very next insert into either table). All
+three were fixed manually in prod: Derby has no
+`ALTER SEQUENCE ... RESTART WITH`, so it's `DROP SEQUENCE` +
+`CREATE SEQUENCE` with the same `INCREMENT BY`, reseeded with real
+headroom (`max(id) + 10000`, not `+1`). The migration code itself is
+still unfixed — any future fresh deploy under concurrent write load can
+reproduce this; see "Bugs & performance debt" below. Also worth noting:
+the actual 0.9.10 release image runs a third migration,
+`V3__Reseed_id_sequences_above_existing_rows`, that does **not** exist
+in this checkout of `main` (no file, no commit) — it apparently only
+ever landed on the `v0.9.10` release branch and was never merged back;
+worth pulling forward before the next release silently loses it again.
+`docs/prod-schema.sql` is a `dblook`-exported snapshot of prod's actual
+schema taken right after this fix (reference only, not the source of
+truth).
 
 The async/event-driven counterpart to the REST OpenAPI spec above is
 `src/main/resources/static/asyncapi.yml` (served with this service and
@@ -637,6 +675,29 @@ batching - every entity's `@GeneratedValue` switched from `IDENTITY`
 (which categorically disabled batching regardless of `jdbc.batch_size`)
 to a pooled `SEQUENCE`, via a Flyway migration that seeds each new
 sequence above its table's current max id.)
+
+### Open - correctness
+
+- **Sequence-seeding race, found 2026-09-29 in prod.** The batching fix
+  above (pooled `SEQUENCE`s via `V2`) reads each table's max id and then
+  creates its sequence as two separate statements - any table under
+  concurrent writes during that window can have its real max id race
+  past the snapshot, so the freshly seeded sequence starts inside
+  already-used id space. `opus_vectorizing_stat` hit this right after a
+  prod deploy (biblioteca-nestjs writes to it continuously): `23505`
+  duplicate-key spam for ~15 minutes, self-healed only because
+  Hibernate's pooled optimizer burned through enough wasted 50-id blocks
+  to climb past the stale seed. A full audit of every sequence-backed
+  table found two more silently unsafe the same way, not yet hit by
+  traffic - `app_user_seq` and `author_media_seq`, both seeded at
+  exactly the existing max id (an immediate collision on the very next
+  insert). All three fixed manually in prod (`DROP`/`CREATE SEQUENCE`
+  with real headroom - `max(id) + 10000`, not `+1` - see "Persistence,
+  caching, messaging" above); the migration code itself is still
+  unfixed, so a future fresh deploy under write load can reproduce this.
+  Also: the actual 0.9.10 release runs a `V3__Reseed_id_sequences_above_existing_rows`
+  migration that isn't in this `main` checkout (branch-only, never
+  merged back) - needs pulling forward regardless of the race fix.
 
 ## Background
 
