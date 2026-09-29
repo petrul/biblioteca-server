@@ -1,6 +1,7 @@
 package ro.editii.scriptorium;
 
 import com.ibm.icu.text.Transliterator;
+import editii.commons.xml.TeiNamespaceResolver;
 import editii.commons.xml.XpathTool;
 import jakarta.servlet.http.HttpServletRequest;
 import org.apache.commons.lang3.StringUtils;
@@ -489,14 +490,24 @@ public class Util {
      * mirrors TeifileParser's own import-time rule for whether a div gets
      * its own TeiDiv row (a direct tei:head child with non-blank text) -
      * see {@code TeifileParser.parcurge_rec}'s {@code head == null || head.isEmpty()} check.
+     *
+     * The check is exactly the div/head pair: a direct tei:head element
+     * child of this div, in the TEI namespace, with non-blank text - not a
+     * head at any other depth. A plain DOM child scan, not an XPath
+     * evaluation: this runs for every div of every TOC/pruning walk, and
+     * the per-call deepCopy + XpathTool + engine evaluation of
+     * "/tei:div/tei:head" it replaced was a measurable profile line.
      */
     private static boolean isAddressableDiv(Node divNode) {
-        final XpathTool xt = new XpathTool(divNode, true);
-        final NodeList heads = xt.applyXpathForNodeSet("/tei:div/tei:head");
-        if (heads.getLength() < 1)
-            return false;
-        final String text = heads.item(0).getTextContent();
-        return text != null && !text.isBlank();
+        for (Node child = divNode.getFirstChild(); child != null; child = child.getNextSibling()) {
+            if (child.getNodeType() == Node.ELEMENT_NODE
+                    && "head".equals(child.getLocalName())
+                    && TeiNamespaceResolver.TEI_NS.equals(child.getNamespaceURI())) {
+                final String text = child.getTextContent();
+                return text != null && !text.isBlank();
+            }
+        }
+        return false;
     }
 
 }
