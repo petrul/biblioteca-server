@@ -101,6 +101,16 @@ class DivServiceTest {
     }
 
     @Test
+    void binaryObjectsAreReadFromTheCacheUsingTheirQualifiedKey() {
+        final expected = [1, 2, 3] as byte[]
+        final cacheKey = 'cantemir_descrierea_moldovei_d3e1954'
+        final binaryCache = this.diskCaches.getCacheBinaryObject()
+        binaryCache.putAt(cacheKey, expected)
+
+        assert this.divService.getBinaryObject('cantemir', 'descrierea_moldovei', 'd3e1954') == expected
+    }
+
+    @Test
     void inexistantUrl() {
         assert this.divService.getByPath("shakespeare/julius_caesar") != null
         assert this.divService.getByPath("shakespeare/julius_caesar/act_i") != null
@@ -208,6 +218,13 @@ class DivServiceTest {
             Assertions.fail('no go')
         } catch (org.springframework.data.rest.webmvc.ResourceNotFoundException e) {
             assert e.message == 'no child element for nth 1 (starting at 1)'
+        }
+
+        try {
+            jc_n([0])
+            Assertions.fail('zero is not a valid 1-indexed child')
+        } catch (org.springframework.data.rest.webmvc.ResourceNotFoundException e) {
+            assert e.message == 'no child element for nth 0 (starting at 1)'
         }
 
         jc_n([3, 2]).with { elem ->

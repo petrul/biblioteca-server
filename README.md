@@ -575,8 +575,8 @@ follow its injected service into the matching package above.
 ## Bugs & performance debt (rethink later)
 
 Findings from the 2026-09-28 pass over the reimport pipeline (measured
-against a live full-corpus import into a fresh Derby - the "why is
-reimport slow" question). Kept here so the open items can be rethought
+against a full-corpus import into a fresh Derby - the "why is reimport
+slow" question). Kept here so the open items can be rethought
 deliberately, not fixed by drive-by.
 
 ### Fixed at the time (in `editii.commons.xml.XpathTool`)
@@ -590,52 +590,36 @@ deliberately, not fixed by drive-by.
   set of strings - thousands of identical compilations per file. Now a
   per-instance `Map<String, XPathExpression>` cache, same guard. The
   compile was the dominant per-element cost of the parser.
+- `getXPath` used to count preceding `div` siblings for every node's
+  positional selector. XPath positions count siblings with the same
+  expanded name; it now does that directly, including when a TEI element
+  uses a different namespace prefix. The sibling scan also no longer
+  allocates temporary lists or takes a global lock.
 
 ### Open - correctness
 
-1. **`XpathTool.getXPath`'s positional bracket is only correct for
-   `div` elements.** The bracket is computed as `[nrPreviousDivs + 1]`
-   (counting previous siblings *named div*), but XPath's `[n]` predicate
-   counts *same-name* siblings:
-   - a `<p>` preceded by two `<div>` siblings would get `p[3]`, when it
-     is really the 1st `p` (`p[1]`);
-   - an element with same-name siblings but no preceding `div` siblings
-     gets **no** bracket at all - an ambiguous path that `xpath_one`
-     would reject ("more than exactly one elem").
-   Latent today: only `div`s get paths stored (`TeifileParser.parcurge_rec`
-   calls `getXPathRelativeTo` for divs only, where the div-counting
-   happens to be correct). **Fixing it changes the stored-path scheme** -
-   every `tei_elem.xpath` already in the DB follows the current (div-
-   relative) convention, so a fix requires deciding whether stored paths
-   migrate or a new, differently-named field starts fresh.
-
-2. **`CustomNodeList.item(i)` has no bounds check** - an `i >= size`
+1. **`CustomNodeList.item(i)` has no bounds check** - an `i >= size`
    index would throw `IndexOutOfBoundsException` instead of the
    `NodeList` contract's null. Internal use only today.
 
-3. **`getXPath`/`getXPathRelativeTo` are `static synchronized`** on
-   pure functions - a needless global lock. Harmless single-threaded
-   (the import runs on one scheduler thread); pure contention overhead
-   the day any parallel import exists. Removing the `synchronized` is
-   safe (the methods share no mutable state), but concurrent DOM
-   traversal safety is the caller's business either way.
-
 ### Open - performance (why a full reimport is slow)
 
-Measured against the live prod import (fresh Derby, full corpus):
+Measured against a full-corpus import into a fresh Derby:
 
-1. **Per-opus Lucene reindex dominates the visible cadence** -
-   ~7ms per paragraph (node copy + prune + XSLT text derivation + index
-   add); a 5,895-paragraph opus costs ~41s, which is the gap between
-   successive "will import" log lines (~70s/file average). The XSLT side
-   is already optimal (ThreadLocal-cached `Transformer` in
-   `ControllerTool`); the cost is the per-paragraph node copy/prune/
-   transform pipeline itself. Embarrassingly parallel per paragraph -
-   the biggest single lever if a parallel import is ever wanted.
+1. **Per-opus Lucene reindex dominated the visible cadence in the
+   paragraph-indexed run** - about 7ms per paragraph (node copy + prune +
+   XSLT text derivation + index add); an opus with roughly 6,000
+   paragraphs cost about 41s, against a roughly 70s-per-file average
+   between successive "will import" log lines. This measurement predates
+   leaf-div indexing: text is still derived paragraph by paragraph, but
+   the index now writes one document per leaf div, so the indexing cost
+   needs a fresh measurement. The XSLT side is already optimal
+   (ThreadLocal-cached `Transformer` in `ControllerTool`); the cost is
+   largely in the per-paragraph node copy/prune/transform pipeline.
 
 2. **The fresher sweep re-lists and re-queries the whole corpus every
    cycle** - `reimportFresherTeis` runs every 15s (autoimport profile)
-   and does ~2,939 individual `getByFilename` queries + file stats per
+   and does roughly 3,000 individual `getByFilename` queries + file stats per
    sweep against Derby. A batched `findByFilenameIn(list)` would cut
    the sweep to a handful of queries.
 

@@ -38,7 +38,7 @@ class LuceneReindexRetentionPolicyTest {
      * calls, as hand-rolled Groovy fakes (map coercion cannot instantiate
      * their all-args constructors): one fixed content text for every
      * paragraph - the URL, the thing this test asserts on, stays unique
-     * per paragraph - and one paragraph-list per opus.
+     * per leaf div - and one paragraph-list per opus.
      */
     static class ParasOfDivService extends DivService {
         // Keyed by opus path, never by the TeiDiv object: the entities are
@@ -46,6 +46,10 @@ class LuceneReindexRetentionPolicyTest {
         // would silently overwrite each other as map keys.
         final Map<String, List<TeiElem>> paragraphsByPath = [:]
         ParasOfDivService() { super(null, null, null) }
+        @Override
+        ro.editii.scriptorium.toc.Toc getToc(long id) {
+            new ro.editii.scriptorium.toc.Toc(new FakeOpus(paragraphsByPath.keySet().find { (long) it.hashCode() == id }))
+        }
         @Override
         List<TeiElem> getParagraphs(TeiDiv teiDiv) { this.paragraphsByPath.get(teiDiv.getCompletePath()) }
     }
@@ -79,7 +83,7 @@ class LuceneReindexRetentionPolicyTest {
      */
     static class FakeOpus extends TeiDiv {
         final String fakePath
-        FakeOpus(String path) { this.fakePath = path }
+        FakeOpus(String path) { this.fakePath = path; this.id = (long) path.hashCode() }
         @Override
         String getCompletePath() { this.fakePath }
     }
@@ -109,7 +113,7 @@ class LuceneReindexRetentionPolicyTest {
     @Test
     void "a renamed book with a corrected paragraph reindexes in place, retaining everything"() {
 
-        // Book A, first edition: two paragraphs.
+        // Book A, first edition: two paragraphs in one leaf div.
         final opusAOld = new FakeOpus("creanga/amintiri")
         divService.paragraphsByPath["creanga/amintiri"] = [
                 new FakePara("creanga/amintiri/p1", "first paragraph stays identical"),
@@ -124,7 +128,7 @@ class LuceneReindexRetentionPolicyTest {
         service.reindexOpus(opusAOld)
         service.reindexOpus(opusB)
 
-        assertEquals(3, service.search("content", 1000).size())
+        assertEquals(2, service.search("content", 1000).size())
 
         // Second edition: the work was RENAMED (every url moves, exactly
         // like the real author/work-title-in-url scheme) and paragraph two
@@ -139,22 +143,20 @@ class LuceneReindexRetentionPolicyTest {
 
         final urls = service.search("content", 1000)*.getUrl().toSet()
 
-        // The renamed edition is fully indexed under its NEW urls.
-        assertTrue(urls.contains("creanga/amintiri-din-copilarie/p1"))
-        assertTrue(urls.contains("creanga/amintiri-din-copilarie/p2"))
+        // The renamed edition is indexed under its new leaf-div URL.
+        assertTrue(urls.contains("creanga/amintiri-din-copilarie"))
 
         // The sibling book is untouched.
-        assertTrue(urls.contains("creanga/povesti/p1"))
+        assertTrue(urls.contains("creanga/povesti"))
 
         // The OLD edition's documents are RETAINED, not dropped - stale
         // urls stop resolving at search time (they are filtered out of
         // what the user sees, see VectorUtils), and only an explicit
         // manual operation (LuceneIndexService.removeOpus) may delete
         // them. Nothing in the automatic flow does.
-        assertTrue(urls.contains("creanga/amintiri/p1"))
-        assertTrue(urls.contains("creanga/amintiri/p2"))
+        assertTrue(urls.contains("creanga/amintiri"))
 
-        assertEquals(5, urls.size())
+        assertEquals(3, urls.size())
     }
 
     @Test
@@ -174,6 +176,6 @@ class LuceneReindexRetentionPolicyTest {
         // Nothing to invoke here: the assertion is that the index keeps
         // serving them until an explicit manual removeOpus runs.
         assertEquals(1, service.search("content", 1000).size())
-        assertTrue(service.search("content", 1000)*.getUrl().contains("creanga/povesti/p1"))
+        assertTrue(service.search("content", 1000)*.getUrl().contains("creanga/povesti"))
     }
 }

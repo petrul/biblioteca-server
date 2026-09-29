@@ -47,9 +47,13 @@ class LuceneIndexServiceResumeTest {
         return new LuceneIndexService(tempDir.toString(), false, 0d, teiDivRepository, divService, controllerTool)
     }
 
-    static TeiDiv opusMock(String path) {
+    TeiDiv opusMock(String path) {
         final opus = Mockito.mock(TeiDiv)
         Mockito.when(opus.getCompletePath()).thenReturn(path)
+        Mockito.when(opus.getId()).thenReturn((long) path.hashCode())
+        Mockito.when(opus.isLeaf()).thenReturn(true)
+        final toc = new ro.editii.scriptorium.toc.Toc(opus)
+        Mockito.when(divService.getToc(opus.getId())).thenReturn(toc)
         return opus
     }
 
@@ -60,6 +64,34 @@ class LuceneIndexServiceResumeTest {
         Mockito.when(para.getCompletePath()).thenReturn(path)
         Mockito.when(para.getDiv()).thenReturn(div)
         return para
+    }
+
+    @Test
+    void rebuildAndIncrementalIndexOnlyNestedLeavesAndCombineTheirParagraphs() {
+        final root = opusMock("author/work")
+        final branch = opusMock("author/work/part")
+        final first = opusMock("author/work/part/chapter")
+        final second = opusMock("author/work/last")
+        Mockito.when(root.isLeaf()).thenReturn(false)
+        Mockito.when(branch.isLeaf()).thenReturn(false)
+        Mockito.when(root.getDbChildren()).thenReturn([branch, second])
+        Mockito.when(branch.getDbChildren()).thenReturn([first])
+        final toc = new ro.editii.scriptorium.toc.Toc(root)
+        Mockito.when(divService.getToc(root.getId())).thenReturn(toc)
+        final paragraphs = [paraMock("unused/p1", "head"), paraMock("unused/p2", "head")]
+        Mockito.when(divService.getParagraphs(first)).thenReturn(paragraphs)
+        Mockito.when(divService.getParagraphs(second)).thenReturn([paragraphs[0]])
+        Mockito.when(controllerTool.teiElemToString(Mockito.any())).thenReturn("leaf content")
+        Mockito.when(teiDivRepository.findOpera(PageRequest.of(0, LuceneIndexService.OPERA_PAGE_SIZE)))
+                .thenReturn(new PageImpl<>([root]))
+        final service = newService()
+        assertEquals(2, service.rebuildIndex())
+        assertEquals(2, service.reindexOpus(root))
+        final hits = service.search("content", 10)
+        assertEquals([first.completePath, second.completePath].toSet(), hits*.url.toSet())
+        assertEquals("leaf content\n\nleaf content", hits.find { it.url == first.completePath }.content)
+        Mockito.verify(divService, Mockito.never()).getParagraphs(root)
+        Mockito.verify(divService, Mockito.never()).getParagraphs(branch)
     }
 
     @Test
@@ -149,13 +181,13 @@ class LuceneIndexServiceResumeTest {
         service.reindexOpus(opusA)
         service.reindexOpus(opusB)
 
-        assertEquals(3, service.search("keeper", 1000).size())
+        assertEquals(2, service.search("keeper", 1000).size())
 
         service.removeOpus("seneca/de-vita")
 
         final remaining = service.search("keeper", 1000)
         assertEquals(1, remaining.size())
-        assertEquals("seneca/de-vita-longa/p0", remaining[0].getUrl())
+        assertEquals("seneca/de-vita-longa", remaining[0].getUrl())
     }
 
     @Test
@@ -177,7 +209,7 @@ class LuceneIndexServiceResumeTest {
         // comment in the resume test above).
         final goodParagraphs = [paraMock("bacon/of_gardens/p0", "gardens head")]
         Mockito.when(divService.getParagraphs(goodOpus)).thenReturn(goodParagraphs)
-        Mockito.when(divService.getParagraphs(ghostOpus))
+        Mockito.when(divService.getToc(ghostOpus.getId()))
                 .thenThrow(new TeiResourceNotFoundException("bcucluj_fcs_brv10_1.tei.xml"))
         Mockito.when(controllerTool.teiElemToString(Mockito.any())).thenReturn("gardens paragraph text")
 

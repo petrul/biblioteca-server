@@ -428,7 +428,7 @@ public class TeiElem implements Comparable<TeiElem>, Serializable  {
         final Node parentNode = parent.getNode();
         final var onlyElements = getAllChildElements(parentNode);
 
-        if (onlyElements.size() < nth || nth < 0) {
+        if (nth <= 0 || onlyElements.size() < nth) {
             throw new ResourceNotFoundException(String.format(
                     "no child element for nth %d (starting at 1)", nth));
         }
@@ -536,4 +536,3 @@ public class TeiElem implements Comparable<TeiElem>, Serializable  {
     }
 
 }
-

@@ -24,7 +24,6 @@ import org.apache.lucene.search.ScoreDoc;
 import org.apache.lucene.search.SearcherManager;
 import org.apache.lucene.search.TermQuery;
 import org.apache.lucene.search.TopDocs;
-import org.apache.lucene.store.ByteBuffersDirectory;
 import org.apache.lucene.store.Directory;
 import org.apache.lucene.store.FSDirectory;
 import org.springframework.beans.factory.annotation.Value;
@@ -41,6 +40,7 @@ import ro.editii.scriptorium.model.Languages;
 import ro.editii.scriptorium.model.TeiDiv;
 import ro.editii.scriptorium.model.TeiElem;
 import ro.editii.scriptorium.search.LuceneHit;
+import ro.editii.scriptorium.toc.TocIterator;
 import ro.editii.scriptorium.service.ControllerTool;
 import ro.editii.scriptorium.service.DivService;
 import ro.editii.scriptorium.tei.TeiResourceNotFoundException;
@@ -69,17 +69,7 @@ import java.util.stream.Stream;
  * coarser - two different search engines surfacing excerpts at their own
  * natural grain is fine, not a bug to reconcile.
  *
- * A leaf-div-level hit's stored content is every one of its paragraphs'
- * derived text concatenated - good enough for BM25 scoring and highlight
- * context, but too coarse to deep-link precisely. search() recovers
- * paragraph precision lazily, only for the (small) set of returned hits:
- * it re-runs the same parsed Query against a throwaway in-memory index
- * built from just that div's own paragraphs (paragraphToDocument, the
- * same per-paragraph shape this class used exclusively before) to find
- * which specific paragraph actually matched, and returns that paragraph's
- * url/content instead of the div's. Cheap - a handful of paragraphs, not
- * the whole corpus - and reuses the query's own analyzer/stemming/boost
- * behavior exactly rather than hand-rolling term matching.
+ * A hit returns the leaf div's URL and its paragraphs' combined text.
  *
  * Body text isn't stored relationally (see TeiElem.getNode()), so building
  * the index means re-deriving each paragraph's text the same way ann() does
@@ -87,7 +77,7 @@ import java.util.stream.Stream;
  * transform. Unlike Milvus (which stores no text, only vectors, and
  * resolves content separately at query time via ContentResolver), Lucene
  * stores the text itself, so a search hit needs no second resolution step
- * beyond the paragraph-recovery above.
+ * at query time.
  *
  * A full rebuild (rebuildIndex(), CREATE mode) still re-derives text for
  * the whole corpus - that part's unavoidable - but is no longer all-or-
@@ -509,7 +499,7 @@ public class LuceneIndexService {
     /**
      * Incrementally reindexes just this one opus - called after every TEI
      * (re)import (see AdminService), not just a manual full rebuild. The
-     * slow part (deriving every paragraph's text via toDocument/XSLT)
+     * slow part (deriving each leaf div's text via XSLT)
      * happens in a throwaway temp Directory/IndexWriter of its own, which
      * never touches the main index or its rebuildLock - only the fast
      * part (drop this opus's previous documents, merge the freshly-built
@@ -551,7 +541,7 @@ public class LuceneIndexService {
                 synchronized (this.rebuildLock) {
                     try (IndexWriter writer = new IndexWriter(this.directory,
                             new IndexWriterConfig(this.analyzer).setOpenMode(IndexWriterConfig.OpenMode.CREATE_OR_APPEND))) {
-                        // Exact match for the opus's own root paragraph (a
+                        // Exact match for the opus's own root div (a
                         // work with no chapter breakdown at all is its own
                         // single readable/indexed div - same "leaf === root"
                         // case the reader's own router.ts had to account
@@ -609,10 +599,7 @@ public class LuceneIndexService {
      */
     private List<TeiDiv> leafDivsOf(TeiDiv opus) {
         final List<TeiDiv> leaves = new ArrayList<>();
-        for (TeiDiv div : this.divService.getToc(opus.getId())) {
-            if (div.isLeaf())
-                leaves.add(div);
-        }
+        new TocIterator(this.divService.getToc(opus.getId())).forEachRemaining(leaves::add);
         return leaves;
     }
 
@@ -620,7 +607,7 @@ public class LuceneIndexService {
      * The main index's document for one leaf div: every one of its own
      * paragraphs' derived text, concatenated - see this class's own doc
      * comment for why leaf-div (not paragraph) is the indexing unit, and
-     * how search() recovers paragraph precision for a hit afterward.
+     * why search hits point to divs.
      */
     private Document leafDivToDocument(TeiDiv leafDiv) {
         final List<TeiElem> paragraphs = this.divService.getParagraphs(leafDiv);
@@ -643,39 +630,6 @@ public class LuceneIndexService {
         doc.add(new StringField(FIELD_URL, leafDiv.getCompletePath(), Field.Store.YES));
         doc.add(new TextField(FIELD_CONTENT, combined.toString(), Field.Store.YES));
         addPerLanguageField(doc, FIELD_CONTENT, combined.toString(), language);
-        if (head != null && !head.isBlank()) {
-            doc.add(new TextField(FIELD_HEAD, head, Field.Store.YES));
-            addPerLanguageField(doc, FIELD_HEAD, head, language);
-        }
-        return doc;
-    }
-
-    /**
-     * The per-paragraph document shape this class used exclusively before
-     * leaf-div indexing - kept for search()'s query-time paragraph
-     * recovery, which builds a throwaway in-memory index of just one
-     * matched div's own paragraphs using this exact same shape, so the
-     * original query resolves to a precise paragraph the same way it
-     * always did.
-     */
-    private Document paragraphToDocument(TeiElem para) {
-        final String text = this.controllerTool.teiElemToString(para.toElemInfo());
-        if (text == null || text.isBlank())
-            return null;
-
-        // Kept as the original (accented) text, not folded - it's both what
-        // gets stored/returned verbatim to callers (LuceneHit.content) and
-        // what the per-language field's real stemmer wants to see; the
-        // generic FIELD_CONTENT/FIELD_HEAD fields fold diacritics on their
-        // own at the token level (TextbaseAnalyzer's ASCIIFoldingFilter),
-        // so a diacritics-free query still matches through those.
-        final String head = para.getDiv().getHead();
-        final Languages language = documentLanguage(para);
-
-        final Document doc = new Document();
-        doc.add(new StringField(FIELD_URL, para.getCompletePath(), Field.Store.YES));
-        doc.add(new TextField(FIELD_CONTENT, text, Field.Store.YES));
-        addPerLanguageField(doc, FIELD_CONTENT, text, language);
         if (head != null && !head.isBlank()) {
             doc.add(new TextField(FIELD_HEAD, head, Field.Store.YES));
             addPerLanguageField(doc, FIELD_HEAD, head, language);
@@ -743,7 +697,7 @@ public class LuceneIndexService {
             // words (like /divHeads or /authors, plain "contains" matching),
             // never as Lucene query syntax they didn't ask to opt into. Not
             // folded here - each target field's own analyzer decides
-            // whether to fold diacritics (see toDocument/LuceneAnalyzers).
+            // whether to fold diacritics (see leafDivToDocument/LuceneAnalyzers).
             query = parser.parse(QueryParser.escape(q));
         } catch (ParseException e) {
             log.warn("Could not parse Lucene query [{}]: {}", q, e.getMessage());

@@ -18,6 +18,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
+import java.util.Objects;
 import java.util.function.BiFunction;
 import java.util.function.Function;
 import java.util.function.Predicate;
@@ -197,14 +198,15 @@ public class XpathTool {
         return result;
     }
 
-    public static synchronized String getXPathRelativeTo(Node node, String beginning) {
+    public static String getXPathRelativeTo(Node node, String beginning) {
         final String wholeXpath = XpathTool.getXPath(node);
-        assert wholeXpath.startsWith(beginning);
+        if (!wholeXpath.startsWith(beginning))
+            throw new IllegalArgumentException("XPath " + wholeXpath + " does not start with " + beginning);
         final String xpath = wholeXpath.substring(beginning.length());
         return xpath;
     }
 
-    public static synchronized String getXPath(Node node) {
+    public static String getXPath(Node node) {
         final Node parent = node.getParentNode();
         if (parent == null) {
             return "";
@@ -232,29 +234,41 @@ public class XpathTool {
         // level of almost every real document, including <TEI>/<text>/
         // <body>, breaking the fixed, bracket-less TEI_TEXT_BODY prefix
         // TeiElem/TeifileParser rely on to relativize paths.
-        final String nodeName = node.getNodeName();
-        final List<Node> prevElementSiblings = previousSiblings(node).stream()
-            .filter(nd -> nd.getNodeType() == Node.ELEMENT_NODE)
-            .toList();
-        final List<Node> nextElementSiblings = nextSiblings(node).stream()
-            .filter(nd -> nd.getNodeType() == Node.ELEMENT_NODE)
-            .toList();
-        int nrPreviousSameName = prevElementSiblings.stream()
-            .filter(nd -> nodeName.equalsIgnoreCase(nd.getNodeName()))
-            .toArray()
-            .length;
+        final String namespaceUri = node.getNamespaceURI();
+        final String localName = node.getLocalName() == null ? node.getNodeName() : node.getLocalName();
+        int sameNamePosition = 1;
+        boolean hasElementSibling = false;
+        for (Node sibling = node.getPreviousSibling(); sibling != null; sibling = sibling.getPreviousSibling()) {
+            if (sibling.getNodeType() != Node.ELEMENT_NODE)
+                continue;
+            hasElementSibling = true;
+            final String siblingLocalName = sibling.getLocalName() == null
+                    ? sibling.getNodeName() : sibling.getLocalName();
+            if (Objects.equals(namespaceUri, sibling.getNamespaceURI()) && localName.equals(siblingLocalName))
+                sameNamePosition++;
+        }
+        for (Node sibling = node.getNextSibling(); sibling != null; sibling = sibling.getNextSibling()) {
+            if (sibling.getNodeType() == Node.ELEMENT_NODE) {
+                hasElementSibling = true;
+                break;
+            }
+        }
 
         String bracketSelector = "";
-        if (!prevElementSiblings.isEmpty() || !nextElementSiblings.isEmpty())
-            bracketSelector = String.format("[%d]", nrPreviousSameName + 1);
+        if (hasElementSibling)
+            bracketSelector = String.format("[%d]", sameNamePosition);
 
         String prefix = namespaceContext.getPrefix(node.getNamespaceURI());
-        if (prefix == null)
+        final String xpathNodeName;
+        if (prefix == null) {
             prefix = "";
-        else
+            xpathNodeName = node.getNodeName();
+        } else {
             prefix = prefix + ":";
+            xpathNodeName = node.getLocalName() == null ? node.getNodeName() : node.getLocalName();
+        }
 
-        return getXPath(parent) + "/" + prefix + node.getNodeName() + bracketSelector;
+        return getXPath(parent) + "/" + prefix + xpathNodeName + bracketSelector;
     }
 
     public void visit(Function<Node, Object> lambda) {

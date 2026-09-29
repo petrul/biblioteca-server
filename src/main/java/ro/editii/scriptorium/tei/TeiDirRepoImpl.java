@@ -121,12 +121,15 @@ public class TeiDirRepoImpl implements TeiRepo, Serializable {
             else
                 finalTeiDirPath = teidirPath;
 
-            List<String> collect = Files.walk(finalTeiDirPath)
-                    .filter(Files::isRegularFile)
-                    .map(it -> it.toString())
-                    .filter(it -> it.toLowerCase().endsWith(".xml"))
-                    .map(it -> it.substring(finalTeiDirPath.toString().length()))
-                    .collect(Collectors.toList());
+            List<String> collect;
+            try (var paths = Files.walk(finalTeiDirPath)) {
+                collect = paths
+                        .filter(Files::isRegularFile)
+                        .map(it -> it.toString())
+                        .filter(it -> it.toLowerCase().endsWith(".xml"))
+                        .map(it -> it.substring(finalTeiDirPath.toString().length()))
+                        .collect(Collectors.toList());
+            }
 
             String filter = this.getFilter();
             if (filter != null && !filter.trim().isEmpty()) {
@@ -159,5 +162,3 @@ public class TeiDirRepoImpl implements TeiRepo, Serializable {
     }
 
 }
-
-

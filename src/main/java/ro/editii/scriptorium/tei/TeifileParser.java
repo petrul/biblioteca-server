@@ -193,27 +193,27 @@ public class TeifileParser {
 
         final TeiDiv parentDiv = (TeiDiv) div.getParent();
 
+        final Set<String> usedFragments;
+        if (parentDiv == null) {
+            final Author author = div.getTeiFile().getAuthor();
+            usedFragments = this.teiDivRepository.findOperaForAuthorStrId(author.getStrId()).stream()
+                    .map(opus -> opus.getUrlFragment())
+                    .collect(java.util.stream.Collectors.toSet());
+        } else if (parentDiv.getDbChildren() == null) {
+            usedFragments = Set.of();
+        } else {
+            usedFragments = parentDiv.getDbChildren().stream()
+                    .map(child -> child.getUrlFragment())
+                    .collect(java.util.stream.Collectors.toSet());
+        }
+
         final CandidateUrlFragmGeneratorForTeiDivHead iterable = new CandidateUrlFragmGeneratorForTeiDivHead(div.getHead());
         for (String candidate : iterable) {
-
-            // check for the case where another edition of the same work, already exists imported into the db
-            if (parentDiv == null) {
-                Author author = div.getTeiFile().getAuthor();
-                List<TeiDiv> opuses = this.teiDivRepository.findOperaForAuthorStrId(author.getStrId());
-                if (opuses
-                        .stream()
-                        .anyMatch( it -> candidate.equals(it.getUrlFragment()))) {
-                    // here we found another opus already imported, of the same author bearing the same name, probably another edition.
-                    continue; // next candidate
-                }
-            }
-
-            // if no other child has the same urlFragment, then return it as good
-            if (parentDiv == null
-                    || parentDiv.getDbChildren() == null
-                    || parentDiv.getDbChildren()
-                    .stream()
-                    .noneMatch( it -> candidate.equals(it.getUrlFragment())))
+            // Root candidates are checked against same-author works (another
+            // edition may already use the title); nested candidates are
+            // checked against this parent's children. Each source is read
+            // once, even when several candidate fragments collide.
+            if (!usedFragments.contains(candidate))
                 return candidate;
         }
         throw new IllegalStateException("should never get here, iterator is infinite");

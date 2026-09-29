@@ -53,6 +53,10 @@ class AdminServiceRetentionPolicyTest {
         final Map<String, List<TeiElem>> paragraphsByPath = [:]
         ParasOfDivService() { super(null, null, null) }
         @Override
+        ro.editii.scriptorium.toc.Toc getToc(long id) {
+            new ro.editii.scriptorium.toc.Toc(new FakeOpus(paragraphsByPath.keySet().find { (long) it.hashCode() == id }))
+        }
+        @Override
         List<TeiElem> getParagraphs(TeiDiv teiDiv) { this.paragraphsByPath.get(teiDiv.getCompletePath()) }
     }
 
@@ -64,7 +68,7 @@ class AdminServiceRetentionPolicyTest {
 
     static class FakeOpus extends TeiDiv {
         final String fakePath
-        FakeOpus(String path) { this.fakePath = path }
+        FakeOpus(String path) { this.fakePath = path; this.id = (long) path.hashCode() }
         @Override
         String getCompletePath() { this.fakePath }
     }
@@ -134,6 +138,6 @@ class AdminServiceRetentionPolicyTest {
         // manual-only operation (LuceneIndexService.removeOpus) by the
         // search-data-is-precious policy.
         assertEquals(1, luceneIndexService.search("content", 1000).size())
-        assertTrue(luceneIndexService.search("content", 1000)*.getUrl().contains("creanga/povesti/p1"))
+        assertTrue(luceneIndexService.search("content", 1000)*.getUrl().contains("creanga/povesti"))
     }
 }

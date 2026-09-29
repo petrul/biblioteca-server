@@ -3,6 +3,7 @@ package editii.commons.xml
 import org.junit.jupiter.api.Test
 import org.w3c.dom.Node
 
+import static org.junit.jupiter.api.Assertions.assertSame
 import static ro.editii.scriptorium.GTestUtil.*
 
 class GXPathToolTest {
@@ -55,27 +56,9 @@ class GXPathToolTest {
         assert head.getTextContent().trim() == 'Manifeste și amintiri politice'
     }
 
-    /**
-     * The getXPath bracket-selector bug (see README's "Bugs & performance
-     * debt (rethink later)"): the positional bracket is computed as
-     * [nrPreviousDivs + 1] - counting previous siblings NAMED DIV - but
-     * XPath's [n] predicate counts SAME-NAME siblings. Deliberately a
-     * FAILING test: it asserts the correct semantics, so it stays red
-     * until the bug is consciously fixed (fixing it changes the stored
-     * tei_elem.xpath scheme, so it must not happen by drive-by).
-     *
-     * Two faces of the same bug:
-     * 1. an element with div siblings before it gets an over-counted
-     *    bracket (a first-and-only <p> after two <div>s -> "p[3]", a
-     *    path that matches NOTHING);
-     * 2. an element with same-name siblings but no div siblings gets NO
-     *    bracket at all - an ambiguous path xpath_one would reject.
-     */
     @Test
     void testGetXPathBracketCountsSameNameSiblingsNotDivs() {
-        // Case 1: the first and only <p>, preceded by two <div> siblings -
-        // correct XPath is p[1]; the current implementation produces
-        // p[3] (counting the divs).
+        // A singleton p after div siblings still needs the p[1] selector.
         def xt = new XpathTool(
             """<body>
                  <div>one</div>
@@ -85,9 +68,7 @@ class GXPathToolTest {
         final target = xt.xpath_one('/body/p[@id="target"]')
         assert XpathTool.getXPath(target) == '/body/p[1]'
 
-        // Case 2: same-name siblings, no div siblings - the second <p>'s
-        // correct XPath is p[2]; the current implementation emits no
-        // bracket ("/body/p"), which xpath_one rejects as ambiguous.
+        // Same-name siblings need a position even when there are no divs.
         xt = new XpathTool(
             """<body>
                  <p>first</p>
@@ -95,5 +76,19 @@ class GXPathToolTest {
                </body>""")
         final second = xt.xpath_one('/body/p[@id="second"]')
         assert XpathTool.getXPath(second) == '/body/p[2]'
+    }
+
+    @Test
+    void getXPathCountsSameExpandedNamesAcrossDifferentPrefixes() {
+        final xt = new XpathTool(
+            """<body xmlns="http://www.tei-c.org/ns/1.0"
+                       xmlns:tei="http://www.tei-c.org/ns/1.0">
+                 <p>first</p>
+                 <tei:p id="second">second</tei:p>
+               </body>""")
+        final second = xt.xpath_one('/tei:body/tei:p[2]')
+
+        assert XpathTool.getXPath(second) == '/tei:body/tei:p[2]'
+        assertSame(second, xt.xpath_one(XpathTool.getXPath(second)))
     }
 }

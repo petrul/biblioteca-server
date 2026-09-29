@@ -237,7 +237,7 @@ public class DivService {
 
         final var binobjStrId = String.format("%s_%s_%s", authorId, opusId, binaryObjectId);
 
-        if (! this.cacheBinaryObject.has(binaryObjectId)) {
+        if (! this.cacheBinaryObject.has(binobjStrId)) {
             final TeiDiv op = this.getOpus(authorId, opusId);
             final Node rootNode = this.getNode(op);
             final TeiDocument tei = new TeiDocument(rootNode);

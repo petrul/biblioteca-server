@@ -356,19 +356,28 @@ class WebITest {
         // yet a real, known term from that corpus is already searchable,
         // because AdminService.reindexLuceneForImportedFile now runs as
         // a side effect of every successful TEI import.
-        final hits = luceneSearchFor('cetitoriu')
+        // Prepeleac occurs inside a leaf story; the parent epigraph is excluded.
+        final hits = luceneSearchFor('Prepeleac')
         assert hits.size() > 0
         assert hits.any { it.url.toString().startsWith('creanga/povesti') }
     }
 
     @Test
+    void luceneDoesNotIndexTheIntroductoryTextOfAnOverarchingDiv() {
+        // "Iubite cetitoriu" belongs to the Povești epigraph, outside its
+        // leaf stories. The parent div must never become a search document.
+        final hits = luceneSearchFor('cetitoriu')
+        assert hits.every { it.url.toString() != 'creanga/povesti' }
+    }
+
+    @Test
     void reimportingASingleTeiFileReindexesOnlyItsOwnOperaWithoutDuplicatingEntries() {
-        final before = luceneSearchFor('cetitoriu').findAll { it.url.toString().startsWith('creanga/povesti') }
+        final before = luceneSearchFor('Prepeleac').findAll { it.url.toString().startsWith('creanga/povesti') }
         assert before.size() > 0
 
         this.adminService.reimportFile('/ro/Creanga-Amintiri_din_copilarie.xml', new NullWriter())
 
-        final after = luceneSearchFor('cetitoriu').findAll { it.url.toString().startsWith('creanga/povesti') }
+        final after = luceneSearchFor('Prepeleac').findAll { it.url.toString().startsWith('creanga/povesti') }
         // Same URLs, same count - not doubled by the reimport, and not
         // wiped either (LuceneIndexService.reindexOpus's delete-then-add
         // targets exactly this opus's own documents).
@@ -378,7 +387,9 @@ class WebITest {
         // A DIFFERENT opus's entries must be completely untouched by that
         // single-file reimport - the whole point of doing this per-opus
         // rather than a full rebuild.
-        final otherOpusHits = luceneSearchFor('Negri').findAll { it.url.toString().startsWith('alecsandri/legende/dumbrava_rosie') }
+        // The old query matched the parent div's subtitle, which is
+        // intentionally outside the leaf stanzas now being indexed.
+        final otherOpusHits = luceneSearchFor('năvălire').findAll { it.url.toString().startsWith('alecsandri/legende/dumbrava_rosie') }
         assert otherOpusHits.size() > 0
     }
 
