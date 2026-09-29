@@ -604,39 +604,39 @@ deliberately, not fixed by drive-by.
 
 Measured against a full-corpus import into a fresh Derby:
 
-1. **Per-opus Lucene reindex dominated the visible cadence in the
-   paragraph-indexed run** - about 7ms per paragraph (node copy + prune +
-   XSLT text derivation + index add); an opus with roughly 6,000
-   paragraphs cost about 41s, against a roughly 70s-per-file average
-   between successive "will import" log lines. This measurement predates
-   leaf-div indexing: text is still derived paragraph by paragraph, but
-   the index now writes one document per leaf div, so the indexing cost
-   needs a fresh measurement. The XSLT side is already optimal
-   (ThreadLocal-cached `Transformer` in `ControllerTool`); the cost is
-   largely in the per-paragraph node copy/prune/transform pipeline.
+1. **Per-opus Lucene reindex still dominates a reimport's per-file
+   cadence, even after the leaf-div redesign** - re-measured post
+   leaf-div/XPath fixes against a handful of real, size-varied corpus
+   files (not the old paragraph-indexed run's numbers, which predate
+   every fix this session): Lucene reindexing is consistently
+   ~260-490ms per leaf div indexed (30 leaf divs / 393KB file: 14.7s;
+   51 leaf divs / 1.2MB file: 13.3s; smaller files scale down
+   accordingly), and remains 85-95% of that file's total reimport time
+   in every non-trivial sample. Leaf-div grain reduced the *document
+   count* Lucene has to `addDocument()` (the original goal), but did
+   **not** reduce the dominant cost, which was never Lucene's own
+   indexing overhead - it's deriving every constituent paragraph's text
+   (node copy + prune + XSLT transform) that a leaf div's Document still
+   has to do in full, same total work as the old per-paragraph scheme,
+   just batched into fewer Documents. The XSLT side is already optimal
+   (ThreadLocal-cached `Transformer` in `ControllerTool`); the real lever
+   left is the per-paragraph node copy/prune/transform pipeline itself,
+   not the indexing grain.
 
-2. **The fresher sweep re-lists and re-queries the whole corpus every
-   cycle** - `reimportFresherTeis` runs every 15s (autoimport profile)
-   and does roughly 3,000 individual `getByFilename` queries + file stats per
-   sweep against Derby. A batched `findByFilenameIn(list)` would cut
-   the sweep to a handful of queries.
-
-3. **`getXPath` is O(siblings x depth) per call** - full previous+next
+2. **`getXPath` is O(siblings x depth) per call** - full previous+next
    sibling walks at every recursion level. Only used for divs today
    (few per file), so tolerable; would matter for any per-paragraph
    use.
 
-4. **Hibernate insert batching is configured (`jdbc.batch_size=100`)
-   but disabled** - every `@GeneratedValue` uses `IDENTITY`, which
-   categorically defeats Hibernate's JDBC batching regardless of
-   `batch_size` (a well-known JPA limitation: IDENTITY needs the
-   generated key back immediately after each individual insert). Fixing
-   this for real means switching to `SEQUENCE` with an `allocationSize`,
-   a physical schema change, not a config toggle.
-
-(Resolved since: URL-fragment generation's per-candidate DB round-trip -
+(Resolved since: the fresher sweep's per-file `getByFilename` N+1 -
+`reimportFresherTeis`/`reimportAllTeis` now fetch every filename/timestamp
+in one query. URL-fragment generation's per-candidate DB round-trip -
 `compute_unique_head_url_fragment` now fetches the used-fragments set
-once per div and checks candidates against it in memory.)
+once per div and checks candidates against it in memory. Hibernate insert
+batching - every entity's `@GeneratedValue` switched from `IDENTITY`
+(which categorically disabled batching regardless of `jdbc.batch_size`)
+to a pooled `SEQUENCE`, via a Flyway migration that seeds each new
+sequence above its table's current max id.)
 
 ## Background
 
