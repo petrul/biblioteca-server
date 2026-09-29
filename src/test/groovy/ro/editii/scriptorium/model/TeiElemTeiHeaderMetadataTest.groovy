@@ -40,9 +40,9 @@ class TeiElemTeiHeaderMetadataTest {
         // <language ident="ro">ro</language> under profileDesc
         assertEquals('ro', div.getTeiLanguage().trim())
 
-        // publicationStmt is now matched at all - before the fix the query
-        // returned nothing (null), even though this file has one
-        assertNotNull(div.getLicense(), 'publicationStmt must be found')
+        // the license is the ptr's target URL - publicationStmt's text
+        // content alone is empty whitespace for this file
+        assertEquals('https://creativecommons.org/licenses/by-sa/3.0/deed.ro', div.getLicense())
 
         // sourceDesc: a detached copy of the real element, with its ptr
         // target attribute intact

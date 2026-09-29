@@ -340,7 +340,34 @@ public class TeiElem implements Comparable<TeiElem>, Serializable  {
 
     @JsonIgnore
     public String getLicense() {
-        return parseTeiFile().xpath("/tei:TEI/tei:teiHeader//tei:publicationStmt");
+        final NodeList nodes = parseTeiFile().applyXpathForNodeSet("/tei:TEI/tei:teiHeader//tei:publicationStmt");
+        if (nodes.getLength() == 0)
+            return null;
+        // The corpus's licenses live either in plain text ("no publication
+        // statement available") or in tei:ptr target URLs (the creativecommons
+        // links) - inline both, so the license actually reads as a license
+        // instead of the empty text content a bare ptr leaves behind.
+        final StringBuilder sb = new StringBuilder();
+        appendTextWithPtrTargets(nodes.item(0), sb);
+        return sb.toString().replaceAll("\\s+", " ").trim();
+    }
+
+    private static void appendTextWithPtrTargets(Node node, StringBuilder sb) {
+        if ("ptr".equals(node.getLocalName())) {
+            final Node target = node.getAttributes() == null ? null : node.getAttributes().getNamedItem("target");
+            if (target != null && target.getNodeValue() != null && !target.getNodeValue().isBlank()) {
+                if (sb.length() > 0 && sb.charAt(sb.length() - 1) != ' ')
+                    sb.append(' ');
+                sb.append(target.getNodeValue().trim());
+            }
+            return;
+        }
+        if (node.getNodeType() == Node.TEXT_NODE) {
+            sb.append(node.getNodeValue());
+            return;
+        }
+        for (Node child = node.getFirstChild(); child != null; child = child.getNextSibling())
+            appendTextWithPtrTargets(child, sb);
     }
 
     @JsonIgnore
