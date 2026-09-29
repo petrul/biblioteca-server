@@ -40,7 +40,10 @@ import java.util.stream.IntStream;
 @JsonInclude(JsonInclude.Include.NON_NULL)
 public class TeiElem implements Comparable<TeiElem>, Serializable  {
 
-    public static final String TEI_TEXT_BODY = "/tei:TEI/tei:text/tei:body";
+    // Must stay in sync with TeifileParser.TEI_BODY_XPATH_PREFIX, which
+    // computes the other direction (full xpath -> relative stored path) -
+    // see its own comment for why <text> is bracketed but <body> is not.
+    public static final String TEI_TEXT_BODY = "/tei:TEI/tei:text[1]/tei:body";
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -438,7 +441,12 @@ public class TeiElem implements Comparable<TeiElem>, Serializable  {
             final var onlyDivElements = onlyElements.stream()
                     .filter(it -> it.getNodeName().equals(Util.DIV))
                     .toList();
-            resp = divElemChildForParent(parent, nth, child, onlyDivElements);
+            // Must match XpathTool.getXPath's own bracket-presence rule
+            // (any element sibling, not just same-name ones) - this
+            // navigates to a node whose xpath TeifileParser already
+            // stored using that rule, and the two must agree or a
+            // by-xpath DB lookup for this exact node finds nothing.
+            resp = divElemChildForParent(parent, nth, child, onlyDivElements, onlyElements.size() > 1);
         } else {
             resp = elemChildForParent(parent, nth, child);
         }
@@ -447,12 +455,11 @@ public class TeiElem implements Comparable<TeiElem>, Serializable  {
         return  resp;
     }
 
-    private static TeiElem divElemChildForParent(TeiElem parent, int nth, Node child, List<Node> divElements) {
+    private static TeiElem divElemChildForParent(TeiElem parent, int nth, Node child, List<Node> divElements, boolean hasAnyElementSibling) {
         final int indexOf = divElements.indexOf(child);
         assert indexOf >= 0;
 
-        // the parser will only add a bracket selector if needed
-        final String bracketSelector  = divElements.size() > 1 ?
+        final String bracketSelector = hasAnyElementSibling ?
                 String.format("[%d]", indexOf + 1) : "" ;
 
         final var xpath = String.format("%s/tei:div%s", parent.getXpath(), bracketSelector);

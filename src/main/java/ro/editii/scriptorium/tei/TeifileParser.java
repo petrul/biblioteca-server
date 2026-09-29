@@ -38,7 +38,16 @@ public class TeifileParser {
 
     public static final String DIV = Util.DIV;
 
-    public static final String TEI_BODY_XPATH_PREFIX = "/tei:TEI/tei:text/tei:body";
+    // getXPath's bracket now correctly reflects real sibling structure
+    // (see editii.commons.xml.XpathTool's own fix comment): <text> always
+    // has exactly one preceding element sibling in a valid TEI document -
+    // <teiHeader> is mandatory and always comes first - so it always gets
+    // bracketed too, deterministically. <body> itself stays bracket-free:
+    // nothing in this corpus uses TEI's optional <front>/<back> siblings
+    // to <body> within <text>. Must stay in sync with
+    // TeiElem.TEI_TEXT_BODY, which reconstructs the same prefix in the
+    // other direction (relative stored path -> full xpath).
+    public static final String TEI_BODY_XPATH_PREFIX = "/tei:TEI/tei:text[1]/tei:body";
 
     final TeiFileRepository teiFileRepository;
     final AuthorRepository authorRepository;

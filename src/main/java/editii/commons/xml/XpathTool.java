@@ -210,21 +210,43 @@ public class XpathTool {
             return "";
         }
 
-        final Collection<Node> prevSiblings = previousSiblings(node);
-        int nrPreviousDivs = prevSiblings.stream()
-            .filter(nd -> DIV.equalsIgnoreCase(nd.getNodeName()))
-            .toArray()
-            .length;
-
-        final Collection<Node> nextSiblings = nextSiblings(node);
-        int nrNextDivs = nextSiblings.stream()
-            .filter(nd -> DIV.equalsIgnoreCase(nd.getNodeName()))
+        // XPath's [n] predicate counts same-name siblings, not siblings
+        // named "div" specifically - this used to hardcode DIV, which is
+        // only correct when node itself happens to be a div (the only
+        // case actually exercised today - see TeifileParser, and
+        // README's "Bugs & performance debt"). Fixed to count siblings
+        // that share node's own name, matching real XPath semantics for
+        // every element, not just divs.
+        //
+        // The bracket is only ever omitted for a true singleton - a node
+        // with NO element siblings at all (e.g. <body>, the document's one
+        // and only child at its level). The moment there is any element
+        // sibling, even a differently-named one, the bracket is added -
+        // still unambiguous (XPath's foo[1] is valid regardless of what
+        // else is around it) but keeps a true singleton's path exactly as
+        // it always rendered (no spurious [1] on every ancestor level).
+        // ELEMENT_NODE only: real (pretty-printed) TEI files have
+        // whitespace-only text nodes between every tag, which
+        // previousSiblings()/nextSiblings() return same as any other
+        // node - counting those would put a bracket on almost every
+        // level of almost every real document, including <TEI>/<text>/
+        // <body>, breaking the fixed, bracket-less TEI_TEXT_BODY prefix
+        // TeiElem/TeifileParser rely on to relativize paths.
+        final String nodeName = node.getNodeName();
+        final List<Node> prevElementSiblings = previousSiblings(node).stream()
+            .filter(nd -> nd.getNodeType() == Node.ELEMENT_NODE)
+            .toList();
+        final List<Node> nextElementSiblings = nextSiblings(node).stream()
+            .filter(nd -> nd.getNodeType() == Node.ELEMENT_NODE)
+            .toList();
+        int nrPreviousSameName = prevElementSiblings.stream()
+            .filter(nd -> nodeName.equalsIgnoreCase(nd.getNodeName()))
             .toArray()
             .length;
 
         String bracketSelector = "";
-        if (nrPreviousDivs > 0 || nrNextDivs > 0)
-            bracketSelector = String.format("[%d]", nrPreviousDivs + 1);
+        if (!prevElementSiblings.isEmpty() || !nextElementSiblings.isEmpty())
+            bracketSelector = String.format("[%d]", nrPreviousSameName + 1);
 
         String prefix = namespaceContext.getPrefix(node.getNamespaceURI());
         if (prefix == null)
