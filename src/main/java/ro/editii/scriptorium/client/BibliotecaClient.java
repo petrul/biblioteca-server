@@ -23,7 +23,7 @@ import java.util.Optional;
 
 
 @RequiredArgsConstructor @Log4j2
-public class TextbaseClient {
+public class BibliotecaClient {
 
     public static final String PAGE = "page";
     public static final String SIZE = "size";

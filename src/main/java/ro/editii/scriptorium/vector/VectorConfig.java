@@ -13,7 +13,7 @@ import org.springframework.context.annotation.Primary;
 import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.web.client.RestTemplate;
 import java.util.concurrent.TimeUnit;
-import ro.editii.scriptorium.client.TextbaseClient;
+import ro.editii.scriptorium.client.BibliotecaClient;
 import ro.editii.scriptorium.health.OllamaHealthTracker;
 import ro.editii.scriptorium.search.content.UrlContentResolver;
 
@@ -190,8 +190,8 @@ public class VectorConfig {
     }
 
     @Bean(TEXTBASE_CLIENT)
-    public TextbaseClient textbaseClient(@Value("${textbase.advertised.url:https://textbase.scriptorium.ro}") String baseUrl, RestTemplate restTemplate) {
-        return new TextbaseClient(baseUrl, restTemplate);
+    public BibliotecaClient textbaseClient(@Value("${textbase.advertised.url:https://textbase.scriptorium.ro}") String baseUrl, RestTemplate restTemplate) {
+        return new BibliotecaClient(baseUrl, restTemplate);
     }
 
     @Bean

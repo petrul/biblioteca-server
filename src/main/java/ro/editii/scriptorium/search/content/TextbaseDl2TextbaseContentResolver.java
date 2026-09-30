@@ -3,7 +3,7 @@ package ro.editii.scriptorium.search.content;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 import org.springframework.web.client.RestTemplate;
-import ro.editii.scriptorium.client.TextbaseClient;
+import ro.editii.scriptorium.client.BibliotecaClient;
 
 /**
  * this is a {@link ContentResolver} that maps a downloads-dl path to the TB site url
@@ -12,7 +12,7 @@ import ro.editii.scriptorium.client.TextbaseClient;
 @Log4j2
 public class TextbaseDl2TextbaseContentResolver implements ContentResolver {
 
-    final TextbaseClient textbaseClient;
+    final BibliotecaClient textbaseClient;
 
     /**
      * get the content identified by the given id
@@ -57,7 +57,7 @@ public class TextbaseDl2TextbaseContentResolver implements ContentResolver {
     }
 
     public static void main(String[] args) {
-        final TextbaseClient tbc = new TextbaseClient("http://localhost:8080", new RestTemplate());
+        final BibliotecaClient tbc = new BibliotecaClient("http://localhost:8080", new RestTemplate());
         final var cr = new TextbaseDl2TextbaseContentResolver(tbc);
         System.out.println(cr.resolve("cosbuc/nepublicate_in_volum/0073_41116_cosbuc__nepublicate_in_volum__petrea.txt#72-0"));
         System.out.println(cr.resolve("inexistant"));

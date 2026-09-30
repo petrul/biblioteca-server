@@ -19,7 +19,7 @@ import ro.editii.scriptorium.MultilangTeiRepoConfig
 import ro.editii.scriptorium.TestConfig
 import ro.editii.scriptorium.TestUtils
 import ro.editii.scriptorium.BibliotecaServer
-import ro.editii.scriptorium.client.TextbaseClient
+import ro.editii.scriptorium.client.BibliotecaClient
 import ro.editii.scriptorium.dao.TeiFileRepository
 import ro.editii.scriptorium.dto.HitDto
 import ro.editii.scriptorium.model.Languages
@@ -34,7 +34,7 @@ import static ro.editii.scriptorium.TestUtils.TEI_ELEM
 /**
  * Same fixture-loading convention as SearchITest (reimport real TEI
  * fixtures into H2, then exercise real REST endpoints through
- * TextbaseClient) but for /api/search/lucene - no Milvus/Ollama setup
+ * BibliotecaClient) but for /api/search/lucene - no Milvus/Ollama setup
  * needed here (FakeEmbedderTestConfig keeps the app context from touching
  * a real embedder at all, same reasoning as SearchITest), only a fresh
  * per-test Lucene index directory (see LuceneIndexService).
@@ -68,7 +68,7 @@ import static ro.editii.scriptorium.TestUtils.TEI_ELEM
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class LuceneSearchITest {
 
-    @Autowired @Lazy TextbaseClient tbc
+    @Autowired @Lazy BibliotecaClient tbc
     @Autowired AdminService adminService
     @Autowired JdbcTemplate jdbcTemplate
     @Autowired TeiFileRepository teiFileRepository

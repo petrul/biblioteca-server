@@ -16,7 +16,7 @@ import org.springframework.http.converter.json.GsonHttpMessageConverter;
 import org.springframework.web.client.RestTemplate;
 import ro.editii.scriptorium.cache.CacheConf;
 import ro.editii.scriptorium.cache.DiskCache;
-import ro.editii.scriptorium.client.TextbaseClient;
+import ro.editii.scriptorium.client.BibliotecaClient;
 import ro.editii.scriptorium.dto.OpusRemovedDto;
 import ro.editii.scriptorium.dto.TeiDivDto;
 import ro.editii.scriptorium.dto.UserLoggedInDto;
@@ -96,11 +96,11 @@ public class TestConfig {
     }
 
     @Bean(VectorConfig.TEXTBASE_CLIENT) @Lazy @Primary
-    TextbaseClient textbaseClient(@LocalServerPort int port,
+    BibliotecaClient textbaseClient(@LocalServerPort int port,
                                   @Qualifier(REST_TEMPLATE_NO_REDIRECT) RestTemplate restTemplateNoRedirect) {
         final String baseUrl = String.format("http://localhost:%d", port);
         final RestTemplate rt = restTemplateNoRedirect;
-        return new TextbaseClient(baseUrl, rt);
+        return new BibliotecaClient(baseUrl, rt);
     }
 
     @Bean @Primary

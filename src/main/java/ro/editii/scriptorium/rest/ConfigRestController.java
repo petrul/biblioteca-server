@@ -57,7 +57,7 @@ public class ConfigRestController {
      * vectors. biblioteca-server is the source of truth for all three --
      * textbase-nestjs has no independent configuration of its own for any
      * of this, it fetches it from here at startup instead (see
-     * TextbaseClient.getConfig() there). Deliberately excludes network
+     * BibliotecaClient.getConfig() there). Deliberately excludes network
      * addresses (Kafka broker, Milvus host, Ollama host) -- those are each
      * service's own deployment/networking concern, not a naming
      * convention both sides need to agree on.

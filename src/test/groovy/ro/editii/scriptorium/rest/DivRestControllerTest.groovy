@@ -14,7 +14,7 @@ import org.springframework.test.context.TestPropertySource
 import ro.editii.scriptorium.TestConfig
 import ro.editii.scriptorium.TestUtils
 import ro.editii.scriptorium.Util
-import ro.editii.scriptorium.client.TextbaseClient
+import ro.editii.scriptorium.client.BibliotecaClient
 import ro.editii.scriptorium.dao.TeiDivRepository
 import ro.editii.scriptorium.service.AdminService
 
@@ -37,7 +37,7 @@ class DivRestControllerTest {
     @Autowired AdminService adminService
     @Autowired JdbcTemplate jdbcTemplate
     @Autowired TeiDivRepository teiDivRepository
-    @Autowired TextbaseClient tbc
+    @Autowired BibliotecaClient tbc
 
     @Test
     void paragraphs() {

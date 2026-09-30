@@ -17,7 +17,7 @@ import ro.editii.scriptorium.MultilangTeiRepoConfig
 import ro.editii.scriptorium.TestConfig
 import ro.editii.scriptorium.TestUtils
 import ro.editii.scriptorium.BibliotecaServer
-import ro.editii.scriptorium.client.TextbaseClient
+import ro.editii.scriptorium.client.BibliotecaClient
 import ro.editii.scriptorium.dao.TeiDivRepository
 import ro.editii.scriptorium.model.Languages
 import ro.editii.scriptorium.model.TeiDiv
@@ -60,7 +60,7 @@ import static ro.editii.scriptorium.TestUtils.TEI_ELEM
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class FragmentControllerITest {
 
-    @Autowired @Lazy TextbaseClient tbc
+    @Autowired @Lazy BibliotecaClient tbc
     @Autowired AdminService adminService
     @Autowired JdbcTemplate jdbcTemplate
     @Autowired TeiDivRepository teiDivRepository

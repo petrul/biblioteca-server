@@ -30,7 +30,7 @@ import org.springframework.web.client.RestTemplate
 import ro.editii.scriptorium.TestConfig
 import ro.editii.scriptorium.TestUtils
 import ro.editii.scriptorium.cache.DiskCache
-import ro.editii.scriptorium.client.TextbaseClient
+import ro.editii.scriptorium.client.BibliotecaClient
 import ro.editii.scriptorium.dao.AuthorRepository
 import ro.editii.scriptorium.dao.TeiDivRepository
 import ro.editii.scriptorium.kafka.TextbaseEventsPublisher
@@ -88,7 +88,7 @@ import static ro.editii.scriptorium.TestUtils.TEI_ELEM
 class WebITest {
 
     @LocalServerPort int port
-    @Autowired TextbaseClient tbc
+    @Autowired BibliotecaClient tbc
     @Autowired DivController divController
     @Autowired @Qualifier(TestConfig.REST_TEMPLATE_NO_REDIRECT) RestTemplate restTemplate
     @Autowired RestTemplate restTemplateNoRedirect
