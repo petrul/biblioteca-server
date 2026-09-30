@@ -53,7 +53,7 @@ idea {
 }
 
 group = 'ro.editii'
-version = '0.9.10-SNAPSHOT'
+version = '0.9.11-SNAPSHOT'
 
 java {
     sourceCompatibility = '25'
@@ -373,6 +373,25 @@ bootRun {
 
 tasks.withType(Test).configureEach {
     jvmArgs '-Xss10m' // needed for the recursion of serializing DOM Nodes
+    // A bare fork inherits Gradle's default 512m cap, which WebITest's
+    // full-corpus reimport + incremental Lucene reindex on top of every
+    // Spring context cached earlier in the same JVM exhausts (the
+    // StringUTF16 OOM that killed Gradle Test Executor mid-WebITest).
+    maxHeapSize = '2g'
+    // ... and keep the TestContext cache itself bounded: unbounded, every
+    // distinct context configuration from earlier classes stays cached for
+    // the JVM's lifetime (~19 Hikari pools were resident at OOM time).
+    systemProperty 'spring.test.context.cache.maxSize', '4'
+    // Opt-in Java Flight Recorder profiling of a test fork:
+    // $ ./gradlew -Pprofile=zmeu -Pjfr=/tmp/webitest.jfr integrationTest --tests '*WebITest'
+    // ... or the same through rake (which loads the profile env itself):
+    // $ TEST_JFR=/tmp/webitest.jfr rake itest[zmeu,WebITest]
+    // Records CPU (ExecutionSample) + allocation sampling (settings=profile);
+    // inspect with `jfr summary` / `jfr print --events jdk.ObjectAllocationSample`.
+    final jfrTarget = System.getenv('TEST_JFR') ?: (project.findProperty('jfr') ?: null)
+    if (jfrTarget) {
+        jvmArgs "-XX:StartFlightRecording=filename=${jfrTarget},settings=profile,dumponexit=true"
+    }
     // $ ./gradlew -Pprofile=ci test   (resolveProfile() below; the rakefile
     // always passes -Pprofile=<profile> this same way). Plain `test`/
     // `unittest`/`integrationTest` with nothing set default to 'ci' - the

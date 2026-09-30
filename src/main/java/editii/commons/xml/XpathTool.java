@@ -140,11 +140,13 @@ public class XpathTool {
     }
 
 
-    // XPathFactory.newInstance() does JDK service-provider discovery
-    // (scanning the classpath's META-INF/services) on every call - cheap
-    // once, but this app calls _applyXpath() once per TeiElem, so a full
-    // corpus reimport (~167k elements) used to pay that classpath scan
-    // roughly 167k times over. Lazily created once per XpathTool instance
+    // The XPath engine is Saxon, pinned by direct instantiation: Saxon-HE
+    // ships no META-INF/services entry for javax.xml.xpath.XPathFactory (only
+    // for TransformerFactory), so XPathFactory.newInstance() silently fell
+    // back to the JDK's internal Xalan - whose per-evaluate() DOM2DTM build
+    // (a full int[] copy of the document per query) measured as ~75% of
+    // reimport/reindex CPU and ~86% of allocation churn. Saxon instead
+    // navigates the parsed DOM in place. Created once per XpathTool instance
     // (one per parsed TEI file - see TeiElem.parseTeiFile's cache_parsedFiles)
     // and reused for every subsequent xpath string against that same file;
     // neither XPath nor XPathExpression is documented thread-safe, but
@@ -161,9 +163,21 @@ public class XpathTool {
     // under the same `synchronized` guard as the XPath above.
     private java.util.Map<String, XPathExpression> compiledXpaths = new java.util.HashMap<>();
 
+    /**
+     * The concrete JAXP XPath engine this tool evaluates with - Saxon
+     * (net.sf.saxon.xpath.XPathEvaluator) since _applyXpath pinned it.
+     * Null before the first evaluation (the engine is lazily created).
+     * Exists so a unit test can assert the engine is Saxon and not the
+     * JDK's internal Xalan, whose silent selection via
+     * XPathFactory.newInstance() went unnoticed for years.
+     */
+    public String getXpathEngine() {
+        return this.xpath == null ? null : this.xpath.getClass().getName();
+    }
+
     public synchronized Object _applyXpath(String str_xpath, QName qname) throws XPathExpressionException {
         if (this.xpath == null) {
-            final XPathFactory xPathfactory = XPathFactory.newInstance();
+            final XPathFactory xPathfactory = new net.sf.saxon.xpath.XPathFactoryImpl();
             this.xpath = xPathfactory.newXPath();
             this.xpath.setNamespaceContext(namespaceContext);
         }
@@ -196,6 +210,53 @@ public class XpathTool {
                 result.add(node);
         }
         return result;
+    }
+
+    /**
+     * Positional path of a node within its parsed document - "1/2/3/7":
+     * the 1-based child index at every level from the document root,
+     * counting ALL node kinds (elements, text, whitespace) - the same
+     * semantics as TeiElem.nth, but as the full chain from the document.
+     * Resolving it (resolveDomPath) needs no XPath engine at all, just
+     * getChildNodes().item(i-1) hops, and it is stable for any unchanged
+     * document. Computed by walking up the DOM, so it costs O(depth +
+     * preceding siblings) once, at import time.
+     */
+    public static String getDomPath(Node node) {
+        final List<Integer> indices = new ArrayList<>();
+        for (Node crt = node; crt.getParentNode() != null; crt = crt.getParentNode()) {
+            int index = 1;
+            for (Node sibling = crt.getPreviousSibling(); sibling != null; sibling = sibling.getPreviousSibling())
+                index++;
+            indices.add(0, index);
+        }
+        final StringBuilder sb = new StringBuilder();
+        for (int i = 0; i < indices.size(); i++) {
+            if (i > 0)
+                sb.append('/');
+            sb.append(indices.get(i));
+        }
+        return sb.toString();
+    }
+
+    /**
+     * Resolve a positional path produced by getDomPath() against a
+     * document root: O(depth) getChildNodes() hops, no XPath engine
+     * involved. Returns null when any index falls outside the actual
+     * child list - a stale path against a changed document - so callers
+     * fall back to their xpath resolution instead of silently landing on
+     * a wrong node.
+     */
+    public static Node resolveDomPath(Node root, String domPath) {
+        Node crt = root;
+        for (final String indexStr : domPath.split("/")) {
+            final NodeList children = crt.getChildNodes();
+            final int index = Integer.parseInt(indexStr) - 1; // 1-based, like nth
+            if (index < 0 || index >= children.getLength())
+                return null;
+            crt = children.item(index);
+        }
+        return crt;
     }
 
     public static String getXPathRelativeTo(Node node, String beginning) {

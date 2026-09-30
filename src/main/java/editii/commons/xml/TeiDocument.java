@@ -18,7 +18,12 @@ public class TeiDocument extends XpathTool {
 
     public byte[] getBinaryObject(String id) {
         assert id != null;
-        final String xpath = String.format("//tei:binaryObject[@xml:id='%s']", id);
+        // .// (relative descendant search), not // : this tool's root is
+        // usually a detached deep-copied div node (see DivService.getBinaryObject)
+        // whose owner Document is empty - an absolute // path resolves against
+        // that empty document and finds nothing under a spec-correct engine
+        // (Saxon). Xalan only made // work by rooting its DTM at the node.
+        final String xpath = String.format(".//tei:binaryObject[@xml:id='%s']", id);
         final NodeList nodeList = this.applyXpathForNodeSet(xpath);
 
         if (nodeList.getLength() < 1)

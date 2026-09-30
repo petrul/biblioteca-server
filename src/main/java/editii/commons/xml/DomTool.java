@@ -5,11 +5,11 @@ import org.w3c.dom.Element;
 import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 
+import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.ParserConfigurationException;
 import javax.xml.transform.Transformer;
 import javax.xml.transform.TransformerException;
-import javax.xml.transform.TransformerFactory;
 import javax.xml.transform.TransformerFactoryConfigurationError;
 import javax.xml.transform.dom.DOMSource;
 import javax.xml.transform.stream.StreamResult;
@@ -37,7 +37,11 @@ public class DomTool {
 
         Transformer transformer;
         try {
-            transformer = TransformerFactory.newInstance().newTransformer();
+            // Saxon explicitly, not TransformerFactory.newInstance(): that
+            // only finds Saxon via Saxon-HE's META-INF/services entry, the
+            // same classpath-discovery scheme that left _applyXpath() on the
+            // JDK's internal Xalan for years. Pinned here like XsltTool does.
+            transformer = new net.sf.saxon.TransformerFactoryImpl().newTransformer();
             transformer.transform(new DOMSource(node), new StreamResult(os));
         } catch (TransformerFactoryConfigurationError | TransformerException e) {
             throw new RuntimeException(e);
@@ -64,13 +68,24 @@ public class DomTool {
         return serialize(node);
     }
 
-    public static Document newDocument() {
+    // DocumentBuilderFactory.newInstance() does a service-provider
+    // classpath scan on every call, and newDocumentBuilder() then sets up
+    // a full parser configuration - together they measured as ~11% of the
+    // WebITest test JVM's CPU, paid once per deepCopy(), i.e. once per
+    // TeiElem.getNode(). The builder is only ever asked for an empty
+    // Document here, never a parse, so one builder per thread
+    // (DocumentBuilder is stateful and not thread-safe) safely
+    // amortizes both costs away.
+    private static final ThreadLocal<DocumentBuilder> NEW_DOCUMENT_BUILDER = ThreadLocal.withInitial(() -> {
         try {
-            return DocumentBuilderFactory.newInstance()
-                    .newDocumentBuilder().newDocument();
+            return DocumentBuilderFactory.newInstance().newDocumentBuilder();
         } catch (ParserConfigurationException e) {
             throw new RuntimeException(e);
         }
+    });
+
+    public static Document newDocument() {
+        return NEW_DOCUMENT_BUILDER.get().newDocument();
     }
 
     public static Node deepCopy(Node node) {

@@ -64,6 +64,17 @@ public class TeiElem implements Comparable<TeiElem>, Serializable  {
     @EqualsAndHashCode.Include
     protected String xpath;
 
+    /**
+     *  positional DOM path ("2/3/7": the 1-based child index at each level
+     *  from the parsed document's root, all node kinds counted - the same
+     *  semantics as nth, but the full chain from the document). A
+     *  resolution fast path for getNode() that needs no XPath engine:
+     *  computed once at import (TeifileParser, right next to xpath).
+     *  null for rows imported before this column existed - getNode()
+     *  falls back to the xpath evaluation for those.
+     */
+    protected String domPath;
+
     @Enumerated(EnumType.STRING)
     Languages lang;
 
@@ -135,6 +146,18 @@ public class TeiElem implements Comparable<TeiElem>, Serializable  {
             throw new IllegalStateException("you must set a TeiRepo in order to retrieve the file content of teiFile");
 
         final XpathTool xpathTool = parseTeiFile();
+
+        // Fast path: positional resolution, no XPath engine involved. The
+        // name check turns a stale path (document edited since import)
+        // into a fallback to the xpath below, which then reports a moved
+        // or missing element with its familiar IllegalStateException -
+        // instead of the path silently resolving to a wrong node.
+        final String domPath = this.getDomPath();
+        if (domPath != null) {
+            final Node resolved = XpathTool.resolveDomPath(xpathTool.getRoot(), domPath);
+            if (resolved != null && (this.getName() == null || this.getName().equals(resolved.getLocalName())))
+                return this._node = DomTool.deepCopy(resolved);
+        }
 
         String xpath_expr = TEI_TEXT_BODY + this.getXpath();
         if (xpath_expr.endsWith("/")) // remove trailing "/"
@@ -301,27 +324,59 @@ public class TeiElem implements Comparable<TeiElem>, Serializable  {
     }
 
     /**
-     * retrieves language information as described in the TEI file, if any
+     * retrieves language information as described in the TEI file, if any.
+     *
+     * The teiHeader lives outside this element, so these queries run
+     * against the cached parsed document (parseTeiFile()), never against
+     * getNode()'s detached deep copy: an absolute /tei:TEI/... path
+     * resolves against the copy's empty owner document and returns
+     * nothing - the old getNode()-rooted form silently never matched
+     * under any engine, Xalan included.
      */
     @JsonIgnore
     public String getTeiLanguage() {
-        final Node node = this.getNode();
-        final XpathTool xp = new XpathTool(node);
-        return xp.xpath("/tei:TEI/tei:teiHeader//tei:profileDesc//tei:language");
+        return parseTeiFile().xpath("/tei:TEI/tei:teiHeader//tei:profileDesc//tei:language");
     }
 
     @JsonIgnore
     public String getLicense() {
-        final Node node = getNode();
-        return new XpathTool(node).xpath("/tei:TEI/tei:teiHeader//tei:publicationStmt");
+        final NodeList nodes = parseTeiFile().applyXpathForNodeSet("/tei:TEI/tei:teiHeader//tei:publicationStmt");
+        if (nodes.getLength() == 0)
+            return null;
+        // The corpus's licenses live either in plain text ("no publication
+        // statement available") or in tei:ptr target URLs (the creativecommons
+        // links) - inline both, so the license actually reads as a license
+        // instead of the empty text content a bare ptr leaves behind.
+        final StringBuilder sb = new StringBuilder();
+        appendTextWithPtrTargets(nodes.item(0), sb);
+        return sb.toString().replaceAll("\\s+", " ").trim();
+    }
+
+    private static void appendTextWithPtrTargets(Node node, StringBuilder sb) {
+        if ("ptr".equals(node.getLocalName())) {
+            final Node target = node.getAttributes() == null ? null : node.getAttributes().getNamedItem("target");
+            if (target != null && target.getNodeValue() != null && !target.getNodeValue().isBlank()) {
+                if (sb.length() > 0 && sb.charAt(sb.length() - 1) != ' ')
+                    sb.append(' ');
+                sb.append(target.getNodeValue().trim());
+            }
+            return;
+        }
+        if (node.getNodeType() == Node.TEXT_NODE) {
+            sb.append(node.getNodeValue());
+            return;
+        }
+        for (Node child = node.getFirstChild(); child != null; child = child.getNextSibling())
+            appendTextWithPtrTargets(child, sb);
     }
 
     @JsonIgnore
     public Node getSourceDesc() {
-        final Node node = getNode();
-        final NodeList nodes = new XpathTool(node).applyXpathForNodeSet("/tei:TEI/tei:teiHeader//tei:sourceDesc");
+        final NodeList nodes = parseTeiFile().applyXpathForNodeSet("/tei:TEI/tei:teiHeader//tei:sourceDesc");
         if (nodes.getLength() > 0)
-            return nodes.item(0);
+            // deep copy: the parsed document is the shared per-file cache -
+            // callers must not be able to mutate it (same rule as getNode())
+            return DomTool.deepCopy(nodes.item(0));
         else
             return null;
     }
