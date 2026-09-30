@@ -55,3 +55,16 @@ saving/committing anything that tool produces.
   max `id`. This is the tool that found the 2026-09-29 prod incident
   documented in the main README's "Persistence, caching, messaging"
   section - safe to run against prod at any time, it only reads.
+- `ij` - Derby's own interactive SQL shell (`org.apache.derby.tools.ij`),
+  auto-connected to `DB_URL` on startup. Same pass-store loader and jar
+  resolution as `run.sh` (reuses whatever Gradle already cached, falling
+  back to Maven Central) - use this instead of `run.sh` when you want a
+  raw interactive `ij>` prompt rather than a canned Groovy script.
+
+  ```bash
+  sql/ij <profile>
+
+  # examples
+  sql/ij prod
+  sql/ij zmeu
+  ```

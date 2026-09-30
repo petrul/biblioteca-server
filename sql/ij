@@ -1,0 +1,67 @@
+#!/usr/bin/env bash
+# Interactive Derby ij client for any biblioteca profile - same
+# pass-store env loader as run.sh, auto-connected to DB_URL on startup
+# so you land straight in an ij prompt instead of typing CONNECT by hand.
+#
+# Usage: sql/ij <profile>
+#   sql/ij prod
+#   sql/ij zmeu
+#
+# <profile> is the pass-store stage under biblioteca/ (prod, zmeu, dev, ...).
+# NEVER print DB_URL or anything derived from it - see sql/README.md.
+set -euo pipefail
+
+PROFILE="${1:?usage: ij <profile>}"
+
+source "${LOAD_ENV_SH:-/home/apps/secrets/load-env.sh}" "biblioteca/${PROFILE}"
+
+# Derby client jars: reuse what Gradle already resolved on this machine
+# if present (same derbyclient/derbyshared version build.gradle pins),
+# else fetch straight from Maven Central into a small local cache - same
+# resolve_jar approach as run.sh.
+CACHE_DIR="${SQL_CLIENT_CACHE_DIR:-$HOME/.cache/biblioteca-sql-client}"
+mkdir -p "$CACHE_DIR"
+
+resolve_jar() {
+    local group="$1" artifact="$2" version="$3"
+    local found
+    found=$(find "$HOME/.gradle/caches/modules-2/files-2.1/${group}/${artifact}/${version}" \
+        -iname "${artifact}-${version}.jar" 2>/dev/null | head -1)
+    if [ -n "$found" ]; then
+        echo "$found"
+        return
+    fi
+    local dest="$CACHE_DIR/${artifact}-${version}.jar"
+    if [ ! -f "$dest" ]; then
+        curl -sL "https://repo1.maven.org/maven2/${group//./\/}/${artifact}/${version}/${artifact}-${version}.jar" -o "$dest"
+    fi
+    echo "$dest"
+}
+
+# derbytools (org.apache.derby.tools.ij's own jar) isn't a build.gradle
+# dependency - the app is a pure Network Server client and never needs
+# the interactive tool itself - so this always falls back to the Maven
+# Central fetch above, unlike derby/derbyclient/derbyshared, which
+# run.sh's/the test suite's own use already leaves sitting in the
+# Gradle cache.
+CP="$(resolve_jar org.apache.derby derbytools 10.17.1.0)"
+CP="$CP:$(resolve_jar org.apache.derby derbyclient 10.17.1.0)"
+CP="$CP:$(resolve_jar org.apache.derby derbyshared 10.17.1.0)"
+# The embedded engine jar is never used to actually connect (DB_URL is
+# always a jdbc:derby://host:port/... network URL below) - it's on the
+# classpath only because ij unconditionally probes for
+# org.apache.derby.jdbc.EmbeddedDriver at startup regardless of
+# ij.protocol, and without the engine jar that probe dies with an
+# uncaught NoClassDefFoundError (JDBCBoot) instead of the harmless
+# ClassNotFoundException it silently swallows when the class is
+# entirely absent.
+CP="$CP:$(resolve_jar org.apache.derby derby 10.17.1.0)"
+
+# ij auto-connects on startup when ij.database is set, then drops into
+# its normal interactive prompt. ij.protocol must be the network client
+# prefix (not its "jdbc:derby:" embedded default) so it uses derbyclient
+# against DB_URL's host:port instead of trying to boot an embedded
+# database - strip that same prefix from DB_URL so host/port/db/attrs
+# (including the embedded user/password) pass through unchanged and
+# unprinted.
+java -Dij.protocol="jdbc:derby://" -Dij.database="${DB_URL#jdbc:derby://}" -cp "$CP" org.apache.derby.tools.ij
