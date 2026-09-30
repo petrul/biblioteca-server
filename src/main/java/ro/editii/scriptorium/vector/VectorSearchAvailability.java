@@ -27,7 +27,7 @@ import ro.editii.scriptorium.Util;
  * someone re-embeds the corpus with the new model - this lets the rest
  * of the app (DB-backed search, everything not vector-search-related) keep
  * working normally in the meantime instead of the whole app failing to
- * start or every /api/search/milvus and /api/search/ann call blowing up.
+ * start or every /api/search/vector and /api/search/ann call blowing up.
  *
  * A one-shot startup check alone also made the flag sticky in both
  * directions: a Milvus outage at boot kept search off forever (until the
@@ -80,7 +80,7 @@ public class VectorSearchAvailability {
             log.info("Vector similarity search available: vector collection ({}) reachable.", this.vectorCollection.getName());
         } else {
             log.warn("Vector similarity search DISABLED (vector collection '{}' not reachable). "
-                            + "/api/search/milvus and /api/search/ann will return empty results until the next periodic check picks it up.",
+                            + "/api/search/vector and /api/search/ann will return errors until the next periodic check picks it up.",
                     this.vectorCollection.getName());
         }
     }
@@ -121,7 +121,7 @@ public class VectorSearchAvailability {
             log.info("Vector similarity search available again: vector collection ({}) reachable.", this.vectorCollection.getName());
         } else {
             log.warn("Vector similarity search now DISABLED (vector collection '{}' unreachable since the last check) - "
-                            + "/api/search/milvus and /api/search/ann will return empty results until the next check finds it back.",
+                            + "/api/search/vector and /api/search/ann will return errors until the next check finds it back.",
                     this.vectorCollection.getName());
         }
     }

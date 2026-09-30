@@ -178,6 +178,14 @@ task :'check-env', [:task_profile] do |_task, args|
   puts "> #{task_profile} environment is complete (#{expected.length} required value(s) present)"
 end
 
+desc "Start a local profile server briefly and synchronize its OpenAPI YAML"
+task :'sync-openapi', [:task_profile] do |_task, args|
+  task_profile = args[:task_profile] || profile
+  load_profile_env(task_profile)
+  puts "Synchronizing OpenAPI from local #{task_profile} application..."
+  sh "#{GRADLE} -Pprofile=#{Shellwords.escape(task_profile)} syncOpenApi --no-daemon"
+end
+
 # Injects biblioteca/ci/* from the local `pass` store as real process
 # env vars, BEFORE gradle runs - build.gradle's own fallback logic
 # already prefers System.getenv(key) over .env.ci, so this alone is enough

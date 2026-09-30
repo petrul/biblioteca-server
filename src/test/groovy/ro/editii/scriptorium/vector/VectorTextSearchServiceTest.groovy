@@ -95,7 +95,8 @@ class VectorTextSearchServiceTest {
         this.availability.available = false
         final service = new VectorTextSearchService(collection, embedder, contentResolver, availability)
 
-        assert service.search("query").isEmpty()
+        final ex = shouldFail { service.search("query") }
+        assert ex instanceof VectorDependencyUnavailableException
 
         assert this.embedder.encodedQueries.isEmpty()
         assert this.collection.searches == 0
@@ -123,18 +124,19 @@ class VectorTextSearchServiceTest {
     }
 
     @Test
-    void embedderFailureDegradesWithoutCallingTheStore() {
+    void embedderFailureReturnsServiceUnavailableWithoutCallingTheStore() {
         this.availability.available = true
         this.embedder.throwOnEncode = new IllegalStateException("offline")
         final service = new VectorTextSearchService(collection, embedder, contentResolver, availability)
 
-        assert service.search("query").isEmpty()
+        final ex = shouldFail { service.search("query") }
+        assert ex instanceof VectorDependencyUnavailableException
 
         assert this.collection.searches == 0
     }
 
     @Test
-    void storeFailureDegradesToEmptyResults() {
+    void storeFailureReturnsServiceUnavailable() {
         // A mid-run store outage/restart: the availability flag is still
         // true (its periodic re-check only flips within its next interval),
         // so the search goes through to a dead store - and must degrade to
@@ -144,7 +146,8 @@ class VectorTextSearchServiceTest {
         this.collection.failWith = new IllegalStateException("connection refused")
         final service = new VectorTextSearchService(collection, embedder, contentResolver, availability)
 
-        assert service.search("query", 4).isEmpty()
+        final ex = shouldFail { service.search("query", 4) }
+        assert ex instanceof VectorDependencyUnavailableException
 
         assert this.embedder.encodedQueries == ["query"]
         assert this.collection.searches == 1

@@ -94,9 +94,9 @@ public class SearchRestController extends CommonControllerUtil {
         return resp;
     }
 
-    @GetMapping("/milvus")
+    @GetMapping("/vector")
     @ResponseBody
-    public List<HitDto> searchMilvus(
+    public List<HitDto> searchVector(
             @RequestParam(name = "q") @Size(min = 3) String q,
             @RequestParam(name = "limit", required = false, defaultValue = "10") int limit,
             UriComponentsBuilder uriComponentsBuilder) {
@@ -108,7 +108,7 @@ public class SearchRestController extends CommonControllerUtil {
 
         final var resp  = divs.stream().map(it -> HitDto.from(it)).toList();
 
-        log.info(String.format("searchMilvus q=[%s](%d). took %s",
+        log.info(String.format("searchVector q=[%s](%d). took %s",
                 Util.maxNCharsEllipsis(q, 10),
                 q.length(),
                 watch));
@@ -172,7 +172,7 @@ public class SearchRestController extends CommonControllerUtil {
             UriComponentsBuilder uriComponentsBuilder, HttpServletRequest request
     ) {
         if (!this.vectorSearchAvailability.isAvailable())
-            return EnvelopeDto.Hits.builder().data(new HitsDto(new HitDto[0])).build();
+            throw new VectorDependencyUnavailableException("Vector search is temporarily unavailable");
 
         final TeiElem elem;
 
@@ -203,7 +203,7 @@ public class SearchRestController extends CommonControllerUtil {
                     vector = Util.runWithTimeout(() -> this.embedder.encode(text), EMBED_TIMEOUT_SECONDS);
                 } catch (Exception e) {
                     log.warn("Embedder call failed/timed out ({}) - degrading to empty results for this ann() call.", e.getMessage());
-                    return EnvelopeDto.Hits.builder().data(new HitsDto(new HitDto[0])).build();
+                    throw new VectorDependencyUnavailableException("Embedding service did not respond in time", e);
                 }
             }
             hits = VectorUtils.searchHitsToHits(
@@ -217,7 +217,7 @@ public class SearchRestController extends CommonControllerUtil {
             // re-check flips the flag within its next minute-long interval,
             // after which the isAvailable() guard at the top handles it.
             log.warn("Vector store failed ({}) - degrading to empty results for this ann() call.", e.getMessage());
-            return EnvelopeDto.Hits.builder().data(new HitsDto(new HitDto[0])).build();
+            throw new VectorDependencyUnavailableException("Vector store did not respond", e);
         }
         final HitDto[] dtos = hits.stream().map(it -> {
             final var dto = HitDto.from(it);

@@ -99,8 +99,8 @@ public class TextbaseClient {
     }
 
 
-    public HitDto[] get_api_search_milvus(String query) {
-        final var url = url("/api/search/milvus") + "?q=" + Util.urlEncode(query);
+    public HitDto[] get_api_search_vector(String query) {
+        final var url = url("/api/search/vector") + "?q=" + Util.urlEncode(query);
 
         final HttpHeaders headers = acceptJsonHeader();
         final HttpEntity<String> req = new HttpEntity<>(headers);

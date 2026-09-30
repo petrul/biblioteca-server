@@ -118,7 +118,7 @@ class SearchITest {
     @Test
     void search() {
         _1:{
-            final resp = this.tbc.get_api_search_milvus("moldov")
+            final resp = this.tbc.get_api_search_vector("moldov")
             final divs = resp.findAll {it -> it.type == HitDto.TYPES.div.name()}
             final milv = resp.findAll {it -> it.type == HitDto.TYPES.milvus.name()}
             assert divs.size() == 0

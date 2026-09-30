@@ -44,13 +44,13 @@ public class VectorTextSearchService {
 
     public List<VectorHit> search(String textQuery, int topK) {
         if (!this.vectorSearchAvailability.isAvailable())
-            return List.of();
+            throw new VectorDependencyUnavailableException("Vector search is temporarily unavailable");
         final float[] vector;
         try {
             vector = Util.runWithTimeout(() -> this.embedder.encode(textQuery), EMBED_TIMEOUT_SECONDS);
         } catch (Exception e) {
             log.warn("Embedder call failed/timed out ({}) - degrading to empty results for this search.", e.getMessage());
-            return List.of();
+            throw new VectorDependencyUnavailableException("Embedding service did not respond in time", e);
         }
         return this.search(vector, topK);
     }
@@ -72,7 +72,7 @@ public class VectorTextSearchService {
 
     public List<VectorHit> search(float[] vector, int topK) {
         if (!this.vectorSearchAvailability.isAvailable())
-            return List.of();
+            throw new VectorDependencyUnavailableException("Vector store is temporarily unavailable");
         try {
             return VectorUtils.searchHitsToHits(
                     this.vectorCollection.searchHits(vector, topK), this.contentResolver);
@@ -84,7 +84,7 @@ public class VectorTextSearchService {
             // and VectorSearchAvailability's periodic re-check only flips it
             // within its next minute-long interval.
             log.warn("Vector store search failed ({}) - degrading to empty results for this search.", e.getMessage());
-            return List.of();
+            throw new VectorDependencyUnavailableException("Vector store did not respond", e);
         }
     }
 

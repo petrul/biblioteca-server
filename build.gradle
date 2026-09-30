@@ -365,7 +365,7 @@ bootRun {
     // of that - it's a standing behavior flag for local bootRun, not a
     // profile choice itself (see `$ gradle bootRun -Pprofile=air,autoimport`
     // further down for the pattern this replaced).
-    final activeProfiles = (['autoimport'] + resolveProfile().split(',').toList()).findAll { !it.isBlank() }.unique()
+    final activeProfiles = ((project.hasProperty('noAutoImport') ? [] : ['autoimport']) + resolveProfile().split(',').toList()).findAll { !it.isBlank() }.unique()
     systemProperties['spring.profiles.active'] = activeProfiles.join(',')
     println "bootRun: spring.profiles.active = " + systemProperties['spring.profiles.active']
 }
@@ -506,6 +506,56 @@ gradle.taskGraph.whenReady {
 
 //def swaggerSourceFile =
 def swaggerTargetFolder = 'src/generated/java'
+
+/** Export the live Springdoc contract for cross-project client generation. */
+tasks.register('syncOpenApi') {
+    group = 'documentation'
+    description = 'Start the local app and export OpenAPI YAML to the static resources'
+    dependsOn('classes')
+    doLast {
+        def base = 'http://localhost:8080'
+        final openApiPath = '/api/docs'
+        final openApiEndpoint = new URL("${base}${openApiPath}")
+        def openApiProfile = System.getenv('PROFILE') ?: java.net.InetAddress.localHost.hostName.split('\\.')[0]
+        def loader = new File(System.getenv('PASSWORD_STORE_DIR') ?: System.getProperty('user.home') + '/.password-store', 'load-env.sh')
+        def command = loader.isFile()
+                ? "source '${loader.absolutePath}' biblioteca/${openApiProfile} && exec ./gradlew -Dlucene.autoindex.enabled=false bootRun -Pprofile=${openApiProfile} -PnoAutoImport --no-daemon"
+                : "exec ./gradlew -Dlucene.autoindex.enabled=false bootRun -Pprofile=${openApiProfile} -PnoAutoImport --no-daemon"
+        def child = new ProcessBuilder('bash', '-lc', command)
+                .directory(projectDir).redirectErrorStream(true)
+                .redirectOutput(ProcessBuilder.Redirect.INHERIT).start()
+        try {
+            def ready = false
+            180.times {
+                if (!child.isAlive()) throw new GradleException('bootRun exited before OpenAPI became available')
+                try {
+                    def c = openApiEndpoint.openConnection()
+                    c.setConnectTimeout(500); c.setReadTimeout(1000)
+                    c.setRequestProperty('Accept', 'application/yaml')
+                    ready = c.responseCode == 200
+                } catch (Exception ignored) { }
+                if (!ready) sleep(1000)
+            }
+            if (!ready) throw new GradleException('Timed out waiting for local bootRun OpenAPI endpoint')
+            def c = openApiEndpoint.openConnection()
+            c.setConnectTimeout(5000); c.setReadTimeout(15000)
+            c.setRequestProperty('Accept', 'application/yaml')
+            def yaml = c.inputStream.getText('UTF-8')
+            yaml = yaml.replaceFirst(/(?m)^(\s*version:\s*).*/, '\\$1' + project.version)
+            def target = file('src/main/resources/static/biblioteca-server-openapi-sync.yml')
+            target.parentFile.mkdirs(); target.text = yaml
+            println "Exported local OpenAPI YAML to ${target}"
+        } finally {
+            // bootRun may fork a DevTools restart JVM; terminate descendants
+            // as well as the Gradle launcher so syncOpenApi never leaves a
+            // server running after the YAML has been written.
+            child.toHandle().descendants().forEach { it.destroy() }
+            child.destroy()
+            child.waitForOrKill(5000)
+            child.toHandle().descendants().forEach { it.destroyForcibly() }
+        }
+    }
+}
 
 task generateApi {
     doLast {
