@@ -282,6 +282,12 @@ task :run, [:task_profile] do |_task, args|
     sh "#{GRADLE} -Pprofile=#{run_profile} bootRun"
 end
 
+desc "Open an interactive Derby ij shell (sql/ij), auto-connected to a profile's DB_URL"
+task :ij, [:task_profile] do |_task, args|
+    task_profile = args[:task_profile] || profile
+    sh "sql/ij #{task_profile}"
+end
+
 task :build, [:task_profile] do |_task, args|
     task_profile = args[:task_profile] || profile
     puts "Building application..."
