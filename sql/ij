@@ -13,7 +13,7 @@ set -euo pipefail
 
 PROFILE="${1:?usage: ij <profile>}"
 
-source "${LOAD_ENV_SH:-/home/apps/secrets/load-env.sh}" "biblioteca/${PROFILE}"
+source "${LOAD_ENV_SH:-$HOME/.password-store/load-env.sh}" "biblioteca/${PROFILE}"
 
 # Derby client jars: reuse what Gradle already resolved on this machine
 # if present (same derbyclient/derbyshared version build.gradle pins),

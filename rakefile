@@ -285,6 +285,7 @@ end
 desc "Open an interactive Derby ij shell (sql/ij), auto-connected to a profile's DB_URL"
 task :ij, [:task_profile] do |_task, args|
     task_profile = args[:task_profile] || profile
+    load_profile_env(task_profile)
     sh "sql/ij #{task_profile}"
 end
 

@@ -23,7 +23,7 @@ PROFILE="${1:?usage: run.sh <profile> <script.groovy> [args...]}"
 SCRIPT="${2:?usage: run.sh <profile> <script.groovy> [args...]}"
 shift 2
 
-source "${LOAD_ENV_SH:-/home/apps/secrets/load-env.sh}" "biblioteca/${PROFILE}"
+source "${LOAD_ENV_SH:-$HOME/.password-store/load-env.sh}" "biblioteca/${PROFILE}"
 
 # Derby client + Groovy jars: reuse what Gradle already resolved on this
 # machine if present (same derbyclient/derbyshared version build.gradle
