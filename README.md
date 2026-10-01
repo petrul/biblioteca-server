@@ -260,6 +260,26 @@ JSON at `/api/docs`, YAML at `/api/docs.yaml` — also checked into the repo
 as `textbase-swagger-api.json`); the integration suite parses the live
 YAML and verifies representative paths, responses, and internal references.
 
+That `/api/docs` document is also the **source of two downstream generated
+clients** — a REST-surface change here ripples into both, and each
+consumer regenerates off a *running* server, so run it at the same commit
+the API changed in:
+
+- **biblioteca-nestjs**: `rake gen-client` → `src/biblioteca.api.ts`
+  (swagger-typescript-api off the raw spec) — see that repo's README,
+  "Regenerating the typed API clients".
+- **biblioteca-reader**: `rake gen-client` →
+  `src/generated/biblioteca-server-api.d.ts` (raw spec), plus the
+  biblioteca-server-backed shapes inside this app's own public allowlist
+  (`scripts/build-openapi-public.mjs` → `openapi-public.json`), which the
+  browser client `src/services/serversideApi.ts` is typed against — see
+  that repo's README, "Refresh the API clients".
+
+Both repos check their generated clients in, so the resulting diff is the
+reviewable record of the API change. A renamed/removed endpoint makes the
+reader's allowlist build fail loudly — update `BIBLIOTECA_PATHS` there
+when deliberately changing a consumed path.
+
 Most `/api/drest/**` repositories exclude writes (`@RestResource(exported
 = false)` on `save`/`delete`) or exclude themselves from DREST entirely
 (child/association tables managed only through their parent's own
