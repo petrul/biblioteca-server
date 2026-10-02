@@ -1,6 +1,7 @@
 package ro.editii.scriptorium.model;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.Column;
 import jakarta.persistence.DiscriminatorValue;
 import jakarta.persistence.Entity;
@@ -37,8 +38,13 @@ public class TeiDiv extends TeiElem {
     // Author.bio: a trusted source (Wikipedia's summary API) when this
     // work has a page there. Null until enrichment has run once; a later
     // reimport never overwrites an existing value.
+    @JsonIgnore
     @Lob @ToString.Exclude
     String summary;
+
+    /** Never expose the Derby locator-backed LOB through Spring Data REST. */
+    @JsonIgnore
+    public String getSummary() { return this.summary; }
 
     @Column(length = 500)
     String summarySourceUrl;
@@ -66,4 +72,3 @@ public class TeiDiv extends TeiElem {
                 ;
     }
 }
-

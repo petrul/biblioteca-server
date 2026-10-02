@@ -40,6 +40,25 @@ import java.util.stream.IntStream;
 @JsonInclude(JsonInclude.Include.NON_NULL)
 public class TeiElem implements Comparable<TeiElem>, Serializable  {
 
+    /**
+     * Older cached TEI DOM trees can contain a deferred element whose
+     * namespace-aware local name was never initialized. JDK 25 throws from
+     * getLocalName() in that case; fall back to the qualified DOM name while
+     * DomTool normalizes the copied subtree below.
+     */
+    private static String safeLocalName(Node node) {
+        try {
+            String local = node.getLocalName();
+            if (local != null) return local;
+        } catch (RuntimeException ignored) {
+            // Malformed legacy namespace metadata; use nodeName below.
+        }
+        String name = node.getNodeName();
+        if (name == null) return null;
+        int colon = name.indexOf(':');
+        return colon >= 0 ? name.substring(colon + 1) : name;
+    }
+
     // Must stay in sync with TeifileParser.TEI_BODY_XPATH_PREFIX, which
     // computes the other direction (full xpath -> relative stored path) -
     // see its own comment for why <text> is bracketed but <body> is not.
@@ -155,7 +174,7 @@ public class TeiElem implements Comparable<TeiElem>, Serializable  {
         final String domPath = this.getDomPath();
         if (domPath != null) {
             final Node resolved = XpathTool.resolveDomPath(xpathTool.getRoot(), domPath);
-            if (resolved != null && (this.getName() == null || this.getName().equals(resolved.getLocalName())))
+            if (resolved != null && (this.getName() == null || this.getName().equals(safeLocalName(resolved))))
                 return this._node = DomTool.deepCopy(resolved);
         }
 
@@ -310,6 +329,12 @@ public class TeiElem implements Comparable<TeiElem>, Serializable  {
         return this.getAuthor().getStrId() + "/" + this.getUrl();
     }
 
+    /**
+     * Derived navigation helper, not a Spring Data REST association. Keeping
+     * it out of direct entity serialization also prevents Jackson from
+     * traversing into Author's Derby LOB-backed enrichment fields.
+     */
+    @JsonIgnore
     public Author getAuthor() {
         return this.getTeiFile().getAuthor();
     }

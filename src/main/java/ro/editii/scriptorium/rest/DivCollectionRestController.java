@@ -12,6 +12,7 @@ import ro.editii.scriptorium.dao.TeiDivRepository;
 import ro.editii.scriptorium.dao.TeiFileRepository;
 import ro.editii.scriptorium.dto.DivCollectionItemDto;
 import ro.editii.scriptorium.dto.TeiDivDto;
+import ro.editii.scriptorium.dto.AuthorDto;
 import ro.editii.scriptorium.dto.DivCollectionDto;
 import ro.editii.scriptorium.fragment.FragmentResolutionService;
 import ro.editii.scriptorium.model.AppUser;
@@ -179,6 +180,23 @@ public class DivCollectionRestController {
 
     private static final int SYSTEM_COLLECTION_LIMIT = 200;
 
+    /**
+     * Stable authorId/opusId references. A missing edition is omitted until
+     * it is imported; no title or database-ID matching is allowed here.
+     */
+    private static final List<String> FEATURED_WORK_PATHS = List.of(
+            "petru/pytho",
+            "mitru/povesti_despre_pacala_si_tandala",
+            "dulfu/ispravile_lui_pacala",
+            "creanga/amintiri_din_copilarie",
+            "goethe/faust",
+            "alighieri/la_divina_commedia",
+            "plato/apology",
+            "montaigne/essais",
+            "lamartine/meditations_poetiques",
+            "shakespeare/the_tragedy"
+    );
+
     @GetMapping("/system/by-language/{lang}")
     public List<TeiDivDto> byLanguage(@PathVariable String lang, UriComponentsBuilder ucb) {
         final Languages language = Languages.from(lang);
@@ -211,5 +229,57 @@ public class DivCollectionRestController {
     @GetMapping("/system/repos")
     public List<String> repoNames() {
         return this.teiFileRepository.findDistinctRepoNames();
+    }
+
+    /**
+     * Stable, read-only system collection used by the reader's featured
+     * carousel.  It is backed by the curated allow-list above, not by import
+     * order, so unrelated newly imported works cannot appear here by chance.
+     */
+    @GetMapping("/system/featured")
+    @org.springframework.transaction.annotation.Transactional(readOnly = true)
+    public List<TeiDivDto> featured(UriComponentsBuilder ucb) {
+        final List<TeiDiv> opera = this.teiDivRepository.findAllOpera();
+        return FEATURED_WORK_PATHS.stream()
+                .flatMap(path -> opera.stream().filter(div -> matchesFeaturedPath(div, path)).limit(1))
+                .map(it -> featuredDto(it, ucb))
+                .toList();
+    }
+
+    private static boolean matchesFeaturedPath(TeiDiv div, String path) {
+        final int slash = path.indexOf('/');
+        if (slash <= 0 || slash == path.length() - 1 || div.getTeiFile() == null
+                || div.getTeiFile().getAuthors() == null
+                )
+            return false;
+        final String authorId = path.substring(0, slash);
+        final String opusId = path.substring(slash + 1);
+        return opusId.equals(div.getUrlFragment())
+                && div.getTeiFile().getAuthors().stream().anyMatch(a -> authorId.equals(a.getStrId()));
+    }
+
+    private static TeiDivDto featuredDto(TeiDiv div, UriComponentsBuilder ucb) {
+        final String path = div.getTeiFile().getAuthors().stream()
+                .filter(a -> a.getStrId() != null)
+                .map(a -> a.getStrId() + "/" + div.getUrlFragment())
+                .filter(FEATURED_WORK_PATHS::contains)
+                .findFirst()
+                .orElseThrow();
+        final var dto = new TeiDivDto();
+        dto.setId(div.getId());
+        dto.setPath(path);
+        dto.setUrl(ucb.path("/").toUriString() + path);
+        dto.setUrlFragment(div.getUrlFragment());
+        dto.setHead(div.getHead());
+        dto.setDepth(div.getDepth());
+        dto.setSize(div.getSize());
+        dto.setWordSize(div.getWordSize());
+        dto.setXpath(div.getXpath());
+        dto.setLeaf(div.isLeaf());
+        dto.setOpus(div.isOpus());
+        dto.setAuthor(AuthorDto.from(div.getTeiFile().getAuthors().stream()
+                .filter(a -> path.startsWith(a.getStrId() + "/"))
+                .findFirst().orElseThrow()));
+        return dto;
     }
 }

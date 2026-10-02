@@ -58,6 +58,7 @@ public class DivRestController {
      * get TeiDiv by long id
      */
     @GetMapping("/{id}")
+    @Transactional(readOnly = true)
     public @ResponseBody TeiDivDto get_id(
             @PathVariable(name = "id") long id,
             UriComponentsBuilder uriComponentsBuilder,
@@ -81,6 +82,7 @@ public class DivRestController {
      * @return the {@link Toc} of the {@link TeiDiv} indicated by the id param
      */
     @GetMapping("/{id}/toc")
+    @Transactional(readOnly = true)
     public @ResponseBody TeiDivDto[] get_id_toc(
             @PathVariable(name = "id") long id,
             @RequestParam(value = "page", defaultValue = "0") int pageNr,
@@ -159,6 +161,7 @@ public class DivRestController {
     }
 
     @GetMapping("/")
+    @Transactional(readOnly = true)
     public List<TeiDivDto> getAllTeiDivs(
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size,

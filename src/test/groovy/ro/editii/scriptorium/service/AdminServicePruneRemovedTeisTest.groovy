@@ -77,7 +77,8 @@ class AdminServicePruneRemovedTeisTest {
 
         Mockito.when(teiRepo.list()).thenReturn([]) // nothing on disk any more
         Mockito.when(teiFileRepository.findAll()).thenReturn([removedFile])
-        Mockito.when(teiDivRepository.getOperaForTeiFileId(2L)).thenReturn([opusOne, opusTwo])
+        Mockito.when(teiDivRepository.getOperaPathsForTeiFileId(2L))
+                .thenReturn(["conscience/gone-work-one", "conscience/gone-work-two"])
 
         adminService.pruneRemovedTeis(new NoWriter())
 
@@ -106,8 +107,8 @@ class AdminServicePruneRemovedTeisTest {
 
         Mockito.when(teiRepo.list()).thenReturn([])
         Mockito.when(teiFileRepository.findAll()).thenReturn([brokenFile, nextFile])
-        Mockito.when(teiDivRepository.getOperaForTeiFileId(4L)).thenReturn([])
-        Mockito.when(teiDivRepository.getOperaForTeiFileId(5L)).thenReturn([])
+        Mockito.when(teiDivRepository.getOperaPathsForTeiFileId(4L)).thenReturn([])
+        Mockito.when(teiDivRepository.getOperaPathsForTeiFileId(5L)).thenReturn([])
         Mockito.doThrow(new RuntimeException("delete is having a bad day"))
                 .when(teiFileDbService).deleteTeiFile("broken-gone.xml")
 

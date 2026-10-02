@@ -82,6 +82,7 @@ public class Author implements Comparable<Author>, Serializable {
 
 //    String description; // remove
 
+    @JsonIgnore
     @Lob @ToString.Exclude
     Blob avatar;
 
@@ -91,8 +92,16 @@ public class Author implements Comparable<Author>, Serializable {
     // worker's EnrichmentService). Null until enrichment has actually
     // run once; never overwritten by a later reimport once set, so a
     // manual edit here survives.
+    @JsonIgnore
     @Lob @ToString.Exclude
     String bio;
+
+    /** Never expose the Derby locator-backed LOB through Spring Data REST. */
+    @JsonIgnore
+    public String getBio() { return this.bio; }
+
+    @JsonIgnore
+    public Blob getAvatar() { return this.avatar; }
 
     // The page bio was derived from (a Wikipedia article, or whatever
     // search result was used as the fallback source) - shown alongside

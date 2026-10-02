@@ -53,3 +53,17 @@ Use `unittest` for the network-free suite and `test` when the external
 integration services are available. Gradle defaults tests to the `ci` profile
 unless `-Pprofile=zmeu` is supplied. Do not run zmeu tests against the shared
 `biblioteca` database: tests can truncate tables and rebuild the Lucene index.
+
+## REST API/client synchronization
+
+Whenever a REST API is added, removed, renamed, or its contract changes, run
+the reader's machine-aware `rake gen-client` task after the server is
+available. Review and commit the regenerated client API artifacts together
+with the REST API change.
+
+## Stable work identity
+
+Across all Biblioteca projects, refer to an opus by its canonical stable path
+`authorId/opusId` (for example `shakespeare/hamlet`). Do not use database IDs,
+display titles, import order, or fuzzy title matching for persisted links,
+collections, bookmarks, search results, or featured-work lists.

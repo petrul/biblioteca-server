@@ -8,6 +8,7 @@ import org.apache.commons.lang3.time.StopWatch;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.env.Environment;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.util.UriComponentsBuilder;
 import ro.editii.scriptorium.Util;
 import ro.editii.scriptorium.dto.AuthorDto;
@@ -31,6 +32,7 @@ import java.util.List;
 @RequestMapping("/api/search")
 @CrossOrigin
 @Log4j2
+@Transactional(readOnly = true)
 public class SearchRestController extends CommonControllerUtil {
 
     // bounds the embedder fallback call in ann() below - see VectorTextSearchService

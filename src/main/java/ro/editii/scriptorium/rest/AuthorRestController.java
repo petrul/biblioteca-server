@@ -5,6 +5,7 @@ import lombok.extern.log4j.Log4j2;
 import org.springframework.core.env.Environment;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.util.UriComponentsBuilder;
 import ro.editii.scriptorium.dao.AuthorRepository;
@@ -38,6 +39,7 @@ public class AuthorRestController extends CommonControllerUtil {
     }
 
     @GetMapping("/")
+    @Transactional(readOnly = true)
     public List<AuthorDto> getAuthors(UriComponentsBuilder uriComponentsBuilder, HttpServletRequest httpServletRequest) {
         log.info("/authors/");
         List<AuthorDto> authors = this.authorRepository.findAll().stream()
@@ -54,6 +56,7 @@ public class AuthorRestController extends CommonControllerUtil {
 
 
     @GetMapping("/{strId}")
+    @Transactional(readOnly = true)
     public AuthorDto getAuthor(@PathVariable(name = "strId") String strId, UriComponentsBuilder uriComponentsBuilder, HttpServletRequest httpServletRequest) {
         final Optional<Author> opt = this.authorRepository.getByStrId(strId);
         if (opt.isEmpty())
@@ -75,6 +78,7 @@ public class AuthorRestController extends CommonControllerUtil {
     }
 
     @GetMapping("/{strId}/opera")
+    @Transactional(readOnly = true)
     public @ResponseBody TeiDivDto[] getOpera(@PathVariable("strId") String strId, UriComponentsBuilder uriComponentsBuilder) {
         final Optional<Author> byStrId = this.authorRepository.getByStrId(strId);
         if (byStrId.isEmpty())

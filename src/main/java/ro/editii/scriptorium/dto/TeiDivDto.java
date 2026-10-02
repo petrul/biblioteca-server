@@ -14,6 +14,16 @@ public class TeiDivDto extends TeiElemDto implements Comparable<TeiDivDto> {
     String head;
     int depth;
 
+    // Set (with summary) the first time the biblioteca-nestjs enrichment
+    // worker enriches this opus. Summary itself is a @JsonIgnore'd Derby
+    // LOB and never crosses the wire, so this attribution column is the
+    // wire-visible "enrichment has already run" marker the worker's
+    // duplicate guards check (enrichment-listener.service.ts,
+    // EnrichmentService.dailySweep) - without it, every replayed event or
+    // nightly sweep would re-run Wikipedia/Wikidata for works that are
+    // already enriched.
+    String summarySourceUrl;
+
     TeiDivDto[] children;
     AuthorDto author;
 
@@ -57,6 +67,7 @@ public class TeiDivDto extends TeiElemDto implements Comparable<TeiDivDto> {
             opus = teiDiv.isOpus();
             path = teiDiv.getCompletePath();
             author = AuthorDto.from(teiDiv.getAuthor());
+            summarySourceUrl = teiDiv.getSummarySourceUrl();
             xpath = teiDiv.getXpath();
         }};
 

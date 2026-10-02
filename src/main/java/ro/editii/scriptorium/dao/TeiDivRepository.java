@@ -32,6 +32,19 @@ public interface TeiDivRepository extends JpaRepository<TeiDiv, Long> {
             """)
     List<TeiDiv> getOperaForTeiFileId(long teiFileId);
 
+    /**
+     * Lightweight variant for housekeeping paths. Do not load whole TeiDiv
+     * entities here: Derby exposes @Lob fields through transaction-bound
+     * locators, while pruning only needs the stable URL paths.
+     */
+    @Query("""
+            select concat(a.strId, '/', div.urlFragment) from TeiDiv div
+            join div.teiFile tf
+            join tf.authors a
+            where div.parent is null and tf.id = ?1
+            """)
+    List<String> getOperaPathsForTeiFileId(long teiFileId);
+
     // aka 'leaf' divs without div children
     @Query("""
         select count(parent) from TeiDiv parent 

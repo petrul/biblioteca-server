@@ -257,8 +257,7 @@ public class AdminService {
                     continue;
                 }
 
-                final List<TeiDiv> opera = this.teiDivRepository.getOperaForTeiFileId(teiFile.getId());
-                final List<String> opusPaths = opera.stream().map(TeiDiv::getCompletePath).toList();
+                final List<String> opusPaths = this.teiDivRepository.getOperaPathsForTeiFileId(teiFile.getId());
 
                 log.info("will prune removed TeiFile {} ({} opera)", teiFile.getFilename(), opusPaths.size());
                 writeLn(logActivity, "will prune removed TeiFile " + teiFile.getFilename());

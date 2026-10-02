@@ -1,6 +1,7 @@
 package editii.commons.xml;
 
 import org.w3c.dom.Document;
+import org.w3c.dom.DOMException;
 import org.w3c.dom.Element;
 import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
@@ -24,6 +25,10 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 public class DomTool {
+
+    private static final String TEI_NAMESPACE = "http://www.tei-c.org/ns/1.0";
+    private static final String XML_NAMESPACE = "http://www.w3.org/XML/1998/namespace";
+    private static final String XMLNS_NAMESPACE = "http://www.w3.org/2000/xmlns/";
 
     public static Collection<Node> nodeList2Collection(NodeList nodeList) {
         final ArrayList<Node> arr = new ArrayList<>(nodeList.getLength());
@@ -90,9 +95,58 @@ public class DomTool {
 
     public static Node deepCopy(Node node) {
         final Document document = newDocument();
-        return document.importNode(node, true);
+        try {
+            return document.importNode(node, true);
+        } catch (DOMException namespaceError) {
+            // Some older imported TEI rows contain prefixed DOM names whose
+            // namespace URI was lost during the original parse/import. JDK 25
+            // validates that combination more strictly and throws
+            // NAMESPACE_ERR here. Rebuild the subtree with valid namespace
+            // metadata so Saxon can safely evaluate local-name()/name tests.
+            return copyWithSafeNamespaces(node, document);
+        }
 //        document.importNode(node, true);
 //        return document;
+    }
+
+    private static Node copyWithSafeNamespaces(Node source, Document target) {
+        return switch (source.getNodeType()) {
+            case Node.ELEMENT_NODE -> {
+                String qualifiedName = source.getNodeName();
+                String prefix = source.getPrefix();
+                String localName = source.getLocalName();
+                if (localName == null || localName.isBlank()) {
+                    int colon = qualifiedName == null ? -1 : qualifiedName.indexOf(':');
+                    localName = colon >= 0 ? qualifiedName.substring(colon + 1) : qualifiedName;
+                }
+                String namespace = source.getNamespaceURI();
+                if (namespace == null && "tei".equals(prefix)) namespace = TEI_NAMESPACE;
+                if (namespace == null && "xml".equals(prefix)) namespace = XML_NAMESPACE;
+                Element copy = namespace == null
+                        ? target.createElementNS("", localName)
+                        : target.createElementNS(namespace, qualifiedName);
+                if (source.hasAttributes()) {
+                    for (int i = 0; i < source.getAttributes().getLength(); i++) {
+                        Node attr = source.getAttributes().item(i);
+                        String attrName = attr.getNodeName();
+                        String attrNs = attr.getNamespaceURI();
+                        if (attrNs == null && "xml".equals(attr.getPrefix())) attrNs = XML_NAMESPACE;
+                        if (attrNs == null && ("xmlns".equals(attrName) || "xmlns".equals(attr.getPrefix()))) attrNs = XMLNS_NAMESPACE;
+                        if (attrNs == null) copy.setAttribute(attrName, attr.getNodeValue());
+                        else copy.setAttributeNS(attrNs, attrName, attr.getNodeValue());
+                    }
+                }
+                for (Node child = source.getFirstChild(); child != null; child = child.getNextSibling()) {
+                    copy.appendChild(copyWithSafeNamespaces(child, target));
+                }
+                yield copy;
+            }
+            case Node.TEXT_NODE -> target.createTextNode(source.getNodeValue() == null ? "" : source.getNodeValue());
+            case Node.CDATA_SECTION_NODE -> target.createCDATASection(source.getNodeValue() == null ? "" : source.getNodeValue());
+            case Node.COMMENT_NODE -> target.createComment(source.getNodeValue() == null ? "" : source.getNodeValue());
+            case Node.PROCESSING_INSTRUCTION_NODE -> target.createProcessingInstruction(source.getNodeName(), source.getNodeValue());
+            default -> target.importNode(source, true);
+        };
     }
 
     public static Node rootForResults (NodeList nodeList) {

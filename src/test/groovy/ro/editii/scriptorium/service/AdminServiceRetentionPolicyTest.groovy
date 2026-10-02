@@ -104,7 +104,7 @@ class AdminServiceRetentionPolicyTest {
 
         final teiRepo = [list: { List.of() }] as ro.editii.scriptorium.tei.TeiRepo
         final teiFileRepository = [findAll: { List.of(teiFile) }] as ro.editii.scriptorium.dao.TeiFileRepository
-        final teiDivRepository = [getOperaForTeiFileId: { Long id -> List.of(opus) }] \
+        final teiDivRepository = [getOperaPathsForTeiFileId: { Long id -> List.of("creanga/povesti") }] \
                 as ro.editii.scriptorium.dao.TeiDivRepository
         final teiFileDbService = new RecordingTeiFileDbService()
 
