@@ -14,7 +14,6 @@ GRADLE = "./gradlew"
 # "dev" bucket. Explicit `rake run[dev]` (or any [task_profile] arg) still
 # always wins - this is only the fallback.
 profile = ENV['PROFILE'] || (Rake.application.top_level_tasks.include?('ci') ? 'ci' : Socket.gethostname.split('.').first)
-puts "profile: #{profile}"
 
 def load_profile_env(task_profile)
   $biblioteca_loaded_profiles ||= {}
