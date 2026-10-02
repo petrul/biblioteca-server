@@ -10,6 +10,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.http.ResponseEntity;
+import org.springframework.http.HttpStatus;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.util.UriComponentsBuilder;
@@ -35,6 +37,13 @@ public class DivRestController {
     final DivService divService;
     final ControllerTool controllerTool;
     final EntityManager entityManager;
+
+    @ExceptionHandler(RuntimeException.class)
+    public ResponseEntity<String> handleTeiFailure(RuntimeException error) {
+        final String summary = RestUtil.summarize(error);
+        log.error("TEI API request failed: {}", summary);
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(summary);
+    }
 
     /**
      * @return TeiElemDto corresponding to path.

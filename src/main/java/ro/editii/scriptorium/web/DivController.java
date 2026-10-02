@@ -258,8 +258,12 @@ public class DivController {
         } catch (IllegalArgumentException e) {
             RestUtil.throw400(e.getMessage());
         } catch (Exception e) {
-            log.error(e, e);
-            RestUtil.throw500(e);
+            final String summary = RestUtil.summarize(e);
+            log.error("TEI request failed: {}", summary);
+            // Do not attach the parser exception as a cause here. Spring's
+            // servlet logger would otherwise print the complete XML parser
+            // stack for every malformed/empty TEI request.
+            RestUtil.throw500(summary);
         }
     }
 

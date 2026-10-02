@@ -71,7 +71,7 @@ public class FragmentController {
         } catch (IllegalArgumentException e) {
             RestUtil.throw400(e.getMessage());
         } catch (Exception e) {
-            log.error(e, e);
+            log.error("Fragment request failed: {}", RestUtil.summarize(e));
             RestUtil.throw500(e);
         }
     }

@@ -38,6 +38,12 @@ public class AuthorDto  {
     // can tell already-enriched authors from enrichment candidates
     // without a second query - see EnrichmentRestController.
     String bio;
+    String bioSourceUrl;
+    String birthDate;
+    String deathDate;
+    String birthPlace;
+    String country;
+    String writingLanguage;
     OpusDto[] opera;
     String image_href;
 
@@ -50,6 +56,12 @@ public class AuthorDto  {
 //                .originalNameInTeiFile(author.getOriginalNameInTeiFile())
                 .displayName(author.getVisualName())
                 .bio(author.getBio())
+                .bioSourceUrl(author.getBioSourceUrl())
+                .birthDate(author.getBirthDate())
+                .deathDate(author.getDeathDate())
+                .birthPlace(author.getBirthPlace())
+                .country(author.getCountry())
+                .writingLanguage(author.getWritingLanguage() == null ? null : author.getWritingLanguage().name())
 //                .description(author.getDescription())
                 .build();
     }
