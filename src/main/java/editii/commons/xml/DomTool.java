@@ -112,14 +112,14 @@ public class DomTool {
     private static Node copyWithSafeNamespaces(Node source, Document target) {
         return switch (source.getNodeType()) {
             case Node.ELEMENT_NODE -> {
-                String qualifiedName = source.getNodeName();
-                String prefix = source.getPrefix();
-                String localName = source.getLocalName();
+                String qualifiedName = safeNodeName(source, "tei:div");
+                String prefix = safePrefix(source, qualifiedName);
+                String localName = safeLocalName(source, qualifiedName);
                 if (localName == null || localName.isBlank()) {
                     int colon = qualifiedName == null ? -1 : qualifiedName.indexOf(':');
                     localName = colon >= 0 ? qualifiedName.substring(colon + 1) : qualifiedName;
                 }
-                String namespace = source.getNamespaceURI();
+                String namespace = safeNamespace(source);
                 if (namespace == null && "tei".equals(prefix)) namespace = TEI_NAMESPACE;
                 if (namespace == null && "xml".equals(prefix)) namespace = XML_NAMESPACE;
                 Element copy = namespace == null
@@ -128,10 +128,12 @@ public class DomTool {
                 if (source.hasAttributes()) {
                     for (int i = 0; i < source.getAttributes().getLength(); i++) {
                         Node attr = source.getAttributes().item(i);
-                        String attrName = attr.getNodeName();
-                        String attrNs = attr.getNamespaceURI();
-                        if (attrNs == null && "xml".equals(attr.getPrefix())) attrNs = XML_NAMESPACE;
-                        if (attrNs == null && ("xmlns".equals(attrName) || "xmlns".equals(attr.getPrefix()))) attrNs = XMLNS_NAMESPACE;
+                        String attrName = safeNodeName(attr, null);
+                        if (attrName == null) continue;
+                        String attrPrefix = safePrefix(attr, attrName);
+                        String attrNs = safeNamespace(attr);
+                        if (attrNs == null && "xml".equals(attrPrefix)) attrNs = XML_NAMESPACE;
+                        if (attrNs == null && ("xmlns".equals(attrName) || "xmlns".equals(attrPrefix))) attrNs = XMLNS_NAMESPACE;
                         if (attrNs == null) copy.setAttribute(attrName, attr.getNodeValue());
                         else copy.setAttributeNS(attrNs, attrName, attr.getNodeValue());
                     }
@@ -147,6 +149,45 @@ public class DomTool {
             case Node.PROCESSING_INSTRUCTION_NODE -> target.createProcessingInstruction(source.getNodeName(), source.getNodeValue());
             default -> target.importNode(source, true);
         };
+    }
+
+    private static String safeNodeName(Node node, String fallback) {
+        try {
+            String name = node.getNodeName();
+            return name == null || name.isBlank() ? fallback : name;
+        } catch (RuntimeException ignored) {
+            return fallback;
+        }
+    }
+
+    private static String safePrefix(Node node, String qualifiedName) {
+        try {
+            String prefix = node.getPrefix();
+            if (prefix != null) return prefix;
+        } catch (RuntimeException ignored) {
+            // Fall back to the qualified name below.
+        }
+        int colon = qualifiedName == null ? -1 : qualifiedName.indexOf(':');
+        return colon >= 0 ? qualifiedName.substring(0, colon) : null;
+    }
+
+    private static String safeLocalName(Node node, String qualifiedName) {
+        try {
+            String local = node.getLocalName();
+            if (local != null && !local.isBlank()) return local;
+        } catch (RuntimeException ignored) {
+            // Fall back to the qualified name below.
+        }
+        int colon = qualifiedName == null ? -1 : qualifiedName.indexOf(':');
+        return colon >= 0 ? qualifiedName.substring(colon + 1) : qualifiedName;
+    }
+
+    private static String safeNamespace(Node node) {
+        try {
+            return node.getNamespaceURI();
+        } catch (RuntimeException ignored) {
+            return null;
+        }
     }
 
     public static Node rootForResults (NodeList nodeList) {

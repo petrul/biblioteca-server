@@ -92,4 +92,20 @@ class TeiElemDomPathResolutionTest {
         final TeiDiv wrongNode = teiDiv(domPath: '1')
         assertEquals(firstBodyDivOracle().textContent, wrongNode.node.textContent)
     }
+
+    @Test
+    void 'concurrent requests do not race deferred DOM namespace initialization'() {
+        def failures = Collections.synchronizedList([])
+        def workers = (1..16).collect {
+            Thread.start {
+                try {
+                    assertNotNull(teiDiv().node)
+                } catch (Throwable failure) {
+                    failures << failure
+                }
+            }
+        }
+        workers*.join()
+        assertEquals([], failures)
+    }
 }

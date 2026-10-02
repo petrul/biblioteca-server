@@ -166,6 +166,13 @@ public class TeiElem implements Comparable<TeiElem>, Serializable  {
 
         final XpathTool xpathTool = parseTeiFile();
 
+        // Xercers' deferred DOM nodes lazily materialize name/namespace data.
+        // The parsed document is cached per TEI file, so concurrent HTTP
+        // requests must not resolve and copy nodes from it at the same time;
+        // otherwise JDK 25 can observe a half-synchronized element and throw
+        // from getPrefix(), getLocalName(), or clone/importNode().
+        synchronized (xpathTool) {
+
         // Fast path: positional resolution, no XPath engine involved. The
         // name check turns a stale path (document edited since import)
         // into a fallback to the xpath below, which then reports a moved
@@ -194,6 +201,7 @@ public class TeiElem implements Comparable<TeiElem>, Serializable  {
         this._node = DomTool.deepCopy(nodeList.item(0));
 
         return this._node;
+        }
     }
 
 
