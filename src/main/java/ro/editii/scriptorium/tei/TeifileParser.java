@@ -178,6 +178,7 @@ public class TeifileParser {
         this.node2div = new LinkedHashMap<>(); // reinit
 
         int opusCounter = 0;
+        final List<TeiDiv> allImportedOpuses = new ArrayList<>();
 
         for (int i = 0; i < bodyChildren.getLength(); i++) {
             final Node node = bodyChildren.item(i);
@@ -195,13 +196,27 @@ public class TeifileParser {
                     // that envelope so Hibernate never sees a transient
                     // TeiDiv when the parser is invoked outside an enclosing
                     // service transaction (as the integration tests do).
-                    this.teiDivRepository.saveAllAndFlush(acc);
+                    flushDivBatch(acc);
                     acc.clear();
                 }
-                persistOpusMetadata(importedOpuses);
-                signalEventNewOpuses(importedOpuses);
+                // Do not let parser-created entity instances (or pending
+                // self-referencing batch actions) leak into the metadata
+                // insert.  The root is reloaded below as a database-backed
+                // entity before the TEI_OPUS FK is written.
+                if (entityManager != null) {
+                    entityManager.flush();
+                    entityManager.clear();
+                }
+                allImportedOpuses.addAll(importedOpuses);
             }
         }
+
+        // TeiOpus is the editable/enriched envelope for root-level divs.  It
+        // is deliberately persisted only after every compiled TEI div has
+        // been flushed, so its FK can never compete with the self-referencing
+        // TEI tree in Hibernate's action queue.
+        persistOpusMetadata(allImportedOpuses);
+        signalEventNewOpuses(allImportedOpuses);
 
         watch.stop();
         log.info("done parsing {}, {} root divs, took {}", name, opusCounter, watch);
@@ -210,15 +225,15 @@ public class TeifileParser {
 
     private void persistOpusMetadata(List<TeiDiv> importedOpuses) {
         if (teiOpusRepository == null) return; // parser-only unit fixtures
-        importedOpuses.stream()
+        final List<ro.editii.scriptorium.model.TeiOpus> metadata = importedOpuses.stream()
                 .filter(TeiDiv::isOpus)
-                .forEach(opus -> {
+                .map(opus -> {
                     // Resolve the just-flushed root again.  This keeps the
                     // one-to-one envelope attached to a managed TeiDiv even
                     // when parsing was entered without a caller transaction.
                     if (opus.getId() == null) {
                         log.warn("skipping opus metadata for {} because its parsed div has no id", opus.getXpath());
-                        return;
+                        return null;
                     }
                     // Resolve a fully managed entity (rather than a lazy
                     // proxy) so the metadata row and the subsequent event
@@ -227,11 +242,14 @@ public class TeifileParser {
                             ? opus : entityManager.find(TeiDiv.class, opus.getId());
                     if (persisted == null) {
                         log.warn("skipping opus metadata for missing div {}", opus.getId());
-                        return;
+                        return null;
                     }
-                    teiOpusRepository.save(new ro.editii.scriptorium.model.TeiOpus(
-                            persisted, openingDescriptions.get(opus)));
-                });
+                    return new ro.editii.scriptorium.model.TeiOpus(
+                            persisted, openingDescriptions.get(opus));
+                })
+                .filter(java.util.Objects::nonNull)
+                .toList();
+        if (!metadata.isEmpty()) teiOpusRepository.saveAllAndFlush(metadata);
     }
 
     /** A conservative import-time fallback: only the opening two paragraphs. */
@@ -368,7 +386,10 @@ public class TeifileParser {
             if (div.isOpus()) openingDescriptions.put(div, openingDescription(node));
 
             if (acc.size() >= 1000) {
-                this.teiDivRepository.saveAll(acc); // use saveAll so inserts be batch'd
+                // Flush each batch before any TeiOpus FK row is written;
+                // leaving earlier chunks pending lets Hibernate interleave
+                // the metadata insert with the self-referencing TEI batch.
+                flushDivBatch(acc);
                 acc.clear();
             }
             acc.add(div);
@@ -390,6 +411,19 @@ public class TeifileParser {
                 parcurge_rec(child, parent, i, teiFile, acc, importedDivs, importedOpuses, langHint);
             }
         }
+    }
+
+    /**
+     * Flush a compiled TEI batch before the metadata phase begins. The first
+     * element is the root div; giving it its own flush guarantees the target
+     * row exists before descendants and the later TEI_OPUS FK are written,
+     * while descendants still use normal JDBC batching.
+     */
+    private void flushDivBatch(List<TeiDiv> divs) {
+        if (divs.isEmpty()) return;
+        this.teiDivRepository.saveAllAndFlush(List.of(divs.get(0)));
+        if (divs.size() > 1)
+            this.teiDivRepository.saveAllAndFlush(divs.subList(1, divs.size()));
     }
 
     /**
