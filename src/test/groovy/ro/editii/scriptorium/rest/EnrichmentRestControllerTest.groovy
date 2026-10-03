@@ -174,6 +174,32 @@ class EnrichmentRestControllerTest {
         assert rerun.description == "Biblioteca is a canonical short-story collection."
     }
 
+    /**
+     * The cover leg of the same blank-fill contract. biblioteca-nestjs's
+     * CoverEnrichmentService is the piece that actually stores the
+     * rendered PNG in the MinIO cover cache (see its
+     * cover-enrichment.service.spec.ts); this server never touches MinIO
+     * itself - it only persists the public object URL the worker POSTs
+     * here onto the opus metadata, fill-once like every other field: an
+     * opus that already has a cover keeps it, whatever a rerun sweep
+     * says the second time.
+     */
+    @Test
+    void opusUpdateStoresTheMinioCoverUrlOnceAndNeverOverwritesIt() {
+        final opus = opusOf(authorWith("Alecsandri, Vasile", "enrichment-ctrl-test-alecsandri"),
+                "enrichment-ctrl-test-alecsandri.xml", "biblioteca", "Biblioteca")
+
+        final coverUrl = "https://minio.example.com/biblioteca/covers/opera-alecsandri-lume-d91a5027a5a9.png"
+        final response = post([opusId: opus.id, coverUrl: coverUrl])
+        assert response.statusCode == HttpStatus.OK
+        assert this.teiOpusRepository.findByTeiDivId(opus.id).get().coverUrl == coverUrl
+
+        // fill-only: an existing cover always wins, a rerun is a no-op -
+        // the reader must keep seeing the MinIO object it already has
+        post([opusId: opus.id, coverUrl: "https://minio.example.com/biblioteca/covers/should-not-replace.png"])
+        assert this.teiOpusRepository.findByTeiDivId(opus.id).get().coverUrl == coverUrl
+    }
+
     @Test
     void unknownAuthorIsACleanNotFound() {
         assert post([authorStrId: "never-heard-of-them", bio: "nope"]).statusCode == HttpStatus.NOT_FOUND
