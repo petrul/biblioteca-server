@@ -14,6 +14,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.http.HttpStatus;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.util.UriComponentsBuilder;
 import ro.editii.scriptorium.Util;
 import ro.editii.scriptorium.dao.TeiDivRepository;
@@ -42,6 +43,15 @@ public class DivRestController {
     public ResponseEntity<String> handleTeiFailure(RuntimeException error) {
         final String summary = RestUtil.summarize(error);
         log.error("TEI API request failed: {}", summary);
+
+        // Do not turn an expected HTTP error (most importantly a missing opus)
+        // into a 500.  Consumers use 404/400 to discard stale Kafka events;
+        // returning 500 here makes them retain and retry those events forever.
+        for (Throwable cause = error; cause != null; cause = cause.getCause()) {
+            if (cause instanceof ResponseStatusException responseStatus) {
+                return ResponseEntity.status(responseStatus.getStatusCode()).body(summary);
+            }
+        }
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(summary);
     }
 

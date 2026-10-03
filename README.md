@@ -280,6 +280,34 @@ reviewable record of the API change. A renamed/removed endpoint makes the
 reader's allowlist build fail loudly — update `BIBLIOTECA_PATHS` there
 when deliberately changing a consumed path.
 
+The reader catalogue is intentionally page-oriented. `GET /api/authors/page`
+and `GET /api/works` accept one-based `page` and `size` parameters and return
+`items`, `totalItems`, and `totalPages`; both also accept `q`, while works
+accepts `lang` (the server's two-letter language code). Consumers should use
+these endpoints instead of downloading `/api/authors/` or the complete works
+collection into browser memory.
+
+### Runtime configuration (writable actuator)
+
+The admin-only `GET /api/admin/runtime-config` endpoint exposes an
+allow-listed view of operational settings that were initialized from the
+profile's environment (for example `DB_URL`, `EMBEDDER_URL`, `KAFKA_BROKERS`,
+and `TEI_REPOS`). `PUT /api/admin/runtime-config/{key}` with
+`{"value":"..."}` changes a value in memory for the current JVM, and
+`DELETE` resets it to the startup value. Environment-variable names and their
+Spring property names are both accepted as keys.
+
+The existing `GET /api/admin/config` shared-resource endpoint (consumed by
+`biblioteca-nestjs`) reads its collection and paragraph settings from this
+same runtime store, so a subsequent config fetch sees those changes.
+
+Database URLs are marked sensitive and are masked unless an authenticated
+administrator explicitly requests `?reveal=true`. Nothing is written back to
+the pass store, `.env` files, or the database. Settings used to construct a
+connection pool or client are reported with `restartRequired: true`: changing
+them updates the runtime property source, but does not rebuild an already
+running client.
+
 Most `/api/drest/**` repositories exclude writes (`@RestResource(exported
 = false)` on `save`/`delete`) or exclude themselves from DREST entirely
 (child/association tables managed only through their parent's own

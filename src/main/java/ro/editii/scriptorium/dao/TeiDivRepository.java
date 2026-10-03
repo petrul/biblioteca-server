@@ -60,6 +60,14 @@ public interface TeiDivRepository extends JpaRepository<TeiDiv, Long> {
              and a.strId = ?1 """)
     List<TeiDiv> findOperaForAuthorStrId(String authorStrId);
 
+    @Query("""
+            select count(div) from TeiDiv div
+            join div.teiFile tf
+            join tf.authors a
+            where div.parent is null and a.strId = ?1
+            """)
+    long countOperaForAuthorStrId(String authorStrId);
+
     Page<TeiDiv> findByHeadContainingIgnoreCase(String excerpt, Pageable page);
     Page<TeiDiv> findByLang(Languages lang, Pageable pageable);
 
@@ -71,9 +79,42 @@ public interface TeiDivRepository extends JpaRepository<TeiDiv, Long> {
     @Query("select div from TeiDiv div where div.parent is null order by div.id")
     Page<TeiDiv> findOpera(Pageable pageable);
 
+    @Query("""
+            select div from TeiDiv div
+            join div.teiFile tf
+            join tf.authors a
+            where div.parent is null
+              and (:language is null or tf.language = :language)
+              and (:q is null or :q = ''
+                   or lower(div.head) like lower(concat('%', :q, '%'))
+                   or lower(a.strId) like lower(concat('%', :q, '%'))
+                   or lower(a.firstName) like lower(concat('%', :q, '%'))
+                   or lower(a.lastName) like lower(concat('%', :q, '%')))
+            order by div.id
+            """)
+    Page<TeiDiv> findOperaCatalogPage(@org.springframework.data.repository.query.Param("q") String query,
+                                       @org.springframework.data.repository.query.Param("language") Languages language,
+                                       Pageable pageable);
+
     @Query("select div from TeiDiv div where div.parent is null")
     @EntityGraph(attributePaths = {"teiFile", "teiFile.authors"})
     List<TeiDiv> findAllOpera();
+
+    /**
+     * Resolve one curated work by its stable authorId/opusId path.  Featured
+     * collections must not load every root work (and all author rows) just to
+     * discard almost all of them in memory.
+     */
+    @Query("""
+            select div from TeiDiv div
+            join div.teiFile tf
+            join tf.authors a
+            where div.parent is null
+              and a.strId = ?1
+              and div.urlFragment = ?2
+            """)
+    @EntityGraph(attributePaths = {"teiFile", "teiFile.authors"})
+    Optional<TeiDiv> findOperaByStablePath(String authorId, String opusId);
 
     @Query("""
             from TeiDiv div

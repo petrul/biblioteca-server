@@ -44,6 +44,8 @@ public class AuthorDto  {
     String birthPlace;
     String country;
     String writingLanguage;
+    /** Number of root works associated with this author, keyed by strId. */
+    Long worksCount;
     OpusDto[] opera;
     String image_href;
 
@@ -62,6 +64,7 @@ public class AuthorDto  {
                 .birthPlace(author.getBirthPlace())
                 .country(author.getCountry())
                 .writingLanguage(author.getWritingLanguage() == null ? null : author.getWritingLanguage().name())
+                .worksCount(null)
 //                .description(author.getDescription())
                 .build();
     }

@@ -16,6 +16,7 @@ import ro.editii.scriptorium.dao.AuthorMediaAssociationRepository
 import ro.editii.scriptorium.dao.AuthorRepository
 import ro.editii.scriptorium.dao.DivMediaAssociationRepository
 import ro.editii.scriptorium.dao.TeiDivRepository
+import ro.editii.scriptorium.dao.TeiOpusRepository
 import ro.editii.scriptorium.dao.TeiFileRepository
 import ro.editii.scriptorium.model.Author
 import ro.editii.scriptorium.model.Languages
@@ -60,6 +61,7 @@ class EnrichmentRestControllerTest {
     @Autowired private TestRestTemplate restTemplate
     @Autowired private AuthorRepository authorRepository
     @Autowired private TeiDivRepository teiDivRepository
+    @Autowired private TeiOpusRepository teiOpusRepository
     @Autowired private TeiFileRepository teiFileRepository
     @Autowired private AuthorMediaAssociationRepository authorMediaAssociationRepository
     @Autowired private DivMediaAssociationRepository divMediaAssociationRepository
@@ -155,22 +157,21 @@ class EnrichmentRestControllerTest {
         final response = post([
                 opusId: opus.id,
                 summary: "Biblioteca is a canonical short-story collection.",
-                summarySourceUrl: "https://en.wikipedia.org/wiki/Amintiri_din_copilărie",
                 imageUrls: [OPUS_IMAGE],
         ])
         assert response.statusCode == HttpStatus.OK
 
         final enriched = this.teiDivRepository.findById(opus.id).get()
-        assert enriched.summary == "Biblioteca is a canonical short-story collection."
-        assert enriched.summarySourceUrl.startsWith("https://en.wikipedia.org/")
+        final opusMetadata = this.teiOpusRepository.findByTeiDivId(opus.id).get()
+        assert opusMetadata.description == "Biblioteca is a canonical short-story collection."
         assert this.divMediaAssociationRepository.existsByDivPathAndMediaRefUrl(
                 enriched.getCompletePath(), OPUS_IMAGE)
         assert this.divMediaAssociationRepository.existsByDivPathAndMediaRefRole(
                 enriched.getCompletePath(), "enrichment")
 
         post([opusId: opus.id, summary: "SOMETHING ELSE ENTIRELY"])
-        final rerun = this.teiDivRepository.findById(opus.id).get()
-        assert rerun.summary == "Biblioteca is a canonical short-story collection."
+        final rerun = this.teiOpusRepository.findByTeiDivId(opus.id).get()
+        assert rerun.description == "Biblioteca is a canonical short-story collection."
     }
 
     @Test

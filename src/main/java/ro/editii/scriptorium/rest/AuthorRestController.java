@@ -4,6 +4,8 @@ import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.log4j.Log4j2;
 import org.springframework.core.env.Environment;
 import org.springframework.http.HttpStatus;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
@@ -11,6 +13,7 @@ import org.springframework.web.util.UriComponentsBuilder;
 import ro.editii.scriptorium.dao.AuthorRepository;
 import ro.editii.scriptorium.dao.TeiDivRepository;
 import ro.editii.scriptorium.dto.AuthorDto;
+import ro.editii.scriptorium.dto.CatalogPageDto;
 import ro.editii.scriptorium.dto.OpusDto;
 import ro.editii.scriptorium.dto.TeiDivDto;
 import ro.editii.scriptorium.model.Author;
@@ -44,7 +47,11 @@ public class AuthorRestController extends CommonControllerUtil {
         log.info("/authors/");
         List<AuthorDto> authors = this.authorRepository.findAll().stream()
                 .sorted()
-                .map(it -> AuthorDto.from(it))
+                .map(it -> {
+                    final AuthorDto dto = AuthorDto.from(it);
+                    dto.setWorksCount(this.teiDivRepository.countOperaForAuthorStrId(it.getStrId()));
+                    return dto;
+                })
                 .collect(Collectors.toList());
 
         // add image if existing
@@ -52,6 +59,28 @@ public class AuthorRestController extends CommonControllerUtil {
             it.setImage_href(this.getAuthorThumb(it.getStrId(), uriComponentsBuilder, httpServletRequest));
         });
         return authors;
+    }
+
+    /** Online catalogue endpoint: only the requested author page is loaded. */
+    @GetMapping("/page")
+    @Transactional(readOnly = true)
+    public CatalogPageDto<AuthorDto> getAuthorPage(
+            @RequestParam(defaultValue = "1") int page,
+            @RequestParam(defaultValue = "12") int size,
+            @RequestParam(required = false) String q,
+            UriComponentsBuilder uriComponentsBuilder,
+            HttpServletRequest httpServletRequest) {
+        final int safePage = Math.max(1, page);
+        final int safeSize = Math.min(100, Math.max(1, size));
+        final Page<Author> result = this.authorRepository.findCatalogPage(
+                q == null ? null : q.trim(), PageRequest.of(safePage - 1, safeSize));
+        final List<AuthorDto> items = result.getContent().stream().map(author -> {
+            final AuthorDto dto = AuthorDto.from(author);
+            dto.setWorksCount(this.teiDivRepository.countOperaForAuthorStrId(author.getStrId()));
+            dto.setImage_href(this.getAuthorThumb(author.getStrId(), uriComponentsBuilder, httpServletRequest));
+            return dto;
+        }).toList();
+        return new CatalogPageDto<>(items, safePage, safeSize, result.getTotalElements(), result.getTotalPages());
     }
 
 

@@ -239,23 +239,21 @@ public class DivCollectionRestController {
     @GetMapping("/system/featured")
     @org.springframework.transaction.annotation.Transactional(readOnly = true)
     public List<TeiDivDto> featured(UriComponentsBuilder ucb) {
-        final List<TeiDiv> opera = this.teiDivRepository.findAllOpera();
         return FEATURED_WORK_PATHS.stream()
-                .flatMap(path -> opera.stream().filter(div -> matchesFeaturedPath(div, path)).limit(1))
+                .map(DivCollectionRestController::stablePathParts)
+                .flatMap(parts -> this.teiDivRepository.findOperaByStablePath(parts.authorId(), parts.opusId()).stream())
                 .map(it -> featuredDto(it, ucb))
                 .toList();
     }
 
-    private static boolean matchesFeaturedPath(TeiDiv div, String path) {
+    private record StablePath(String authorId, String opusId) {}
+
+    private static StablePath stablePathParts(String path) {
         final int slash = path.indexOf('/');
-        if (slash <= 0 || slash == path.length() - 1 || div.getTeiFile() == null
-                || div.getTeiFile().getAuthors() == null
-                )
-            return false;
-        final String authorId = path.substring(0, slash);
-        final String opusId = path.substring(slash + 1);
-        return opusId.equals(div.getUrlFragment())
-                && div.getTeiFile().getAuthors().stream().anyMatch(a -> authorId.equals(a.getStrId()));
+        if (slash <= 0 || slash == path.length() - 1) {
+            throw new IllegalStateException("invalid featured stable path: " + path);
+        }
+        return new StablePath(path.substring(0, slash), path.substring(slash + 1));
     }
 
     private static TeiDivDto featuredDto(TeiDiv div, UriComponentsBuilder ucb) {

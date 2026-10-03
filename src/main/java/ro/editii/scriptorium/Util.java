@@ -28,7 +28,7 @@ public class Util {
 
     public static final String DIV = "div";
     public static final String BINARY_OBJECT = "binaryObject";
-    public static final String TEI_ELEM = "tei_elem";
+    public static final String TEI_ELEM = "_tei_elem";
 
     /**
      * windows 11-resistent way to get the file path of a URL representing a file

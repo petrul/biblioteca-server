@@ -5,6 +5,8 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.Column;
 import jakarta.persistence.DiscriminatorValue;
 import jakarta.persistence.Entity;
+import jakarta.persistence.FetchType;
+import jakarta.persistence.OneToOne;
 import jakarta.persistence.Lob;
 import jakarta.validation.constraints.Size;
 import lombok.Data;
@@ -48,6 +50,14 @@ public class TeiDiv extends TeiElem {
 
     @Column(length = 500)
     String summarySourceUrl;
+
+    /** Public MinIO URL of the asynchronously generated work cover. */
+    @Column(length = 1000)
+    String coverUrl;
+
+    @JsonIgnore
+    @OneToOne(mappedBy = "teiDiv", fetch = FetchType.EAGER)
+    TeiOpus opusMetadata;
 
     @Override
     public TeiElemDto toDto(UriComponentsBuilder uriComponentsBuilder) {

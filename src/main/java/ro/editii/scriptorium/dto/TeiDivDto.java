@@ -24,6 +24,10 @@ public class TeiDivDto extends TeiElemDto implements Comparable<TeiDivDto> {
     // already enriched.
     String summarySourceUrl;
 
+    String coverUrl;
+    String description;
+    String significantQuote;
+
     TeiDivDto[] children;
     AuthorDto author;
 
@@ -68,6 +72,12 @@ public class TeiDivDto extends TeiElemDto implements Comparable<TeiDivDto> {
             path = teiDiv.getCompletePath();
             author = AuthorDto.from(teiDiv.getAuthor());
             summarySourceUrl = teiDiv.getSummarySourceUrl();
+            coverUrl = teiDiv.getCoverUrl();
+            if (teiDiv.getOpusMetadata() != null) {
+                description = teiDiv.getOpusMetadata().getDescription();
+                significantQuote = teiDiv.getOpusMetadata().getSignificantQuote();
+                if (coverUrl == null) coverUrl = teiDiv.getOpusMetadata().getCoverUrl();
+            }
             xpath = teiDiv.getXpath();
         }};
 

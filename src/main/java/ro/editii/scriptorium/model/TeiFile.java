@@ -17,6 +17,7 @@ import java.util.List;
  * represents a TEI xml file
  */
 @Entity
+@Table(name = "_tei_file")
 @Data @ToString(onlyExplicitlyIncluded = true)
 public class TeiFile implements Serializable, Comparable<TeiFile> {
 
@@ -34,6 +35,7 @@ public class TeiFile implements Serializable, Comparable<TeiFile> {
 
     @EqualsAndHashCode.Exclude
     @ManyToMany(fetch = FetchType.EAGER)
+    @JoinTable(name = "_tei_file_authors")
     List<Author> authors;
 
     // Detected once at import time from the document's own text (see

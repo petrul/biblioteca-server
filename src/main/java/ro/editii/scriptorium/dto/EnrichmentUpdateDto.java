@@ -12,11 +12,12 @@ public class EnrichmentUpdateDto {
     private String bio;
     private String bioSourceUrl;
     private String summary;
-    private String summarySourceUrl;
+    private String significantQuote;
     private String birthDate;
     private String deathDate;
     private String birthPlace;
     private String country;
     private String writingLanguage;
     private List<String> imageUrls;
+    private String coverUrl;
 }

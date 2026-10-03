@@ -4,6 +4,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 import ro.editii.scriptorium.model.Author;
 import ro.editii.scriptorium.model.TeiFile;
@@ -27,6 +28,17 @@ public interface AuthorRepository extends JpaRepository<Author, Long> {
     Page<Author> findByLastNameContainingIgnoreCase(String excerpt, Pageable page);
     Page<Author> findByLastNameIgnoreCase(String excerpt, Pageable page);
     Page<Author> findByFirstNameContainingIgnoreCase(String excerpt, Pageable page);
+
+    @Query("""
+            select a from Author a
+            where :q is null or :q = ''
+               or lower(a.strId) like lower(concat('%', :q, '%'))
+               or lower(a.firstName) like lower(concat('%', :q, '%'))
+               or lower(a.lastName) like lower(concat('%', :q, '%'))
+               or lower(a.displayName) like lower(concat('%', :q, '%'))
+            order by a.lastName, a.firstName, a.strId
+            """)
+    Page<Author> findCatalogPage(@Param("q") String query, Pageable page);
 
     // save/delete used to be @RestResource(exported = false) here - DREST
     // writes were disabled while /api/drest/** was reachable from the

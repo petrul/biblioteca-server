@@ -7,6 +7,7 @@ import lombok.extern.log4j.Log4j2;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.time.StopWatch;
 import org.springframework.stereotype.Component;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 import ro.editii.scriptorium.TextbaseConfig;
@@ -14,6 +15,7 @@ import ro.editii.scriptorium.Util;
 import ro.editii.scriptorium.dao.AuthorRepository;
 import ro.editii.scriptorium.dao.TeiDivRepository;
 import ro.editii.scriptorium.dao.TeiFileRepository;
+import ro.editii.scriptorium.dao.TeiOpusRepository;
 import ro.editii.scriptorium.dto.TeiDivDto;
 import ro.editii.scriptorium.kafka.TextbaseEventsPublisher;
 import ro.editii.scriptorium.model.Author;
@@ -53,12 +55,23 @@ public class TeifileParser {
     final AuthorRepository authorRepository;
     final TeiDivRepository teiDivRepository;
 
+    // Kept as an optional setter-injected dependency so the small parser unit
+    // tests can continue to construct TeifileParser with their existing
+    // fixture repositories.
+    private TeiOpusRepository teiOpusRepository;
+
+    @Autowired
+    void setTeiOpusRepository(TeiOpusRepository repository) {
+        this.teiOpusRepository = repository;
+    }
+
     final TextbaseEventsPublisher textbaseEventsPublisher;
     final TextbaseConfig textbaseConfig;
 
     final private AuthorStrIdComputer authorStrIdComputer;
 
     protected Map<Node, TeiDiv> node2div = new LinkedHashMap<>();
+    private final Map<TeiDiv, String> openingDescriptions = new IdentityHashMap<>();
 
     private static String xpath(XpathTool xpathTool, String str_xpath) {
         return xpathTool.xpath(str_xpath);
@@ -104,6 +117,7 @@ public class TeifileParser {
         final List<TeiDiv> resp = new ArrayList<>();
 
         this.node2div.clear();
+        this.openingDescriptions.clear();
         final var xpathTool = new XpathTool(is, name);
 
         final StopWatch watch = new StopWatch(); watch.start();
@@ -167,6 +181,7 @@ public class TeifileParser {
                     this.teiDivRepository.saveAll(acc);
                     acc.clear();
                 }
+                persistOpusMetadata(importedOpuses);
                 signalEventNewOpuses(importedOpuses);
             }
         }
@@ -174,6 +189,46 @@ public class TeifileParser {
         watch.stop();
         log.info("done parsing {}, {} root divs, took {}", name, opusCounter, watch);
         return resp;
+    }
+
+    private void persistOpusMetadata(List<TeiDiv> importedOpuses) {
+        if (teiOpusRepository == null) return; // parser-only unit fixtures
+        importedOpuses.stream()
+                .filter(TeiDiv::isOpus)
+                .forEach(opus -> teiOpusRepository.findByTeiDivId(opus.getId())
+                        .orElseGet(() -> teiOpusRepository.save(
+                                new ro.editii.scriptorium.model.TeiOpus(opus, openingDescriptions.get(opus)))));
+    }
+
+    /** A conservative import-time fallback: only the opening two paragraphs. */
+    private static String openingDescription(Node opusNode) {
+        final List<String> paragraphs = new ArrayList<>();
+        final NodeList descendants = opusNode.getChildNodes();
+        collectParagraphs(descendants, paragraphs);
+        if (paragraphs.isEmpty()) {
+            final String text = opusNode.getTextContent();
+            if (text != null && !text.isBlank()) paragraphs.add(text);
+        }
+        final String normalized = paragraphs.stream().limit(2)
+                .map(it -> it.replaceAll("\\s+", " ").trim())
+                .filter(it -> !it.isBlank())
+                .collect(java.util.stream.Collectors.joining(" "));
+        if (normalized.isBlank()) return null;
+        return normalized.length() <= 600 ? normalized : normalized.substring(0, 600).trim() + "…";
+    }
+
+    private static void collectParagraphs(NodeList nodes, List<String> paragraphs) {
+        for (int i = 0; i < nodes.getLength(); i++) {
+            final Node node = nodes.item(i);
+            if (node.getNodeType() == Node.ELEMENT_NODE &&
+                    ("p".equals(node.getLocalName()) || "p".equals(node.getNodeName()) ||
+                            node.getNodeName().endsWith(":p"))) {
+                paragraphs.add(node.getTextContent());
+            } else if (node.hasChildNodes()) {
+                collectParagraphs(node.getChildNodes(), paragraphs);
+            }
+            if (paragraphs.size() >= 2) return;
+        }
     }
 
     private static boolean isDivNode(Node node) {
@@ -276,6 +331,7 @@ public class TeifileParser {
             div.setNth(nth + 1); // because we store xpath-style, which starts at 1, not at 0
 
             this.node2div.put(node, div);
+            if (div.isOpus()) openingDescriptions.put(div, openingDescription(node));
 
             if (acc.size() >= 1000) {
                 this.teiDivRepository.saveAll(acc); // use saveAll so inserts be batch'd

@@ -316,7 +316,7 @@ public class AdminService {
             // the Class and Object... overloads).
             final List<Long> orphanedOperaIds = this.jdbcTemplate.queryForList(
                             "SELECT d.id FROM " + Util.TEI_ELEM + " d"
-                                            + " LEFT JOIN tei_file f ON f.id = d.tei_file_id"
+                            + " LEFT JOIN _tei_file f ON f.id = d.tei_file_id"
                                             + " WHERE f.id IS NULL AND d.parent_id IS NULL AND d.name = 'div'")
                             .stream()
                             .map(row -> ((Number) row.get("id")).longValue())
@@ -347,7 +347,7 @@ public class AdminService {
             // tei_file_id rows, which the LEFT JOIN caught).
             final int leftovers = this.jdbcTemplate.update(
                     "DELETE FROM " + Util.TEI_ELEM
-                            + " WHERE tei_file_id IS NULL OR tei_file_id NOT IN (SELECT id FROM tei_file)");
+                            + " WHERE tei_file_id IS NULL OR tei_file_id NOT IN (SELECT id FROM _tei_file)");
 
             if (pruned > 0 || leftovers > 0) {
                 log.info("Orphan sweep: {} opera trees and {} leftover elems removed", pruned, leftovers);
@@ -375,10 +375,10 @@ public class AdminService {
             // per-row) - the order below still respects the real FKs
             // between these four tables (tei_file_authors and tei_elem
             // both reference tei_file, so tei_file must go last).
-            this.jdbcTemplate.update("DELETE FROM tei_file_authors");
+            this.jdbcTemplate.update("DELETE FROM _tei_file_authors");
             this.jdbcTemplate.update("DELETE FROM author");
             this.jdbcTemplate.update("DELETE FROM " + Util.TEI_ELEM);
-            this.jdbcTemplate.update("DELETE FROM tei_file");
+            this.jdbcTemplate.update("DELETE FROM _tei_file");
 
             List<TeiFile> allExistingTeiFiles = this.teiFileRepository.findAll();
             writeLn(logActivity, "will first destroy existing...");

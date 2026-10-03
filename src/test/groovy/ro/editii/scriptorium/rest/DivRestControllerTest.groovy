@@ -122,6 +122,15 @@ class DivRestControllerTest {
         assert divs.xpath == elemsByPath.xpath
     }
 
+    @Test
+    void missingOpusRemainsNotFound() {
+        def connection = new URL(url('/api/divs?path=missing/opus')).openConnection()
+        connection.requestMethod = 'GET'
+
+        assert connection.responseCode == 404
+        assert connection.errorStream.text.contains('no opus for [missing/opus]')
+    }
+
     def p(args) { println(args) }
 
     def url(String path) {

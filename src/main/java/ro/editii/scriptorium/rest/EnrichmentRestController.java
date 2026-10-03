@@ -8,6 +8,7 @@ import ro.editii.scriptorium.dao.AuthorRepository;
 import ro.editii.scriptorium.dao.DivMediaAssociationRepository;
 import ro.editii.scriptorium.dao.MediaRefRepository;
 import ro.editii.scriptorium.dao.TeiDivRepository;
+import ro.editii.scriptorium.dao.TeiOpusRepository;
 import ro.editii.scriptorium.dto.EnrichmentUpdateDto;
 import ro.editii.scriptorium.media.AuthorMediaAssociation;
 import ro.editii.scriptorium.media.DivMediaAssociation;
@@ -39,6 +40,7 @@ public class EnrichmentRestController {
 
     private final AuthorRepository authors;
     private final TeiDivRepository divs;
+    private final TeiOpusRepository opera;
     private final MediaRefRepository mediaRefs;
     private final AuthorMediaAssociationRepository authorMedia;
     private final DivMediaAssociationRepository divMedia;
@@ -64,8 +66,11 @@ public class EnrichmentRestController {
             var opus = divs.findById(update.getOpusId());
             if (opus.isEmpty()) return ResponseEntity.notFound().build();
             var o = opus.get();
-            if (blank(o.getSummary()) && !blank(update.getSummary())) { o.setSummary(update.getSummary()); o.setSummarySourceUrl(update.getSummarySourceUrl()); }
-            divs.save(o);
+            var metadata = opera.findByTeiDivId(o.getId()).orElseGet(() -> opera.save(new ro.editii.scriptorium.model.TeiOpus(o, null)));
+            if (blank(metadata.getDescription()) && !blank(update.getSummary())) metadata.setDescription(update.getSummary());
+            if (blank(metadata.getSignificantQuote()) && !blank(update.getSignificantQuote())) metadata.setSignificantQuote(update.getSignificantQuote());
+            if (blank(metadata.getCoverUrl()) && !blank(update.getCoverUrl())) metadata.setCoverUrl(update.getCoverUrl());
+            opera.save(metadata);
             persistDivImages(o.getCompletePath(), update.getImageUrls());
         }
         return ResponseEntity.ok(Map.of("updated", true));

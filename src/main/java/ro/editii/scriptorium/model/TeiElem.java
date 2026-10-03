@@ -33,7 +33,7 @@ import java.util.stream.IntStream;
 @Entity
 @DiscriminatorColumn(name="name", discriminatorType = DiscriminatorType.STRING)
 @Inheritance(strategy = InheritanceType.SINGLE_TABLE)
-@Table(indexes = {@Index(columnList = "urlFragment")})
+@Table(name = "_tei_elem", indexes = {@Index(columnList = "urlFragment")})
 @Data
 @Log4j2 @NoArgsConstructor @AllArgsConstructor @Builder
 @EqualsAndHashCode(onlyExplicitlyIncluded = true) @ToString

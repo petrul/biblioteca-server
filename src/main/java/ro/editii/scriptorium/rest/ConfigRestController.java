@@ -7,6 +7,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import ro.editii.scriptorium.dto.SharedConfigDto;
+import ro.editii.scriptorium.config.RuntimeConfigService;
 import ro.editii.scriptorium.kafka.KafkaProps;
 import ro.editii.scriptorium.vector.Embedder;
 import ro.editii.scriptorium.vector.VectorCollection;
@@ -27,6 +28,7 @@ import ro.editii.scriptorium.vector.OllamaEmbedder;
 public class ConfigRestController {
 
     final KafkaProps kafkaProps;
+    final RuntimeConfigService runtimeConfigService;
     // ObjectProvider, not a plain VectorCollection/Embedder field: those
     // beans (see VectorConfig) require ${vectorstore.address}/${ollama.host}
     // etc. to actually resolve, which not every profile that boots this
@@ -85,9 +87,15 @@ public class ConfigRestController {
         // The DTO field keeps its historic "milvus" name on the wire (the
         // deployed textbase-nestjs reads shared.milvus.collection) - what
         // it carries is simply "the collection name", for whichever store.
+        final String configuredCollection = this.runtimeConfigService.value("vector.collection");
         SharedConfigDto.Milvus milvusInfo = SharedConfigDto.Milvus.builder()
-                .collection(resolvedCollection != null ? resolvedCollection.getName() : null)
+                .collection(configuredCollection != null
+                        ? configuredCollection
+                        : resolvedCollection != null ? resolvedCollection.getName() : null)
                 .build();
+
+        final int configuredParaMin = integerValue("vectorizer.para.minChars", this.paraMinChars);
+        final int configuredParaMax = integerValue("vectorizer.para.maxChars", this.paraMaxChars);
 
         return SharedConfigDto.builder()
                 .kafka(SharedConfigDto.Kafka.builder()
@@ -98,9 +106,19 @@ public class ConfigRestController {
                 .milvus(milvusInfo)
                 .embedder(embedderInfo)
                 .paragraph(SharedConfigDto.Paragraph.builder()
-                        .minChars(this.paraMinChars)
-                        .maxChars(this.paraMaxChars)
+                        .minChars(configuredParaMin)
+                        .maxChars(configuredParaMax)
                         .build())
                 .build();
+    }
+
+    private int integerValue(String key, int fallback) {
+        final String value = this.runtimeConfigService.value(key);
+        if (value == null) return fallback;
+        try {
+            return Integer.parseInt(value);
+        } catch (NumberFormatException ignored) {
+            return fallback;
+        }
     }
 }
