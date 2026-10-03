@@ -61,6 +61,15 @@ the reader's machine-aware `rake gen-client` task after the server is
 available. Review and commit the regenerated client API artifacts together
 with the REST API change.
 
+## Database migration format
+
+Use SQL migrations for deterministic schema changes and data-independent DDL.
+Use a Groovy Flyway migration (a compiled class extending `BaseJavaMigration`)
+for conditional repairs or data-dependent changes that need database metadata,
+dynamic identifiers, or branching logic. The project already has Groovy support,
+so no extra migration runtime is needed. Do not rewrite migrations that have
+already been applied; add a new version instead.
+
 ## Stable work identity
 
 Across all Biblioteca projects, refer to an opus by its canonical stable path
