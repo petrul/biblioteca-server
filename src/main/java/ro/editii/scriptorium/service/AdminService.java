@@ -147,7 +147,9 @@ public class AdminService {
                     } catch (TeiFileAlreadyImportedException e) {
                         log.error(e.getMessage(), e);
                     } catch (RuntimeException e) {
-                        log.error("caught runtime exception logging but will continue with other files", e);
+                        final Throwable cause = e.getCause() != null ? e.getCause() : e;
+                        log.error("caught {} importing {}, will continue with other files", cause.getMessage(), filename);
+                        log.debug("stacktrace", e);
                     }
                 }
             }
