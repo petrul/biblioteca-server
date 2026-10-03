@@ -152,7 +152,7 @@ class DivRestControllerTest {
     void beforeAll() {
         adminService.reimportAllTeis(new OutputStreamWriter(System.out))
         assert countTableRows("author") > 0
-        assert countTableRows("tei_file_authors") > 0
+        assert countTableRows(TestUtils.TEI_FILE_AUTHORS) > 0
         assert countTableRows(TestUtils.TEI_ELEM) > 0
     }
 

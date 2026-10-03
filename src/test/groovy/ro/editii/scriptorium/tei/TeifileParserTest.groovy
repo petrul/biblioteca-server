@@ -13,6 +13,7 @@ import ro.editii.scriptorium.TextbaseConfig
 import ro.editii.scriptorium.dao.AuthorRepository
 import ro.editii.scriptorium.dao.TeiDivRepository
 import ro.editii.scriptorium.dao.TeiFileRepository
+import ro.editii.scriptorium.dao.TeiOpusRepository
 import ro.editii.scriptorium.kafka.TextbaseEventsPublisher
 import ro.editii.scriptorium.dto.TeiDivDto
 import ro.editii.scriptorium.model.Languages
@@ -29,6 +30,7 @@ import static org.mockito.Mockito.verify
 class TeifileParserTest {
 
     @MockitoBean TeiFileRepository teiFileRepository
+    @MockitoBean TeiOpusRepository teiOpusRepository
     @MockitoBean AuthorRepository authorRepository
     @MockitoBean TeiDivRepository teiDivRepository
     @MockitoBean TextbaseEventsPublisher eventsPublisher

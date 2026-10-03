@@ -3,6 +3,8 @@ package ro.editii.scriptorium.model;
 import jakarta.persistence.*;
 import lombok.*;
 
+import java.io.Serializable;
+
 /**
  * Work-level metadata.  A TeiDiv is the parsed tree node; this entity is the
  * stable, editable envelope around a root-level opus.  Enrichment and manual
@@ -11,7 +13,7 @@ import lombok.*;
 @Entity
 @Table(name = "TEI_OPUS", uniqueConstraints = @UniqueConstraint(name = "UK_TEI_OPUS_DIV", columnNames = "TEI_DIV_ID"))
 @Getter @Setter @NoArgsConstructor
-public class TeiOpus {
+public class TeiOpus implements Serializable {
     @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 

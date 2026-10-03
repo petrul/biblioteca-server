@@ -34,6 +34,13 @@ class TeifileParserMockdepsTest {
                 teiDivs.addAll(arg)
                 return arg
             })
+        Mockito
+            .when(teiDivRepository.saveAllAndFlush(Mockito.anyCollection()))
+            .thenAnswer { inv ->
+                List arg = inv.getArgument(0)
+                teiDivs.addAll(arg)
+                return arg
+            }
 
         AuthorStrIdComputer authorStrIdComputer = new AuthorStrIdComputer(authorRepository)
         final cnt = """

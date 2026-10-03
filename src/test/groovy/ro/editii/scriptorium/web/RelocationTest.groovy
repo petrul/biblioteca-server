@@ -100,7 +100,7 @@ class RelocationTest {
             TestUtils.truncateAllTables(this.jdbcTemplate)
             p this.authorRepository.findAll().strId
             assert this.authorRepository.getByStrId(authorId).empty
-            assert JdbcTestUtils.countRowsInTable(this.jdbcTemplate, 'tei_elem') == 0
+            assert JdbcTestUtils.countRowsInTable(this.jdbcTemplate, '"_tei_elem"') == 0
             assert JdbcTestUtils.countRowsInTable(this.jdbcTemplate, 'author') == 0
 
             final tei = GTestUtil.teiOf("Văsălie Alecsandri", """

@@ -10,6 +10,9 @@ import org.springframework.stereotype.Component;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
+import jakarta.transaction.Transactional;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.PersistenceContext;
 import ro.editii.scriptorium.TextbaseConfig;
 import ro.editii.scriptorium.Util;
 import ro.editii.scriptorium.dao.AuthorRepository;
@@ -60,6 +63,13 @@ public class TeifileParser {
     // fixture repositories.
     private TeiOpusRepository teiOpusRepository;
 
+    private EntityManager entityManager;
+
+    @Autowired(required = false)
+    void setEntityManager(EntityManager entityManager) {
+        this.entityManager = entityManager;
+    }
+
     @Autowired
     void setTeiOpusRepository(TeiOpusRepository repository) {
         this.teiOpusRepository = repository;
@@ -90,6 +100,7 @@ public class TeifileParser {
         return this.parse(id, content, langHint);
     }
 
+    @Transactional
     public List<TeiDiv> parse(String name, String content, Languages langHint) throws TeiFileAlreadyImportedException {
         final ByteArrayInputStream is = new ByteArrayInputStream(content.getBytes(StandardCharsets.UTF_8));
         try(is) {
@@ -112,6 +123,7 @@ public class TeifileParser {
      *
      * @return warn, if a TEI <div> does not contain a <head> it will be ignored.
      */
+    @Transactional
     public List<TeiDiv> parse(String name, InputStream is, Languages langHint) throws TeiFileAlreadyImportedException {
 
         final List<TeiDiv> resp = new ArrayList<>();
@@ -178,7 +190,12 @@ public class TeifileParser {
                 parcurge_rec(node, null, i, teifile, acc, resp, importedOpuses, langHint);
 
                 if (acc.size() > 0) {
-                    this.teiDivRepository.saveAll(acc);
+                    // TeiOpus has a mandatory one-to-one reference to the
+                    // root TeiDiv. Flush the parsed tree before persisting
+                    // that envelope so Hibernate never sees a transient
+                    // TeiDiv when the parser is invoked outside an enclosing
+                    // service transaction (as the integration tests do).
+                    this.teiDivRepository.saveAllAndFlush(acc);
                     acc.clear();
                 }
                 persistOpusMetadata(importedOpuses);
@@ -195,9 +212,26 @@ public class TeifileParser {
         if (teiOpusRepository == null) return; // parser-only unit fixtures
         importedOpuses.stream()
                 .filter(TeiDiv::isOpus)
-                .forEach(opus -> teiOpusRepository.findByTeiDivId(opus.getId())
-                        .orElseGet(() -> teiOpusRepository.save(
-                                new ro.editii.scriptorium.model.TeiOpus(opus, openingDescriptions.get(opus)))));
+                .forEach(opus -> {
+                    // Resolve the just-flushed root again.  This keeps the
+                    // one-to-one envelope attached to a managed TeiDiv even
+                    // when parsing was entered without a caller transaction.
+                    if (opus.getId() == null) {
+                        log.warn("skipping opus metadata for {} because its parsed div has no id", opus.getXpath());
+                        return;
+                    }
+                    // Resolve a fully managed entity (rather than a lazy
+                    // proxy) so the metadata row and the subsequent event
+                    // serialization never outlive the persistence session.
+                    final TeiDiv persisted = entityManager == null
+                            ? opus : entityManager.find(TeiDiv.class, opus.getId());
+                    if (persisted == null) {
+                        log.warn("skipping opus metadata for missing div {}", opus.getId());
+                        return;
+                    }
+                    teiOpusRepository.save(new ro.editii.scriptorium.model.TeiOpus(
+                            persisted, openingDescriptions.get(opus)));
+                });
     }
 
     /** A conservative import-time fallback: only the opening two paragraphs. */

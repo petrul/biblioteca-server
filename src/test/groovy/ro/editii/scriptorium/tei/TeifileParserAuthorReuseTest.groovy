@@ -55,10 +55,11 @@ class TeifileParserAuthorReuseTest {
 
     @BeforeEach
     void before() {
-        this.jdbcTemplate.update("DELETE FROM tei_file_authors")
+        this.jdbcTemplate.update("DELETE FROM ${TestUtils.TEI_FILE_AUTHORS}")
         this.jdbcTemplate.update("DELETE FROM author")
+        this.jdbcTemplate.update("DELETE FROM tei_opus")
         this.jdbcTemplate.update("DELETE FROM ${TestUtils.TEI_ELEM}")
-        this.jdbcTemplate.update("DELETE FROM tei_file")
+        this.jdbcTemplate.update("DELETE FROM ${TestUtils.TEI_FILE}")
     }
 
     private int countAuthors() {
@@ -83,9 +84,11 @@ class TeifileParserAuthorReuseTest {
         assert countAuthors() == 1
 
         // forceReimport's path: delete the file's rows, then import again
-        this.jdbcTemplate.update("DELETE FROM ${TestUtils.TEI_ELEM} where tei_file_id in (select id from tei_file where filename = 'f1.xml')")
-        this.jdbcTemplate.update("DELETE FROM tei_file_authors where tei_file_id in (select id from tei_file where filename = 'f1.xml')")
-        this.jdbcTemplate.update("DELETE FROM tei_file where filename = 'f1.xml'")
+        // This fixture contains only f1.xml at this point; use the same
+        // dependency-safe cleanup as the other parser tests rather than
+        // relying on Derby's scope rules for DELETE + subquery on a
+        // delimited table name.
+        TestUtils.truncateAllTables(this.jdbcTemplate)
 
         this.teifileParser.parse("f1.xml", String.format(TEI_TMPL, "Erste Arbeit", "Erste Arbeit"), Languages.DE)
 

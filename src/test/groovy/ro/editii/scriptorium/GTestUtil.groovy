@@ -33,7 +33,10 @@ class GTestUtil {
     }
 
     static def countTableRows(JdbcTemplate jdbcTemplate, String tableName) {
-        return jdbcTemplate.queryForObject("select count(*) from " + tableName, Integer.class)
+        def actual = tableName == 'tei_elem' ? '"_tei_elem"' :
+                tableName == 'tei_file' ? '"_tei_file"' :
+                tableName == 'tei_file_authors' ? '"_tei_file_authors"' : tableName
+        return jdbcTemplate.queryForObject("select count(*) from " + actual, Integer.class)
     }
 
     static String[] DERBY_INMEM_TEST_DB_PROPS = [

@@ -52,7 +52,13 @@ class TocTest {
                 divs.addAll(batch)
                 return batch
             }
-        })
+                })
+        Mockito
+                .when(teidivRep.saveAllAndFlush(Mockito.anyCollection())).thenAnswer { invocation ->
+                    def batch = invocation.arguments[0]
+                    divs.addAll(batch)
+                    batch
+                }
 
         final URL res = this.getClass().getClassLoader().getResource("testrepo/ro/Alecsandri-Scrieri.xml")
         parser.parse("Alecsandri-Scrieri.xml",
@@ -114,4 +120,3 @@ class TocTest {
 
     }
 }
-

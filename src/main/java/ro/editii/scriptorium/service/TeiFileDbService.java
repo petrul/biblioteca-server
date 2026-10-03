@@ -11,6 +11,7 @@ import ro.editii.scriptorium.cache.DiskCaches;
 import ro.editii.scriptorium.dao.AuthorRepository;
 import ro.editii.scriptorium.dao.TeiDivRepository;
 import ro.editii.scriptorium.dao.TeiFileRepository;
+import ro.editii.scriptorium.dao.TeiOpusRepository;
 import ro.editii.scriptorium.kafka.TextbaseEventsPublisher;
 import ro.editii.scriptorium.model.*;
 import ro.editii.scriptorium.tei.AuthorStrIdComputer;
@@ -37,6 +38,7 @@ public class TeiFileDbService {
     final TeiFileRepository teiFileRepository;
     final AuthorRepository authorRepository;
     final TeiDivRepository teiDivRepository;
+    final TeiOpusRepository teiOpusRepository;
     final TeiRepo teiRepo;
     final AuthorStrIdComputer authorStrIdComputer;
     final CacheManager cacheManager;
@@ -96,6 +98,7 @@ public class TeiFileDbService {
         for (TeiElem child: children)
             this.delete_rec((TeiDiv) child);
 
+        this.teiOpusRepository.deleteByTeiDivId(div.getId());
         this.teiDivRepository.deleteById(div.getId());
     }
 

@@ -9,4 +9,5 @@ import java.util.Optional;
 @Repository
 public interface TeiOpusRepository extends JpaRepository<TeiOpus, Long> {
     Optional<TeiOpus> findByTeiDivId(Long teiDivId);
+    void deleteByTeiDivId(Long teiDivId);
 }

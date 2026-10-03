@@ -54,7 +54,7 @@ class DavItest {
         this.adminService.reimportAllTeis(new NullWriter())
 
         assert TestUtils.countTableRows(this.jdbcTemplate, "author") > 0
-        assert TestUtils.countTableRows(this.jdbcTemplate, "tei_file_authors") > 0
+        assert TestUtils.countTableRows(this.jdbcTemplate, TestUtils.TEI_FILE_AUTHORS) > 0
         assert TestUtils.countTableRows(this.jdbcTemplate, TEI_ELEM) > 0
     }
 

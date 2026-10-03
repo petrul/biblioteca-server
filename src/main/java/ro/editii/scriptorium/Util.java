@@ -28,7 +28,10 @@ public class Util {
 
     public static final String DIV = "div";
     public static final String BINARY_OBJECT = "binaryObject";
-    public static final String TEI_ELEM = "_tei_elem";
+    // Derby requires identifiers beginning with '_' to be delimited.
+    // Keep the quoting with this SQL-facing constant so every raw query uses
+    // the same safe spelling after migration V6 renames the compiled tables.
+    public static final String TEI_ELEM = "\"_tei_elem\"";
 
     /**
      * windows 11-resistent way to get the file path of a URL representing a file

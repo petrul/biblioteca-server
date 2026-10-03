@@ -35,13 +35,14 @@ class ParseTeiFileIntoMemDbTest {
 
         // DELETE FROM, not TRUNCATE + SET FOREIGN_KEY_CHECKS - see
         // AdminService.destroyAllExistingAndReimportAllTeis's own comment.
-        this.jdbcTemplate.update("DELETE FROM tei_file_authors")
+        this.jdbcTemplate.update("DELETE FROM ${TestUtils.TEI_FILE_AUTHORS}")
         this.jdbcTemplate.update("DELETE FROM author")
+        this.jdbcTemplate.update("DELETE FROM tei_opus")
         this.jdbcTemplate.update("DELETE FROM ${TestUtils.TEI_ELEM}")
-        this.jdbcTemplate.update("DELETE FROM tei_file")
+        this.jdbcTemplate.update("DELETE FROM ${TestUtils.TEI_FILE}")
 
         assert countTableRows(this.jdbcTemplate, "author") == 0
-        assert countTableRows(this.jdbcTemplate, "tei_file_authors") == 0
+        assert countTableRows(this.jdbcTemplate, TestUtils.TEI_FILE_AUTHORS) == 0
         assert countTableRows(this.jdbcTemplate, TestUtils.TEI_ELEM) == 0
     }
 
@@ -249,9 +250,8 @@ class ParseTeiFileIntoMemDbTest {
         this.teifileParser.parse(tei, Languages.BG)
 
         assert 1 == countTeiElem()
-        assert "Pula calului" ==  this.jdbcTemplate.queryForList("select head from tei_elem", String.class).get(0)
+        assert "Pula calului" ==  this.jdbcTemplate.queryForList("select head from ${TestUtils.TEI_ELEM}", String.class).get(0)
 
     }
 
 }
-
