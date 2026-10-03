@@ -109,7 +109,13 @@ class RelocationTest {
                     <p>content</p>
                 </div>
             """)
-            this.parser.parse(tei, Languages.ES)
+            // TeifileParser performs explicit JPA flushes while compiling the
+            // tree.  Invoke it inside a committed transaction so the data is
+            // visible to the worker thread assertions below as well.
+            tt.execute { status ->
+                this.parser.parse(tei, Languages.ES)
+                status.flush()
+            }
 
             // make sure data commited on test main thread is visible from another thread
             final mainThreadName = Thread.currentThread().name

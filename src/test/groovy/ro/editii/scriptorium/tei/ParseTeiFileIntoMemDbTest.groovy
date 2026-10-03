@@ -8,6 +8,7 @@ import org.springframework.boot.kafka.autoconfigure.KafkaAutoConfiguration
 import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.jdbc.core.JdbcTemplate
 import org.springframework.test.context.TestPropertySource
+import org.springframework.transaction.annotation.Transactional
 import ro.editii.scriptorium.TestConfig
 import ro.editii.scriptorium.TestUtils
 import ro.editii.scriptorium.dao.TeiDivRepository
@@ -24,6 +25,7 @@ import static ro.editii.scriptorium.TestUtils.TEI_ELEM
         "spring.main.allow-bean-definition-overriding=true"])
 @SpringBootTest(classes = [ TestConfig.class ])
 @EnableAutoConfiguration(exclude= [KafkaAutoConfiguration.class])
+@Transactional
 class ParseTeiFileIntoMemDbTest {
 
     @Autowired TeiDivRepository teiDivRepository
