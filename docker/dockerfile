@@ -78,7 +78,12 @@ RUN useradd dockerapp -u 10001
 USER 10001
 
 EXPOSE 8080
-ENTRYPOINT ["java", "-Xmx4g", "-Xss20m", "-jar", "/biblioteca-server.jar"]
+# --enable-native-access=ALL-UNNAMED: Lucene 10's MMapDirectory calls libc
+# (mmap/madvise) through the restricted java.lang.foreign.Linker API; the
+# classpath (unnamed-module) app needs this explicit grant or the JVM
+# warns on every boot - and a future JDK deny-default would silently push
+# Lucene to its slower pure-Java fallback.
+ENTRYPOINT ["java", "-Xmx4g", "-Xss20m", "--enable-native-access=ALL-UNNAMED", "-jar", "/biblioteca-server.jar"]
 
 # Stage 3: the GraalVM native-image variant - the same converter toolbox
 # (the app shells out to these tools at runtime regardless of how the JVM

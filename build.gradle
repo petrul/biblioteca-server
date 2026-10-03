@@ -358,6 +358,15 @@ dependencies {
 
 bootRun {
     jvmArgs '-Xss10m' // add line
+    // Lucene 10's MMapDirectory reaches libc (mmap/madvise) through the
+    // Foreign Function & Memory API; Linker's methods are JDK-restricted
+    // and a classpath (unnamed-module) app needs this explicit grant,
+    // else every bootRun prints the "restricted method in
+    // java.lang.foreign.Linker has been called" warning (and a future
+    // JDK default of deny would push Lucene to its slower pure-Java
+    // fallback). Tests fork their own JVMs - the Test task below carries
+    // the same grant.
+    jvmArgs '--enable-native-access=ALL-UNNAMED'
     // resolveProfile() (below) is the single source of truth: the rakefile
     // always passes -Pprofile=<profile> (biblioteca/<profile> in the pass
     // store - a hostname by default, e.g. zmeu, see the rakefile's own
@@ -373,6 +382,9 @@ bootRun {
 
 tasks.withType(Test).configureEach {
     jvmArgs '-Xss10m' // needed for the recursion of serializing DOM Nodes
+    // same Lucene FFM native-access grant as bootRun - the forks that
+    // touch Lucene otherwise print the restricted-Linker warning too
+    jvmArgs '--enable-native-access=ALL-UNNAMED'
     // A bare fork inherits Gradle's default 512m cap, which WebITest's
     // full-corpus reimport + incremental Lucene reindex on top of every
     // Spring context cached earlier in the same JVM exhausts (the

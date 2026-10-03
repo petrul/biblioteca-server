@@ -10,7 +10,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
-import jakarta.transaction.Transactional;
+import org.springframework.transaction.annotation.Transactional;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
 import ro.editii.scriptorium.TextbaseConfig;
@@ -123,13 +123,27 @@ public class TeifileParser {
      *
      * @return warn, if a TEI <div> does not contain a <head> it will be ignored.
      */
-    @Transactional
+    @Transactional(rollbackFor = TeiFileAlreadyImportedException.class)
     public List<TeiDiv> parse(String name, InputStream is, Languages langHint) throws TeiFileAlreadyImportedException {
 
         final List<TeiDiv> resp = new ArrayList<>();
 
         this.node2div.clear();
         this.openingDescriptions.clear();
+
+        // Already-imported verdict BEFORE anything is saved. This is a
+        // checked exception and the default @Transactional does not roll
+        // back on checked exceptions (the rollbackFor above is the belt
+        // to this check's suspenders): an author saved ahead of this
+        // point would commit while the import aborts - a file-less
+        // orphan author no cleanup can ever reach, since deleteTeiFile
+        // only inspects the authors of the file it deletes. More than
+        // one importer JVM can share one DB (Globals.IMPORT_TEIS_WORKING
+        // is a per-JVM lock), so reaching this check with the file
+        // already present is a real race, not a theoretical one.
+        if (this.teiFileRepository.getByFilename(name).isPresent())
+            throw new TeiFileAlreadyImportedException("teifile " + name + " already imported");
+
         final var xpathTool = new XpathTool(is, name);
 
         final StopWatch watch = new StopWatch(); watch.start();
@@ -145,9 +159,27 @@ public class TeifileParser {
              // already an originalname present in db
             author = authorOptionalRetrieved.get();
         } else {
-            // no such original name in db
-            this.authorStrIdComputer.compute_strid_for_new_author(author);
-            this.authorRepository.save(author);
+            // No exact name match - but the corpus spells the same person
+            // differently across files (diacritics, token order,
+            // punctuation; see Author.nameIdentityKey). Before creating a
+            // second row for them, look for an existing row whose name
+            // folds to the same identity key and reuse it. Only a genuine
+            // first sighting falls through to the new-author path.
+            final String identityKey = Author.nameIdentityKey(author.getOriginalNameInTeiFile());
+            final Optional<Author> variant = this.authorRepository.findAll().stream()
+                    .filter(existing -> !identityKey.isEmpty()
+                            && identityKey.equals(Author.nameIdentityKey(existing.getOriginalNameInTeiFile())))
+                    .findFirst();
+            if (variant.isPresent()) {
+                log.warn("reusing author {} [{}] for name variant [{}] - same identity key \"{}\"",
+                        variant.get().getStrId(), variant.get().getOriginalNameInTeiFile(),
+                        author.getOriginalNameInTeiFile(), identityKey);
+                author = variant.get();
+            } else {
+                // no such original name in db
+                this.authorStrIdComputer.compute_strid_for_new_author(author);
+                this.authorRepository.save(author);
+            }
         }
 
         // teiFile
@@ -163,12 +195,6 @@ public class TeifileParser {
         // directory-path guess - recorded once here at the file level,
         // same value TeiDiv.lang gets per-div below (parcurge_rec).
         teifile.setLanguage(langHint);
-
-        // check if already existing teiFile
-        final Optional<TeiFile> optionalTeiFile = this.teiFileRepository.getByFilename(teiFilename);
-
-        if (optionalTeiFile.isPresent())
-            throw new TeiFileAlreadyImportedException("teifile " + teiFilename + " already imported");
 
         this.teiFileRepository.save(teifile);
 

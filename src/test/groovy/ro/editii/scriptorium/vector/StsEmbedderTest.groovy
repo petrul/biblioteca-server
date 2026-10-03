@@ -1,8 +1,5 @@
 package ro.editii.scriptorium.vector
 
-import org.junit.jupiter.api.AfterAll
-import org.junit.jupiter.api.BeforeAll
-import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.Tag
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestInstance
@@ -20,25 +17,28 @@ import org.springframework.boot.test.context.SpringBootTest
  * server does small-model CPU inference, not GPU-contended LLM work, so it's
  * fast/reliable enough to run every time - this is deliberately the
  * "make encoding test target sts" test.
+ *
+ * Migrated off the retired milvus: the three encoding tests never needed a
+ * store, and the old fourth test's collection round-trip (milvus persisted
+ * the embedder description as collection metadata) has no qdrant equivalent -
+ * VectorCollection.create() documents qdrant accepting-and-dropping the
+ * description - so what survives is the describe() contract itself, the
+ * part the search layer still reads. No store beans at all: vector.store=none
+ * keeps the context free of both the milvus and the qdrant wiring.
  */
 @SpringBootTest(
-        classes = [VectorConfig.class, MilvusService.class, ro.editii.scriptorium.health.OllamaHealthTracker.class],
+        classes = [VectorConfig.class, ro.editii.scriptorium.health.OllamaHealthTracker.class],
         properties = [
             "sts.host=mini.local",
             "sts.port=11200",
-            // The collection round-trip below is milvus-specific machinery
-            // (MilvusService.getAt), so opt into the milvus beans explicitly
-            // - qdrant is the default store now.
-            "vector.store=milvus",
-            "vectorstore.address=http://srv2.local:20112",
+            // Neither store is needed here: the conditional collection beans
+            // (milvus / qdrant-by-default) are both opted out of.
+            "vector.store=none",
             "embedder.address=http://zmeu.local:11434",
         ])
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 @Tag("integration-test")
-@Disabled("Milvus is retired infrastructure - its collection round-trip needs a live milvus instance that no longer exists; the vector store itest path is qdrant now (QdrantCollectionITest).")
 class StsEmbedderTest {
-
-    static final String TEST_COLLECTION = "test_textbase_paras_sts_all_minilm_l6_v2_stsembeddertest"
 
     @Autowired
     @Qualifier("model_prod_all_MiniLM_L6_v2")
@@ -47,9 +47,6 @@ class StsEmbedderTest {
     @Autowired
     @Qualifier("model_all_mpnet_base_v2")
     StsEmbedder allMpnetEmbedder
-
-    @Autowired
-    MilvusService milvusService
 
     private static final String[] SENTENCES = ["hello there", "how are you", "comment allez-vous?", "ce faci, bă?"]
 
@@ -104,29 +101,18 @@ class StsEmbedderTest {
         assert miniLmVector.length != mpnetVector.length
     }
 
-    // Exercises MilvusCollection.create(dim, description) with a real
-    // encoder's own describe() - the "collection description must contain
-    // where the encoder is, its name, characteristics" requirement - and
-    // confirms it actually round-trips through Milvus.
+    /**
+     * The describe() contract that used to feed MilvusCollection.create()'s
+     * description (milvus persisted it as collection metadata; qdrant has no
+     * such field, so VectorCollection.create() accepts-and-drops it - see its
+     * own javadoc). The part the system still depends on is what describe()
+     * itself must carry: where the encoder runs, its name, characteristics.
+     */
     @Test
     void collectionDescriptionCarriesRealEncoderDetails() {
-        final MilvusCollection col = this.milvusService.getAt(TEST_COLLECTION)
-        if (col.exists()) col.drop()
-        try {
-            final description = allMiniLmEmbedder.describe()
-            assert description.contains("all-MiniLM-L6-v2")
-            assert description.contains("mini.local")
-            assert description.contains("11200")
-
-            col.create(MilvusCollection.DIM_384, description)
-
-            assert col.getDescription() == description
-            final fieldDescriptions = col.getFieldDescriptions()
-            assert fieldDescriptions[MilvusCollection.FIELD_SHA_256].contains("deduplicate")
-            assert fieldDescriptions[MilvusCollection.FIELD_URL].contains("retrieve")
-            assert fieldDescriptions[MilvusCollection.FIELD_EMBEDDING].contains("same encoder and dimension")
-        } finally {
-            if (col.exists()) col.drop()
-        }
+        final description = allMiniLmEmbedder.describe()
+        assert description.contains("all-MiniLM-L6-v2")
+        assert description.contains("mini.local")
+        assert description.contains("11200")
     }
 }

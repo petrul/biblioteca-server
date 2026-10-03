@@ -10,6 +10,7 @@ import ro.editii.scriptorium.VersionProperties;
 import ro.editii.scriptorium.dto.TeiRepoDto;
 import ro.editii.scriptorium.scheduled.NoWriter;
 import ro.editii.scriptorium.service.AdminService;
+import ro.editii.scriptorium.service.AuthorMergeService;
 import ro.editii.scriptorium.tei.CombinedTeiRepo;
 import ro.editii.scriptorium.tei.TeiRepo;
 
@@ -25,6 +26,7 @@ public class AdminRestController {
 
     final TeiRepo teiRepo;
     final AdminService adminService;
+    final AuthorMergeService authorMergeService;
     final Environment environment;
     final VersionProperties versionProperties;
 
@@ -105,6 +107,44 @@ public class AdminRestController {
     @ResponseBody
     public Map<String, Integer> reindexLucene() {
         return Map.of("indexed", this.adminService.reindexLucene());
+    }
+
+    /**
+     * Author rows split by name variants - the same person under two or
+     * more TEI-header spellings (see Author.nameIdentityKey). Review
+     * these before merging; TeifileParser already reuses variant rows
+     * for NEW imports, these endpoints repair the EXISTING splits.
+     */
+    @GetMapping("/authors/name-variants")
+    public List<AuthorMergeService.NameVariantGroup> authorNameVariants() {
+        return this.authorMergeService.nameVariants();
+    }
+
+    /** Folds one duplicate author row into the canonical one - see AuthorMergeService.merge. */
+    @PostMapping("/authors/merge")
+    public Map<String, Object> mergeAuthors(@RequestParam String canonical, @RequestParam String duplicate) {
+        return this.authorMergeService.merge(canonical, duplicate);
+    }
+
+    /**
+     * Merges every name-variant group with the deterministic canonical
+     * pick (most files, tie-broken by lower id). Safe to re-run: a
+     * repaired group no longer shows up in the variant list.
+     */
+    @PostMapping("/authors/merge-all-variants")
+    public List<Map<String, Object>> mergeAllAuthorVariants() {
+        return this.authorMergeService.mergeAllNameVariants();
+    }
+
+    /**
+     * Sweeps author rows left with no attached tei_file - the
+     * author-table mirror of /teirepos/pruneOrphanedElems, also run
+     * hourly by the autoimport scheduler. See
+     * AuthorMergeService.pruneOrphanedAuthors.
+     */
+    @PostMapping("/authors/pruneOrphaned")
+    public Map<String, Integer> pruneOrphanedAuthors() {
+        return Map.of("pruned", this.authorMergeService.pruneOrphanedAuthors(new NoWriter()));
     }
 
 }

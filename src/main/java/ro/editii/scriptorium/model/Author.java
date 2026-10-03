@@ -223,6 +223,41 @@ public class Author implements Comparable<Author>, Serializable {
     }
 
     /**
+     * Identity key for variant-name matching: the corpus spells the same
+     * person differently across files ("Alarcón, Pedro Antonio de" vs
+     * "Alarcon,Pedro Antonio de", "Jókai,Mór" vs "Mor,Jokai",
+     * "Chesterton,G. K." vs "Chesterton,G. K"), and the exact-string
+     * lookup on originalNameInTeiFile splits their works across two
+     * Author rows. The key folds everything that is typography rather
+     * than identity: diacritics (NFD, marks stripped), case, punctuation
+     * and spacing - and the ORDER of the name tokens, so
+     * "Alberdi,Juan Bautista" and "Bautista Juan,Alberdi" land on the
+     * same key too. Token order was verified against the whole author
+     * table (26 variant groups, 52 rows): no false collisions among
+     * genuinely distinct authors.
+     *
+     * Deliberately NOT used as the primary lookup - the parser consults
+     * it only when the exact originalNameInTeiFile lookup missed, as a
+     * reuse-an-existing-row heuristic.
+     */
+    public static String nameIdentityKey(String originalNameInTeiFile) {
+        if (originalNameInTeiFile == null || originalNameInTeiFile.isBlank())
+            return "";
+        final String folded = java.text.Normalizer
+                .normalize(originalNameInTeiFile.toLowerCase(java.util.Locale.ROOT), java.text.Normalizer.Form.NFD)
+                .replaceAll("\\p{M}", "");
+        final String[] tokens = folded.replaceAll("[^\\p{Alnum}]+", " ").trim().split("\\s+");
+        final java.util.List<String> sorted = new java.util.ArrayList<>(java.util.Arrays.asList(tokens));
+        java.util.Collections.sort(sorted);
+        return String.join(" ", sorted);
+    }
+
+    /** @see #nameIdentityKey(String) */
+    public String nameIdentityKey() {
+        return nameIdentityKey(this.originalNameInTeiFile);
+    }
+
+    /**
      * @return displayName if non-null, else computes visually appealing name from first and last names.
      */
     public String getVisualName() {

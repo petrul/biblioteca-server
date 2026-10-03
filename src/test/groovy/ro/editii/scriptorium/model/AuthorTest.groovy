@@ -50,4 +50,42 @@ class AuthorTest {
         assert reginaMaria.displayName == 'Regina Maria a României'
         assert reginaMaria.firstName == 'Maria'
     }
+
+    // the Alarcon double-identity bug: the corpus spells the same person
+    // differently across TEI headers, and the exact-string identity on
+    // originalNameInTeiFile split their works into two author rows.
+    // nameIdentityKey folds everything that is typography (diacritics,
+    // case, punctuation, spacing) or token order - identity stays.
+    @Test
+    void nameIdentityKeyFoldsTypographyAndTokenOrder() {
+        // the actual DB pair: id=1114 [Alarcon,Pedro Antonio de] (ro file,
+        // no accent) vs id=1256 [Alarcón,Pedro Antonio de] (es/de files)
+        assert Author.nameIdentityKey("Alarcon,Pedro Antonio de")
+                == Author.nameIdentityKey("Alarcón, Pedro Antonio de")
+
+        // token order: "Alberdi,Juan Bautista" vs "Bautista Juan,Alberdi"
+        assert Author.nameIdentityKey("Alberdi,Juan Bautista")
+                == Author.nameIdentityKey("Bautista Juan,Alberdi")
+
+        // punctuation/initials: Chesterton,G. K vs Chesterton,G. K.
+        assert Author.nameIdentityKey("Chesterton,G. K")
+                == Author.nameIdentityKey("Chesterton,G. K.")
+
+        // hyphens and diacritics: Stevenson-Louis variants, Jókai/Mór
+        assert Author.nameIdentityKey("Stevenson,Robert Louis")
+                == Author.nameIdentityKey("Stevenson,Robert-Louis")
+        assert Author.nameIdentityKey("Jókai,Mór") == Author.nameIdentityKey("Mor,Jokai")
+    }
+
+    @Test
+    void nameIdentityKeyKeepsDistinctPeopleDistinct() {
+        // initials are NOT expanded: F. is not Fenimore
+        assert Author.nameIdentityKey("Cooper,James F.") != Author.nameIdentityKey("Cooper,James Fenimore")
+
+        // different given names, same family name
+        assert Author.nameIdentityKey("Caragiale,Ion-Luca") != Author.nameIdentityKey("Caragiale,Mateiu")
+
+        // one-named authors
+        assert Author.nameIdentityKey("Platón") != Author.nameIdentityKey("Aristóteles")
+    }
 }

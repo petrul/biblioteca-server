@@ -5,12 +5,17 @@ import org.springframework.data.rest.core.annotation.RepositoryRestResource;
 import org.springframework.data.rest.core.annotation.RestResource;
 import org.springframework.stereotype.Repository;
 import ro.editii.scriptorium.media.DivMediaAssociation;
+
+import java.util.List;
+
 @RepositoryRestResource(exported = false)
 @Repository
 public interface DivMediaAssociationRepository extends JpaRepository<DivMediaAssociation, Long> {
     boolean existsByDivPathAndMediaRefRole(String divPath, String role);
 
     boolean existsByDivPathAndMediaRefUrl(String divPath, String url);
+
+    List<DivMediaAssociation> findAllByDivPathStartingWith(String divPath);
 
     @RestResource(exported = false)
     @Override

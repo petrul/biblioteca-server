@@ -151,12 +151,20 @@ The canonical environment variable names expected by the application are:
 ```bash
 ./gradlew -Pci unittest      # network-free: no real Milvus/embedder needed
 ./gradlew test               # unit + external integration tests, CI profile by default
-./gradlew -Pci integrationTest  # only the tests tagged external
+./gradlew -Pci integrationTest  # only the tests tagged integration-test
 ```
 
-`rake test` delegates to `./gradlew test`; `rake ci` runs that plus a full
-build and Docker publish. CI values (TeamCity/Vault) are injected as real
-environment variables, which always take precedence over `.env.<profile>`
+The Rake tasks split the same way:
+
+```bash
+rake unittest[dev]       # unit and local component tests only
+rake itest[dev]          # integration-test tagged tests only
+rake test[dev]           # runs unittest and itest
+```
+
+`rake ci` uses the aggregate `rake test` behavior before the build and Docker
+publish. CI values (TeamCity/Vault) are injected as real environment
+variables, which always take precedence over `.env.<profile>`
 — the file is only a local-developer fallback.
 
 ### Mocking in Groovy tests: prefer Groovy mocks over Mockito

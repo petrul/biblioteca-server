@@ -10,6 +10,7 @@ import ro.editii.scriptorium.dao.AuthorRepository;
 import ro.editii.scriptorium.dao.TeiDivRepository;
 import ro.editii.scriptorium.dao.TeiFileRepository;
 import ro.editii.scriptorium.service.AdminService;
+import ro.editii.scriptorium.service.AuthorMergeService;
 import ro.editii.scriptorium.service.TeiFileDbService;
 import ro.editii.scriptorium.tei.AuthorStrIdComputer;
 import ro.editii.scriptorium.tei.TeiRepo;
@@ -27,6 +28,7 @@ public class TeiImportScheduler {
     final protected TeiFileDbService teiFileDbService;
     final TeiRepo teiRepo;
     final AdminService adminService;
+    final AuthorMergeService authorMergeService;
 
     // 60s, not 15s: still fast enough for a live-editing feedback loop
     // (edit a TEI file, see it reflected shortly after) without polling
@@ -82,6 +84,28 @@ public class TeiImportScheduler {
                 adminService.pruneOrphanedElems(new NoWriter());
             } catch (RuntimeException e) {
                 log.error("Scheduled prune of orphaned elems failed - will retry next cycle", e);
+            }
+        }
+    }
+
+    /**
+     * Hourly sweep of author rows whose tei_file vanished out-of-band (see
+     * AuthorMergeService.pruneOrphanedAuthors) - the per-file author cleanup
+     * in TeiFileDbService.deleteTeiFile cannot reach a file-less author, so
+     * this is the only thing that ever removes them. Own schedule, same
+     * cadence reasoning as the two sweeps above: quick DB pass, rare by
+     * construction (only out-of-band deletion or the fixed
+     * TeiFileAlreadyImportedException hole produce such rows), and it shares
+     * IMPORT_TEIS_WORKING with the reimport/prunes, so a long import pass
+     * delays it (and vice versa) by at most one cycle each.
+     */
+    @Scheduled(fixedDelay = 60 * 60 * 1000, initialDelay = 60 * 1000)
+    public void pruneOrphanedAuthors() {
+        synchronized (Globals.IMPORT_TEIS_WORKING) {
+            try {
+                this.authorMergeService.pruneOrphanedAuthors(new NoWriter());
+            } catch (RuntimeException e) {
+                log.error("Scheduled prune of orphaned authors failed - will retry next cycle", e);
             }
         }
     }

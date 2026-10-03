@@ -74,7 +74,6 @@ desc "Run the complete CI pipeline: clean, test, build, build the Docker image, 
 task :ci => [:clean] do
   Rake::Task[:'check-env'].invoke('ci')
   Rake::Task[:test].invoke
-  Rake::Task[:itest].invoke
   Rake::Task[:build].invoke('ci')
   Rake::Task['docker:publish'].invoke
 end
@@ -83,7 +82,6 @@ desc "Same pipeline as ci, plus a GraalVM native-image build, published with a -
 task :'ci-graalvm' => [:clean] do
   Rake::Task[:'check-env'].invoke('ci')
   Rake::Task[:test].invoke
-  Rake::Task[:itest].invoke
   Rake::Task[:build].invoke('ci')
   # The opt-in native step (build.gradle gates the AOT/native tasks behind
   # -Pgraalvm). Expect the first stable builds to surface reachability-
@@ -109,6 +107,7 @@ task :itest, [:task_profile, :test_filter] do |_task, args|
   task_profile = args[:task_profile] || profile
   test_filter = args[:test_filter]
   load_profile_env(task_profile)
+  Rake::Task['check-env'].invoke(task_profile)
   puts "Running integration tests..."
   selector = ''
   if test_filter && !test_filter.empty?
@@ -226,27 +225,39 @@ task :load_pass_secrets do
   puts "> Loaded #{loaded} secret(s)/config value(s) from pass (#{ci_dir})"
 end
 
-task :test, [:task_profile, :test_filter] do |_task, args|
-    task_profile = args[:task_profile] || profile
-    test_filter = args[:test_filter]
+def run_rake_tests(task_profile, test_filter, gradle_task, heading)
     load_profile_env(task_profile)
-    # Fail fast, before spending minutes on a test run, if the pass store
-    # is out of sync with what the app actually expects (exactly what
-    # happened tonight: application.properties/build.gradle moved from
-    # MYSQL_URL to DB_URL/DB_USER/DB_PASSWORD, but nothing forced the pass
-    # store itself to be checked until a test run failed confusingly deep
-    # into Spring context startup).
     Rake::Task['check-env'].invoke(task_profile)
-    puts "Running unit and integration tests..."
+    puts heading
     selector = ''
     if test_filter && !test_filter.empty?
-      # Resolve the friendly filter case-insensitively against test source
-      # filenames, then pass Gradle the exact fully-qualified class names.
       selectors = resolve_test_selectors(test_filter)
       abort "No test matches '#{test_filter}'" if selectors.empty?
       selector = selectors.map { |name| " --tests '#{name}'" }.join
     end
-    sh "#{GRADLE} -Pprofile=#{task_profile} test#{selector}"
+    # --rerun: a rake-driven test run is an explicit request to RUN the
+    # tests. Without it, Gradle's up-to-date check silently turns a
+    # rerun with unchanged sources into a one-second no-op ("BUILD
+    # SUCCESSFUL ... 7 up-to-date", zero tests executed) that reads
+    # exactly like an interrupted run. --rerun forces only the named
+    # test task itself - compilation stays incremental.
+    sh "#{GRADLE} -Pprofile=#{task_profile} #{gradle_task} --rerun#{selector}"
+end
+
+desc "Run only unit and local component tests"
+task :unittest, [:task_profile, :test_filter] do |_task, args|
+    task_profile = args[:task_profile] || profile
+    test_filter = args[:test_filter]
+    run_rake_tests(task_profile, test_filter, 'unittest', 'Running unit tests...')
+end
+
+desc "Run unit and integration tests"
+task :test, [:task_profile, :test_filter] do |_task, args|
+    task_profile = args[:task_profile] || profile
+    test_filter = args[:test_filter]
+    puts "Running unit and integration tests..."
+    Rake::Task[:unittest].invoke(task_profile, test_filter)
+    Rake::Task[:itest].invoke(task_profile, test_filter)
 end
 
 desc "List discovered test classes without running them"
