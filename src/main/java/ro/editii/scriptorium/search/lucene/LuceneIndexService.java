@@ -202,7 +202,7 @@ public class LuceneIndexService {
                                DivService divService,
                                ControllerTool controllerTool) throws IOException {
         // Expand a leading ~ to the user's home (same as CacheConf/AppConfig):
-        // lucene.index.dir defaults to ${cache.dir}/lucene-index, which
+        // lucene.index.dir defaults to ${work.dir}/lucene-index, which
         // inherits the pass store's WORK_DIR value - and that is allowed to
         // use the conventional leading-~/ form (e.g. ~/.biblioteca), which
         // must never reach Path.of as a literal tilde-named directory.

@@ -211,7 +211,7 @@ configurations {
 	}
 }
 
-final luceneVersion = '9.9.1'
+final luceneVersion = '10.5.1'
 dependencies {
 
 //	implementation('org.springframework.boot:spring-boot-starter-data-cassandra')
@@ -294,7 +294,7 @@ dependencies {
     implementation group: 'org.apache.lucene', name: 'lucene-queries', version: luceneVersion
     // Was 'lucene-analyzers-common:8.11.2' - that artifact was renamed to
     // 'lucene-analysis-common' from Lucene 9 onward, and the 8.x jar doesn't
-    // match lucene-core 9.9.1's API (e.g. IndexSearcher.doc() -> storedFields()).
+    // match the Lucene 10.5.1 API (e.g. IndexSearcher.doc() -> storedFields()).
     // lucene-demo/lucene-snowball dropped: unused (no demo code; the
     // per-language stemmers this module ships - RomanianAnalyzer etc, see
     // search/lucene/LuceneAnalyzers.java - cover stemming instead).
@@ -412,7 +412,7 @@ tasks.withType(Test).configureEach {
     systemProperty 'lucene.incremental.enabled', 'false'
     // ... and the index itself lives in a per-task scratch dir under build/,
     // never the real dev/int/prod index that lucene.index.dir otherwise
-    // defaults to (${work.dir}/cache/lucene-index) - no test may even open,
+    // defaults to (${work.dir}/lucene-index) - no test may even open,
     // let alone write, the live machine's index (see WebITest's own
     // isolation comment for the lock contention/corruption that causes).
     // The two tests that actually build/search a real index (WebITest,
