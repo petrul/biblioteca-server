@@ -70,6 +70,12 @@ public class TeiDivDto extends TeiElemDto implements Comparable<TeiDivDto> {
             leaf = teiDiv.isLeaf();
             opus = teiDiv.isOpus();
             path = teiDiv.getCompletePath();
+            // Every division inherits the detected language of its TEI file;
+            // expose it on the DTO so root opuses carry their own work-level
+            // language instead of forcing clients to infer it from authors.
+            language = teiDiv.getTeiFile() != null && teiDiv.getTeiFile().getLanguage() != null
+                    ? teiDiv.getTeiFile().getLanguage().getISO639_1Code()
+                    : null;
             author = AuthorDto.from(teiDiv.getAuthor());
             summarySourceUrl = teiDiv.getSummarySourceUrl();
             coverUrl = teiDiv.getCoverUrl();
