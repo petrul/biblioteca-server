@@ -77,6 +77,12 @@ public class SecurityConfig {
                     .requestMatchers("/api/users/register").permitAll()
                     .requestMatchers("/api/auth/google").permitAll()
                     .requestMatchers("/api/auth/google/profile").authenticated()
+                    // A reader's own UI preferences document (theme, last
+                    // catalog tab, ...) - same reasoning as collections/mine
+                    // below: always scoped to a real signed-in reader, no
+                    // anonymous concept here (anonymous stays on the
+                    // client's localStorage store instead).
+                    .requestMatchers("/api/users/me/preferences").authenticated()
                     // A user's own collections (list/create/mutate) always
                     // require being logged in as that user - see
                     // DivCollectionRestController. System collections
