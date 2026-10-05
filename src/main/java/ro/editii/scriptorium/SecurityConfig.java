@@ -76,6 +76,7 @@ public class SecurityConfig {
                     .requestMatchers("/api/shell").authenticated()
                     .requestMatchers("/api/users/register").permitAll()
                     .requestMatchers("/api/auth/google").permitAll()
+                    .requestMatchers("/api/auth/google/profile").authenticated()
                     // A user's own collections (list/create/mutate) always
                     // require being logged in as that user - see
                     // DivCollectionRestController. System collections

@@ -16,6 +16,7 @@ public class GoogleAuthService {
     final AppUserRepository appUserRepository;
     final DivCollectionService divCollectionService;
     final GoogleIdTokenVerifier googleIdTokenVerifier;
+    final GoogleProfileClient googleProfileClient;
 
     /**
      * @return the AppUser this Google credential belongs to - an existing
@@ -31,7 +32,62 @@ public class GoogleAuthService {
 
         return this.appUserRepository.findByGoogleSub(claims.sub())
                 .map(user -> updateAvatarIfChanged(user, claims))
-                .orElseGet(() -> createFromGoogleAccount(claims));
+                .orElseGet(() -> findLegacyAccountByEmail(claims)
+                        .map(user -> linkGoogleAccount(user, claims))
+                        .orElseGet(() -> createFromGoogleAccount(claims)));
+    }
+
+    /**
+     * Refresh the profile photo using a Google OAuth access token. One Tap's
+     * ID token is enough to authenticate, but it does not grant the userinfo
+     * API access needed for accounts whose picture is absent from tokeninfo.
+     * The caller must already be logged in and the verified Google email must
+     * match the current Biblioteca account.
+     */
+    @Transactional
+    public AppUser refreshProfile(String accessToken, String currentUsername) {
+        if (accessToken == null || accessToken.isBlank())
+            throw new IllegalArgumentException("missing Google access token");
+        if (currentUsername == null || currentUsername.isBlank())
+            throw new IllegalArgumentException("no signed-in Biblioteca user");
+
+        final GoogleProfile profile = this.googleProfileClient.fetch(accessToken);
+        final String email = profile.email();
+        if (!currentUsername.equalsIgnoreCase(email))
+            throw new IllegalArgumentException("Google profile does not match the signed-in user");
+
+        final AppUser user = this.appUserRepository.findByUsername(currentUsername)
+                .orElseThrow(() -> new IllegalArgumentException("signed-in Biblioteca user was not found"));
+        final String googleSub = profile.sub();
+        if (user.getGoogleSub() != null && !user.getGoogleSub().equals(googleSub))
+            throw new IllegalArgumentException("Google profile identity does not match the signed-in user");
+
+        if (profile.picture() != null && !profile.picture().isBlank()) {
+            user.setAvatarUrl(profile.picture());
+            this.appUserRepository.save(user);
+        }
+        return user;
+    }
+
+    /**
+     * Link an older password-created account when its username is the same
+     * verified Google email. Without this bridge, the Google sign-in creates
+     * a suffixed duplicate while /users/me continues finding the old account
+     * (and therefore never returns its Google avatar).
+     */
+    private java.util.Optional<AppUser> findLegacyAccountByEmail(GoogleClaims claims) {
+        if (claims.email() == null || claims.email().isBlank())
+            return java.util.Optional.empty();
+        return java.util.Optional.ofNullable(this.appUserRepository.findByUsername(claims.email()))
+                .orElse(java.util.Optional.empty())
+                .filter(user -> user.getGoogleSub() == null);
+    }
+
+    private AppUser linkGoogleAccount(AppUser user, GoogleClaims claims) {
+        user.setGoogleSub(claims.sub());
+        if (claims.picture() != null)
+            user.setAvatarUrl(claims.picture());
+        return this.appUserRepository.save(user);
     }
 
     // Google's profile picture can change over time (or simply wasn't

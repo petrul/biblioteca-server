@@ -1,11 +1,16 @@
 package ro.editii.scriptorium.security.google;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.Data;
 import lombok.extern.log4j.Log4j2;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestTemplate;
+
+import java.nio.charset.StandardCharsets;
+import java.util.Base64;
 
 /**
  * Verifies a Google ID token server-side via Google's own tokeninfo
@@ -30,6 +35,7 @@ public class GoogleTokenInfoVerifier implements GoogleIdTokenVerifier {
     String expectedClientId;
 
     private final RestTemplate restTemplate = new RestTemplate();
+    private final ObjectMapper objectMapper = new ObjectMapper();
 
     public boolean isConfigured() {
         return this.expectedClientId != null && !this.expectedClientId.isBlank();
@@ -84,6 +90,26 @@ public class GoogleTokenInfoVerifier implements GoogleIdTokenVerifier {
             throw new IllegalArgumentException("unexpected Google credential issuer: " + info.getIss());
 
         log.debug("Google credential verified OK for sub={}", info.getSub());
-        return new GoogleClaims(info.getSub(), info.getEmail(), info.getName(), info.getPicture(), "true".equals(info.getEmail_verified()));
+        // Some Workspace accounts expose their profile image in the signed
+        // ID token but omit it from tokeninfo. tokeninfo has already
+        // authenticated and audience-checked this token above, so reading
+        // this optional claim is safe and keeps organization avatars visible.
+        final String picture = info.getPicture() != null
+                ? info.getPicture()
+                : pictureFromIdToken(idToken);
+        return new GoogleClaims(info.getSub(), info.getEmail(), info.getName(), picture, "true".equals(info.getEmail_verified()));
+    }
+
+    private String pictureFromIdToken(String idToken) {
+        try {
+            final String[] parts = idToken.split("\\.");
+            if (parts.length < 2) return null;
+            final byte[] payload = Base64.getUrlDecoder().decode(parts[1]);
+            final JsonNode picture = this.objectMapper.readTree(new String(payload, StandardCharsets.UTF_8)).get("picture");
+            return picture == null || picture.isNull() ? null : picture.asText(null);
+        } catch (Exception e) {
+            log.debug("Google ID token had no readable picture claim");
+            return null;
+        }
     }
 }

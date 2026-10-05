@@ -17,6 +17,7 @@ class GoogleAuthServiceTest {
     AppUserRepository appUserRepository
     DivCollectionService divCollectionService
     GoogleIdTokenVerifier tokenVerifier
+    GoogleProfileClient googleProfileClient
     GoogleAuthService service
 
     @BeforeEach
@@ -24,7 +25,8 @@ class GoogleAuthServiceTest {
         this.appUserRepository = mock(AppUserRepository)
         this.divCollectionService = mock(DivCollectionService)
         this.tokenVerifier = mock(GoogleIdTokenVerifier)
-        this.service = new GoogleAuthService(appUserRepository, divCollectionService, tokenVerifier)
+        this.googleProfileClient = mock(GoogleProfileClient)
+        this.service = new GoogleAuthService(appUserRepository, divCollectionService, tokenVerifier, googleProfileClient)
 
         when(appUserRepository.save(any(AppUser))).thenAnswer { invocation ->
             final user = invocation.getArgument(0, AppUser)
@@ -50,6 +52,29 @@ class GoogleAuthServiceTest {
         assert user.role == AppUser.Role.USER
         verify(appUserRepository).save(user)
         verify(divCollectionService).createFavoritesIfMissing(user)
+    }
+
+    @Test
+    void linksAnExistingLegacyEmailAccountAndStoresItsGoogleAvatar() {
+        final claims = new GoogleClaims("google-sub-petru", "petru@scriptorium.ro", "Petru", "https://example.com/petru.jpg", true)
+        final legacy = AppUser.builder()
+                .id(7L)
+                .username(claims.email())
+                .role(AppUser.Role.ADMIN)
+                .build()
+        when(tokenVerifier.verify("credential")).thenReturn(claims)
+        when(appUserRepository.findByGoogleSub(claims.sub())).thenReturn(Optional.empty())
+        when(appUserRepository.findByUsername(claims.email())).thenReturn(Optional.of(legacy))
+        when(appUserRepository.save(any(AppUser))).thenAnswer { invocation -> invocation.getArgument(0, AppUser) }
+
+        final user = service.signIn("credential")
+
+        assert user.is(legacy)
+        assert user.googleSub == claims.sub()
+        assert user.avatarUrl == claims.picture()
+        assert user.role == AppUser.Role.ADMIN
+        verify(appUserRepository).save(legacy)
+        verify(divCollectionService, never()).createFavoritesIfMissing(any(AppUser))
     }
 
     @Test
@@ -102,6 +127,7 @@ class GoogleAuthServiceTest {
         final claims = new GoogleClaims("abcdef123456", "carol@example.com", "Carol", null, true)
         when(tokenVerifier.verify("credential")).thenReturn(claims)
         when(appUserRepository.findByGoogleSub(claims.sub())).thenReturn(Optional.empty())
+        when(appUserRepository.findByUsername(claims.email())).thenReturn(Optional.empty())
         when(appUserRepository.existsByUsername(claims.email())).thenReturn(true)
 
         final user = service.signIn("credential")
@@ -118,6 +144,42 @@ class GoogleAuthServiceTest {
 
         assert ex.message.contains("invalid Google credential")
         verifyNoInteractions(appUserRepository, divCollectionService)
+    }
+
+    @Test
+    void retrievesAndStoresThePictureThroughTheApprovedGoogleProfileFlow() {
+        final user = AppUser.builder()
+                .id(42L)
+                .username('petru@scriptorium.ro')
+                .googleSub('google-sub-petru')
+                .role(AppUser.Role.ADMIN)
+                .build()
+        when(appUserRepository.findByUsername(user.username)).thenReturn(Optional.of(user))
+        when(googleProfileClient.fetch('oauth-access-token'))
+                .thenReturn(new GoogleProfile(user.googleSub, user.username, 'https://lh3.googleusercontent.com/petru'))
+
+        final result = service.refreshProfile('oauth-access-token', user.username)
+
+        assert result.is(user)
+        assert result.avatarUrl == 'https://lh3.googleusercontent.com/petru'
+        verify(googleProfileClient).fetch('oauth-access-token')
+        verify(appUserRepository).save(user)
+    }
+
+    @Test
+    void refusesAProfileBelongingToAnotherSignedInEmail() {
+        final user = AppUser.builder()
+                .username('petru@scriptorium.ro')
+                .googleSub('google-sub-petru')
+                .role(AppUser.Role.ADMIN)
+                .build()
+        when(googleProfileClient.fetch('oauth-access-token'))
+                .thenReturn(new GoogleProfile('other-sub', 'other@example.com', 'https://example.com/other.jpg'))
+
+        final ex = shouldFail { service.refreshProfile('oauth-access-token', user.username) }
+
+        assert ex.message.contains('does not match')
+        verifyNoInteractions(appUserRepository)
     }
 
     private static Exception shouldFail(Closure closure) {

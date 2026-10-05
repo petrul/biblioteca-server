@@ -13,6 +13,9 @@ import org.springframework.security.web.context.HttpSessionSecurityContextReposi
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.ResponseBody;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import ro.editii.scriptorium.dto.UserLoggedInDto;
 import ro.editii.scriptorium.kafka.TextbaseEventsPublisher;
 import ro.editii.scriptorium.model.AppUser;
@@ -62,6 +65,24 @@ public class GoogleAuthController {
             log.warn("Google sign-in failed ({}): {}", e.getClass().getSimpleName(), e.getMessage(), e);
             response.sendRedirect("/?googleSignInError="
                     + URLEncoder.encode(e.getMessage(), StandardCharsets.UTF_8));
+        }
+    }
+
+    /** Refresh the photo from Google's userinfo endpoint for the current session. */
+    @PostMapping("/api/auth/google/profile")
+    @ResponseBody
+    public java.util.Map<String, Object> refreshGoogleProfile(
+            @RequestBody java.util.Map<String, String> body,
+            @AuthenticationPrincipal UserDetails principal) {
+        if (principal == null)
+            throw new org.springframework.web.server.ResponseStatusException(
+                    org.springframework.http.HttpStatus.UNAUTHORIZED, "not signed in");
+        try {
+            final AppUser user = this.googleAuthService.refreshProfile(body == null ? null : body.get("access_token"), principal.getUsername());
+            return java.util.Map.of("success", true, "avatarUrl", user.getAvatarUrl());
+        } catch (IllegalArgumentException e) {
+            throw new org.springframework.web.server.ResponseStatusException(
+                    org.springframework.http.HttpStatus.UNAUTHORIZED, e.getMessage(), e);
         }
     }
 
