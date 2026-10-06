@@ -111,12 +111,19 @@ public class DivService {
 
         assert elem.getTeiFile() != null;
         // @Cacheable hands back the instance cached by some EARLIER request's
-        // transaction - detached by now, and walking its still-lazy
-        // collections (dbChildren, for depth pruning and text rendering)
-        // throws LazyInitializationException: no session. Same re-attach as
-        // getToc's disk-cache hit below: merge into the CURRENT session so
-        // lazy loading works on cache hits too.
-        return this.entityManager.merge(elem);
+        // transaction - detached by now. Path navigation itself has already
+        // initialized the collections it needs; do not merge the whole graph
+        // here because leaf elements can retain transient parent references.
+        // Do not merge the navigated element graph here.  Path navigation can
+        // intentionally produce an in-memory leaf whose parent is the
+        // persisted div; merging that graph makes Hibernate try to flush a
+        // transient parent reference.  The caller only needs the content
+        // repository attached for XML access.
+        final TeiElem attached = elem;
+        // Reattach the content repository; nodeAsText and nodeAsXmlString
+        // need it when the result came through the cache.
+        attached.setTeiRepo(this.teiRepo);
+        return attached;
     }
 
     /**

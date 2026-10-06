@@ -146,7 +146,14 @@ public class TeiElem implements Comparable<TeiElem>, Serializable  {
     @JsonIgnore
     public List<TeiDiv> getDbChildrenAsDivs() {
         if (this.dbChildren == null) return null;
-        return this.dbChildren.stream().map(it -> (TeiDiv) it).toList();
+        // A TEI div's persisted children include both nested divs and leaf
+        // elements (head, p, note, ...).  Only the former belong in a
+        // div-only navigation response; blindly casting every child causes
+        // the REST endpoint to fail as soon as a work contains a paragraph.
+        return this.dbChildren.stream()
+                .filter(it -> it instanceof TeiDiv)
+                .map(it -> (TeiDiv) it)
+                .toList();
     }
 
     @ToString.Exclude @JsonIgnore

@@ -104,7 +104,7 @@ class DivRestControllerTest {
     void getTeiDivByIdAndByPath() {
         final tbc = new RestApiClient(url('/'))
 
-        final divIds = teiDivRepository.findAll().stream()
+        final divIds = teiDivRepository.findAll().findAll { it instanceof ro.editii.scriptorium.model.TeiDiv }.stream()
                 .map(it -> it.getId()).toList()
 
         assert divIds.size() > 2

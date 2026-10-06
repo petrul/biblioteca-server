@@ -35,7 +35,16 @@ class DavExportServiceTest {
 
         shortWork = div("short_work", "Short Work", null);
         shortWork.setDbChildren(new ArrayList<>());
-        when(repository.findAllOpera()).thenReturn(List.of(work, shortWork));
+        // The export uses the lightweight routing projection; keeping the
+        // fixture on that API also prevents the test from accidentally
+        // relying on full entities and their LOB fields.
+        when(repository.findAllOperaRowsForDav()).thenReturn(List.of(
+                row(1L, work, 1),
+                row(2L, shortWork, 0)));
+        when(repository.findOperaByStablePath("writer", work.getUrlFragment()))
+                .thenReturn(java.util.Optional.of(work));
+        when(repository.findOperaByStablePath("writer", shortWork.getUrlFragment()))
+                .thenReturn(java.util.Optional.of(shortWork));
     }
 
     @Test
@@ -98,5 +107,10 @@ class DavExportServiceTest {
         div.setTeiFile(file);
         div.setParent(parent);
         return div;
+    }
+
+    private DavOperaRow row(long id, TeiDiv div, long childCount) {
+        return new DavOperaRow(id, div.getTeiFile().getFilename(), div.getUrlFragment(),
+                div.getHead(), Languages.RO, "writer", null, "Ada", "Writer", childCount);
     }
 }

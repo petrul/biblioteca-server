@@ -86,7 +86,9 @@ public class DivRestController {
         final Optional<TeiDiv> teiDivOpt = this.teiDivRepository.findById(id);
         if (teiDivOpt.isEmpty())
             RestUtil.throw404();
-        final TeiDiv teiDiv = teiDivOpt.get();
+        if (!(teiDivOpt.get() instanceof TeiDiv))
+            RestUtil.throw404();
+        final TeiDiv teiDiv = (TeiDiv) teiDivOpt.get();
         final String baseUrl = uriComponentsBuilder.path("/").toUriString();
         final TeiDivDto dto = TeiDivDto.fromTeiDiv(teiDiv, baseUrl);
         final TeiDivDto[] childrenDtos = teiDiv.getDbChildrenAsDivs().stream()
