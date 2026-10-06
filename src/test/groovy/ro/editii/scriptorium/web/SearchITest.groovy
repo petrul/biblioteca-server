@@ -71,6 +71,8 @@ import static ro.editii.scriptorium.TestUtils.TEI_ELEM
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class SearchITest {
 
+    private boolean qdrantSetupSucceeded = false
+
     /**
      * Unique per run: concurrent itest executions (two developers, or a
      * developer plus a CI agent) share the same qdrant instance, and setup
@@ -216,8 +218,15 @@ class SearchITest {
     void setupQdrantCollection() {
         final col = this.connect()
         try {
-            if (col.exists()) {
-                col.drop()
+            // Every operation, including the initial existence probe, is a
+            // network operation.  The old guard only caught create(), so a
+            // down/unreachable CI Qdrant failed the class during exists().
+            // This test is explicitly an integration test and must skip
+            // cleanly when its external store is unavailable.
+            try {
+                if (col.exists()) col.drop()
+            } catch (Exception unreachable) {
+                Assumptions.assumeTrue(false, "Qdrant is unavailable at the configured endpoint: ${unreachable.message}")
             }
             try {
                 col.create(FakeQwen3Embedder.DIM, "qdrant search itest fixture - safe to delete")
@@ -244,6 +253,7 @@ class SearchITest {
             // that it does, or every search()/ann() call below would just get
             // empty results for the rest of this test class.
             this.vectorSearchAvailability.checkAvailability()
+            this.qdrantSetupSucceeded = true
         } catch (Throwable setupFailure) {
             this.dropBestEffort(col, setupFailure)
             throw setupFailure
@@ -270,6 +280,7 @@ class SearchITest {
      */
     @AfterAll
     void teardownQdrantCollection() {
+        if (!this.qdrantSetupSucceeded) return
         final col = this.connect()
         this.dropBestEffort(col, null)
     }

@@ -76,3 +76,23 @@ Across all Biblioteca projects, refer to an opus by its canonical stable path
 `authorId/opusId` (for example `shakespeare/hamlet`). Do not use database IDs,
 display titles, import order, or fuzzy title matching for persisted links,
 collections, bookmarks, search results, or featured-work lists.
+
+## TeamCity snapshot verification
+
+Before treating Docker snapshots as deployable, verify the corresponding
+TeamCity build status; registry tags alone only prove that an image was
+published, not that the latest build passed. On the TeamCity host, use the
+REST API at `http://127.0.0.1:8111/teamcity/app/rest` with an access token
+supplied at runtime. Never store or print that token. The relevant build
+configurations are:
+
+* `Textbase_BibliotecaServer_Build`
+* `Textbase_TextbaseNestjs_Build`
+* `Textbase_TextbaseReader_Build`
+* `Biblioteca_Bibliotecacovers_Build`
+
+The latest build for each must report `SUCCESS` before `run-dev.sh` is
+considered a fully valid snapshot deployment. If a project manifest has a
+newer `*-SNAPSHOT` version than the registry, the matching TeamCity build has
+not yet published that snapshot (or failed); report deployment as blocked
+instead of silently using an older tag.
