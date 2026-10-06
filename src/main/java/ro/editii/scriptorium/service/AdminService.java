@@ -316,10 +316,16 @@ public class AdminService {
             // all-matchers rule meets Groovy's runtime overload dispatch
             // (matchers return null, and (sql, null) is ambiguous between
             // the Class and Object... overloads).
+            // "teiFile_id"/"parent_id": quoted to match the actual stored
+            // column names exactly - Derby folds an UNQUOTED identifier to
+            // uppercase before matching, which does not find these
+            // quoted-lowercase/mixed-case columns (confirmed live against
+            // the real schema: SQLSyntaxErrorException 42X04 on
+            // D.PARENT_ID, which does not exist - only parent_id does).
             final List<Long> orphanedOperaIds = this.jdbcTemplate.queryForList(
                             "SELECT d.id FROM " + Util.TEI_ELEM + " d"
-                            + " LEFT JOIN \"_tei_file\" f ON f.id = d.tei_file_id"
-                                            + " WHERE f.id IS NULL AND d.parent_id IS NULL AND d.name = 'div'")
+                            + " LEFT JOIN \"_tei_file\" f ON f.id = d.\"teiFile_id\""
+                                            + " WHERE f.id IS NULL AND d.\"parent_id\" IS NULL AND d.name = 'div'")
                             .stream()
                             .map(row -> ((Number) row.get("id")).longValue())
                             .toList();
