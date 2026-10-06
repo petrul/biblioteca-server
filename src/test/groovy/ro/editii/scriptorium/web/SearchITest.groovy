@@ -71,7 +71,6 @@ import static ro.editii.scriptorium.TestUtils.TEI_ELEM
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class SearchITest {
 
-    private boolean qdrantSetupSucceeded = false
 
     /**
      * Unique per run: concurrent itest executions (two developers, or a
@@ -206,8 +205,9 @@ class SearchITest {
      * handle on the same random-named collection the app bean points at,
      * with the lifecycle-tolerant RestTemplate (collection create/drop are
      * slow while the shared store is under bulk-vectorization load - see
-     * QdrantCollectionITest's own timeout note). Skips (not fails) when
-     * the store is unreachable, same as QdrantCollectionITest does.
+     * QdrantCollectionITest's own timeout note). An unavailable or
+     * misconfigured store fails this test; the endpoint and full exception
+     * are printed so CI does not hide an infrastructure problem.
      *
      * The whole setup is guarded so a failure at any step (create landed
      * but an index step failed, upsert rejected, availability check blew
@@ -219,20 +219,12 @@ class SearchITest {
         final col = this.connect()
         try {
             // Every operation, including the initial existence probe, is a
-            // network operation.  The old guard only caught create(), so a
-            // down/unreachable CI Qdrant failed the class during exists().
-            // This test is explicitly an integration test and must skip
-            // cleanly when its external store is unavailable.
-            try {
-                if (col.exists()) col.drop()
-            } catch (Exception unreachable) {
-                Assumptions.assumeTrue(false, "Qdrant is unavailable at the configured endpoint: ${unreachable.message}")
-            }
-            try {
-                col.create(FakeQwen3Embedder.DIM, "qdrant search itest fixture - safe to delete")
-            } catch (Exception unreachable) {
-                Assumptions.assumeTrue(false, "Qdrant is unavailable at the configured endpoint: ${unreachable.message}")
-            }
+            // network operation.  Log the exact sanitized endpoint and the
+            // complete exception before failing: an unavailable Qdrant in CI
+            // is a configuration/infrastructure failure, not a reason to
+            // silently skip this integration test.
+            if (col.exists()) col.drop()
+            col.create(FakeQwen3Embedder.DIM, "qdrant search itest fixture - safe to delete")
 
             final rnd = new Random()
             final nrRows = 12
@@ -253,8 +245,10 @@ class SearchITest {
             // that it does, or every search()/ann() call below would just get
             // empty results for the rest of this test class.
             this.vectorSearchAvailability.checkAvailability()
-            this.qdrantSetupSucceeded = true
         } catch (Throwable setupFailure) {
+            final endpoint = TestUtils.vectorStoreBaseAddress(System.getenv('VECTORSTORE_URL') ?: 'http://srv2.local:20126')
+            System.err.println("SearchITest: Qdrant unavailable or setup failed at ${endpoint}; full exception follows")
+            setupFailure.printStackTrace(System.err)
             this.dropBestEffort(col, setupFailure)
             throw setupFailure
         }
@@ -280,7 +274,6 @@ class SearchITest {
      */
     @AfterAll
     void teardownQdrantCollection() {
-        if (!this.qdrantSetupSucceeded) return
         final col = this.connect()
         this.dropBestEffort(col, null)
     }
