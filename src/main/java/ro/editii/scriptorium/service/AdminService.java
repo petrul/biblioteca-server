@@ -355,7 +355,13 @@ public class AdminService {
             // tei_file_id rows, which the LEFT JOIN caught).
             final int leftovers = this.jdbcTemplate.update(
                     "DELETE FROM " + Util.TEI_ELEM
-                            + " WHERE tei_file_id IS NULL OR tei_file_id NOT IN (SELECT id FROM \"_tei_file\")");
+                            // "teiFile_id" - the stored, quoted camelCase FK
+                            // column (Hibernate's naming), exactly as the
+                            // SELECT above references it. Unquoted
+                            // tei_file_id uppercases to TEI_FILE_ID, which
+                            // does not exist - the sweep failed on this
+                            // every cycle.
+                            + " WHERE \"teiFile_id\" IS NULL OR \"teiFile_id\" NOT IN (SELECT id FROM \"_tei_file\")");
 
             if (pruned > 0 || leftovers > 0) {
                 log.info("Orphan sweep: {} opera trees and {} leftover elems removed", pruned, leftovers);

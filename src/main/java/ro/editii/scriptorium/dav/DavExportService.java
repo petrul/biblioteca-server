@@ -3,7 +3,6 @@ package ro.editii.scriptorium.dav;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import ro.editii.scriptorium.dao.TeiDivRepository;
-import ro.editii.scriptorium.model.Author;
 import ro.editii.scriptorium.model.Languages;
 import ro.editii.scriptorium.model.TeiDiv;
 
@@ -19,20 +18,34 @@ import java.util.Optional;
 public class DavExportService {
     private final TeiDivRepository teiDivRepository;
 
+    /** One opus of the slim listing with its (possibly several) author refs. */
+    private record OpusEntry(
+            long divId,
+            String filename,
+            String urlFragment,
+            String head,
+            Languages language,
+            List<AuthorRef> authors,
+            long childCount) {
+    }
+
+    private record AuthorRef(String strId, String visualName) {
+    }
+
     public Optional<DavResource> resolve(List<String> path, DavExportOptions options) {
-        final List<TeiDiv> opera = eligibleOpera(options);
+        final List<OpusEntry> opera = eligibleOpera(options);
         if (path.isEmpty())
             return Optional.of(new DavResource(List.of(), "Textbase", true, null));
 
         final Languages language = Languages.from(path.get(0));
-        if (language == null || opera.stream().noneMatch(it -> languageOf(it) == language))
+        if (language == null || opera.stream().noneMatch(it -> it.language() == language))
             return Optional.empty();
         if (path.size() == 1)
             return Optional.of(new DavResource(path, language.getISO639_1Code(), true, null));
 
         final String authorId = path.get(1);
-        final List<TeiDiv> authorOpera = opera.stream()
-                .filter(it -> languageOf(it) == language)
+        final List<OpusEntry> authorOpera = opera.stream()
+                .filter(it -> it.language() == language)
                 .filter(it -> hasAuthor(it, authorId))
                 .toList();
         if (authorOpera.isEmpty())
@@ -40,25 +53,40 @@ public class DavExportService {
         if (path.size() == 2)
             return Optional.of(new DavResource(path, authorDisplayName(authorOpera.getFirst(), authorId), true, null));
 
-        TeiDiv current = null;
-        int divDepth = 1;
-        for (int pathIndex = 2; pathIndex < path.size(); pathIndex++, divDepth++) {
+        // The opus level: matched against the slim listing, then loaded
+        // whole - the one full entity of the whole request.
+        final String opusName = path.get(2);
+        final OpusEntry entry = authorOpera.stream()
+                .filter(it -> opusEntryName(it, options).equals(opusName))
+                .findFirst().orElse(null);
+        if (entry == null)
+            return Optional.empty();
+
+        final TeiDiv opus = teiDivRepository
+                .findOperaByStablePath(authorId, entry.urlFragment())
+                .orElse(null);
+        if (opus == null)
+            return Optional.empty();
+
+        TeiDiv current = opus;
+        int depth = 1;
+        for (int pathIndex = 3; pathIndex < path.size(); pathIndex++) {
+            final int childDepth = pathIndex - 1;
             final String requestedName = path.get(pathIndex);
-            final List<TeiDiv> candidates = current == null ? authorOpera : divChildren(current);
-            final int currentDepth = divDepth;
-            current = candidates.stream()
-                    .filter(it -> entryName(it, currentDepth, options).equals(requestedName))
+            current = divChildren(current).stream()
+                    .filter(it -> entryName(it, childDepth, options).equals(requestedName))
                     .findFirst().orElse(null);
             if (current == null)
                 return Optional.empty();
-            if (isFile(current, currentDepth, options) && pathIndex != path.size() - 1)
+            depth = childDepth;
+            if (isFile(current, childDepth, options) && pathIndex != path.size() - 1)
                 return Optional.empty();
         }
 
         return Optional.of(new DavResource(
                 path,
                 current.getVisualLabel(),
-                !isFile(current, divDepth - 1, options),
+                !isFile(current, depth, options),
                 current));
     }
 
@@ -66,11 +94,11 @@ public class DavExportService {
         if (!parent.collection())
             return List.of();
 
-        final List<TeiDiv> opera = eligibleOpera(options);
+        final List<OpusEntry> opera = eligibleOpera(options);
         final List<String> path = parent.path();
         if (path.isEmpty()) {
             final Map<String, Languages> languages = new LinkedHashMap<>();
-            opera.stream().map(this::languageOf).filter(it -> it != null)
+            opera.stream().map(OpusEntry::language).filter(it -> it != null)
                     .sorted(Comparator.comparing(Languages::getISO639_1Code))
                     .forEach(it -> languages.putIfAbsent(it.getISO639_1Code(), it));
             return languages.keySet().stream()
@@ -80,27 +108,32 @@ public class DavExportService {
         final Languages language = Languages.from(path.get(0));
         if (path.size() == 1) {
             final Map<String, String> authors = new LinkedHashMap<>();
-            opera.stream().filter(it -> languageOf(it) == language)
-                    .flatMap(it -> it.getTeiFile().getAuthors().stream())
-                    .sorted(Comparator.comparing(Author::getStrId))
-                    .forEach(it -> authors.putIfAbsent(it.getStrId(), it.getVisualName()));
+            opera.stream().filter(it -> it.language() == language)
+                    .flatMap(it -> it.authors().stream())
+                    .sorted(Comparator.comparing(AuthorRef::strId))
+                    .forEach(it -> authors.putIfAbsent(it.strId(), it.visualName()));
             return authors.entrySet().stream()
                     .map(it -> new DavResource(append(path, it.getKey()), it.getValue(), true, null)).toList();
         }
 
-        final List<TeiDiv> divs;
-        final int childDepth;
         if (path.size() == 2) {
             final String authorId = path.get(1);
-            divs = opera.stream().filter(it -> languageOf(it) == language)
-                    .filter(it -> hasAuthor(it, authorId)).toList();
-            childDepth = 1;
-        } else {
-            divs = divChildren(parent.div());
-            childDepth = path.size() - 1;
+            return opera.stream()
+                    .filter(it -> it.language() == language)
+                    .filter(it -> hasAuthor(it, authorId))
+                    .map(it -> new DavResource(
+                            append(path, opusEntryName(it, options)),
+                            it.head(),
+                            !opusIsFile(it, options),
+                            // Slim-listing children: displayname and
+                            // resourcetype only; the timestamps of a
+                            // directory entry are not worth an entity each.
+                            null))
+                    .toList();
         }
 
-        return divs.stream()
+        final int childDepth = path.size() - 1;
+        return divChildren(parent.div()).stream()
                 .sorted()
                 .map(it -> new DavResource(
                         append(path, entryName(it, childDepth, options)),
@@ -110,26 +143,44 @@ public class DavExportService {
                 .toList();
     }
 
-    private List<TeiDiv> eligibleOpera(DavExportOptions options) {
-        return teiDivRepository.findAllOpera().stream()
-                .filter(it -> options.language() == null || languageOf(it) == options.language())
-                .filter(it -> options.author() == null || hasAuthor(it, options.author()))
-                .sorted()
+    /**
+     * The slim opus listing (see findAllOperaRowsForDav): rows grouped by
+     * div - one row per (opus, author) - filtered by the mount's language
+     * and author, ordered like the entities were (TeiFile filename, see
+     * TeiElem.compareTo).
+     */
+    private List<OpusEntry> eligibleOpera(DavExportOptions options) {
+        final Map<Long, List<DavOperaRow>> byDiv = new LinkedHashMap<>();
+        for (final DavOperaRow row : teiDivRepository.findAllOperaRowsForDav()) {
+            if (options.language() != null && row.language() != options.language())
+                continue;
+            if (options.author() != null && !options.author().equals(row.authorStrId()))
+                continue;
+            byDiv.computeIfAbsent(row.divId(), ignored -> new ArrayList<>()).add(row);
+        }
+
+        return byDiv.values().stream()
+                .map(rows -> {
+                    final DavOperaRow first = rows.getFirst();
+                    final List<AuthorRef> authors = rows.stream()
+                            .filter(row -> row.authorStrId() != null)
+                            .map(row -> new AuthorRef(row.authorStrId(), row.authorVisualName()))
+                            .toList();
+                    return new OpusEntry(first.divId(), first.filename(), first.urlFragment(),
+                            first.head(), first.language(), authors, first.childCount());
+                })
+                .sorted(Comparator.comparing(OpusEntry::filename).thenComparing(OpusEntry::urlFragment))
                 .toList();
     }
 
-    private Languages languageOf(TeiDiv div) {
-        return div.getTeiFile().getLanguage();
+    private boolean hasAuthor(OpusEntry entry, String authorId) {
+        return entry.authors().stream().anyMatch(it -> it.strId().equals(authorId));
     }
 
-    private boolean hasAuthor(TeiDiv div, String authorId) {
-        return div.getTeiFile().getAuthors().stream().anyMatch(it -> it.getStrId().equals(authorId));
-    }
-
-    private String authorDisplayName(TeiDiv div, String authorId) {
-        return div.getTeiFile().getAuthors().stream()
-                .filter(it -> it.getStrId().equals(authorId))
-                .map(Author::getVisualName)
+    private String authorDisplayName(OpusEntry entry, String authorId) {
+        return entry.authors().stream()
+                .filter(it -> it.strId().equals(authorId))
+                .map(AuthorRef::visualName)
                 .findFirst().orElse(authorId);
     }
 
@@ -145,6 +196,15 @@ public class DavExportService {
 
     private String entryName(TeiDiv div, int depth, DavExportOptions options) {
         return div.getUrlFragment() + (isFile(div, depth, options) ? "." + options.format().extension() : "");
+    }
+
+    /** Whether the opus itself is a file at depth 1 (fragmentation 1, or a single-div work). */
+    private boolean opusIsFile(OpusEntry entry, DavExportOptions options) {
+        return 1 >= options.fragmentationDepth() || entry.childCount() == 0;
+    }
+
+    private String opusEntryName(OpusEntry entry, DavExportOptions options) {
+        return entry.urlFragment() + (opusIsFile(entry, options) ? "." + options.format().extension() : "");
     }
 
     private List<String> append(List<String> path, String value) {

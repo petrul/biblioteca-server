@@ -6,6 +6,7 @@ import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;
+import ro.editii.scriptorium.dav.DavOperaRow;
 import ro.editii.scriptorium.model.Author;
 import ro.editii.scriptorium.model.Languages;
 import ro.editii.scriptorium.model.TeiDiv;
@@ -99,6 +100,27 @@ public interface TeiDivRepository extends JpaRepository<TeiDiv, Long> {
     @Query("select div from TeiDiv div where div.parent is null")
     @EntityGraph(attributePaths = {"teiFile", "teiFile.authors"})
     List<TeiDiv> findAllOpera();
+
+    /**
+     * The DAV export's opus listing: routing fields only, one row per
+     * (opus, author; authorless opera have null author fields). The DAV
+     * service resolves paths against this slim projection instead of
+     * findAllOpera()'s full entity graph - the summary LOB plus the eager
+     * opusMetadata/teiFile/authors per opus made every DAV request
+     * materialize thousands of entities (tens of seconds per PROPFIND).
+     * The one work a path actually descends into is loaded whole
+     * afterwards, via findOperaByStablePath.
+     */
+    @Query("""
+            select new ro.editii.scriptorium.dav.DavOperaRow(
+                div.id, tf.filename, div.urlFragment, div.head, tf.language,
+                a.strId, a.displayName, a.firstName, a.lastName, size(div.dbChildren))
+            from TeiDiv div
+            join div.teiFile tf
+            left join tf.authors a
+            where div.parent is null
+            """)
+    List<DavOperaRow> findAllOperaRowsForDav();
 
     /**
      * Resolve one curated work by its stable authorId/opusId path.  Featured
