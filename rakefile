@@ -106,7 +106,6 @@ desc "Run integration-test tagged tests against the integration dependencies"
 task :itest, [:task_profile, :test_filter] do |_task, args|
   task_profile = args[:task_profile] || profile
   test_filter = args[:test_filter]
-  load_profile_env(task_profile)
   Rake::Task['check-env'].invoke(task_profile)
   puts "Running integration tests..."
   selector = ''
@@ -167,12 +166,13 @@ task :'check-env', [:task_profile] do |_task, args|
     labels = missing.map { |entry| entry.is_a?(Array) ? entry.join(' or ') : entry }
     raise "Missing required #{task_profile} environment value(s) from pass store: #{labels.join(', ')}"
   end
-  stage_dir = File.join(ENV.fetch('PASSWORD_STORE_DIR', File.expand_path('~/.password-store')), 'biblioteca', task_profile)
-  stored_keys = Dir.glob(File.join(stage_dir, '*')).select { |path| File.file?(path) }
-                  .map { |path| File.basename(path).sub(/\.gpg\z/, '') }
-  expected_keys = expected.flatten
-  extras = stored_keys - expected_keys
-  warn "> Warning: unused #{task_profile} pass-store value(s): #{extras.sort.join(', ')}" unless extras.empty?
+  # No "unused pass-store key" warning, matching biblioteca-nestjs's
+  # check-env: biblioteca/<profile> is one flat store shared across this
+  # app, biblioteca-nestjs, and biblioteca-reader, so keys like
+  # MINIO_URL/MINIO_CREDS are sibling-owned, not stale - a diff against
+  # only this app's required list would false-positive on every run.
+  # Cross-profile key consistency is the pass store's own
+  # check-consistency.sh instead.
   puts "> #{task_profile} environment is complete (#{expected.length} required value(s) present)"
 end
 
@@ -226,7 +226,6 @@ task :load_pass_secrets do
 end
 
 def run_rake_tests(task_profile, test_filter, gradle_task, heading)
-    load_profile_env(task_profile)
     Rake::Task['check-env'].invoke(task_profile)
     puts heading
     selector = ''
