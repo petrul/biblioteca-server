@@ -5,6 +5,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 import ro.editii.scriptorium.dav.DavOperaRow;
 import ro.editii.scriptorium.model.Author;
@@ -46,13 +47,18 @@ public interface TeiDivRepository extends JpaRepository<TeiDiv, Long> {
             """)
     List<String> getOperaPathsForTeiFileId(long teiFileId);
 
-    // aka 'leaf' divs without div children
-    @Query("""
-        select count(parent) from TeiDiv parent 
-        left outer join parent.dbChildren c 
-        where c is null 
-        """)
-    int getNrOfBottomDivs();
+    // Random-discovery picks, in native SQL on purpose: the JPQL equivalent
+    // (full-entity join + setFirstResult, or even the slim `dbChildren is
+    // empty` projection) lets Hibernate build a plan Derby runs in ~0.8s at
+    // this table size, while this not-exists form costs ~0.5-1s ONCE -
+    // the ids are then picked from in memory (cached in UtilController,
+    // since the corpus changes only on import).
+    @Query(value = """
+            select e.id from "_tei_elem" e
+            where e.name = 'div'
+            and not exists (select 1 from "_tei_elem" c where c."parent_id" = e.id)
+            """, nativeQuery = true)
+    List<Long> getBottomDivIds();
 
     @Query(""" 
              select div from TeiDiv div 

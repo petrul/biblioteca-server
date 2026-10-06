@@ -1,7 +1,5 @@
 package ro.editii.scriptorium.web;
 
-import jakarta.persistence.EntityManager;
-import jakarta.persistence.TypedQuery;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.log4j.Log4j2;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -34,9 +32,6 @@ public class UtilController {
     @Autowired
     TeiDivRepository teiDivRepository;
 
-    @Autowired
-    EntityManager entityManager;
-
     @GetMapping("/echo")
     @ResponseBody
     public ResponseEntity<String> echo(HttpServletRequest request, UriComponentsBuilder uriComponentsBuilder) {
@@ -64,12 +59,10 @@ public class UtilController {
             div = (TeiDiv) div.getParent();
         }
 
-
         urlFragments.add(author.getStrId());
 
         Collections.reverse(urlFragments);
         final String redirect_to = urlFragments.stream().collect(Collectors.joining("/"));
-        redirect_to.replaceAll("\\/\\/", "\\/");
 
         log.info("will redirect to url [{}]", redirect_to);
 
@@ -86,26 +79,40 @@ public class UtilController {
     }
 
     private TeiDiv getAcceptableRandomDiv() {
-        while (true) {
-            final var div = this.getRandomDiv();
-            if (!div.isLicense()) {
+        final List<Long> bottomDivIds = this.bottomDivIds();
+        if (bottomDivIds.isEmpty()) {
+            throw new IllegalStateException("no bottom div found to redirect to");
+        }
+        // A license div only wastes this pick - license divs are rare, so a
+        // fresh random index is cheaper than any filtered query shape. The
+        // bound only exists to guarantee a return; 20 bad picks in a row
+        // means the corpus is all but entirely license divs.
+        final Random rnd = new Random();
+        for (int attempt = 0; attempt < 20; attempt++) {
+            final TeiDiv div = this.teiDivRepository.findById(bottomDivIds.get(rnd.nextInt(bottomDivIds.size()))).orElse(null);
+            if (div != null && !div.isLicense()) {
                 return div;
             }
         }
+        throw new IllegalStateException("no non-license bottom div found to redirect to");
     }
 
-    private TeiDiv getRandomDiv() {
-        int nr_divs = this.teiDivRepository.getNrOfBottomDivs();
-        int rnd_value = new Random().nextInt(nr_divs);
+    // Bottom-div ids for the random pick, cached: the anti-join query
+    // costs ~0.5-1s at this table size (no index on the child side), far
+    // too much to pay per click. The corpus changes only on import, so a
+    // TTL-cached in-memory list turns every pick after the first one
+    // into a map lookup plus a single findById.
+    private volatile List<Long> bottomDivIdsCache = List.of();
+    private volatile long bottomDivIdsCacheAt = 0L;
+    private static final long BOTTOM_DIV_IDS_TTL_MS = 30 * 60_000L;
 
-        final TypedQuery<TeiDiv> query = this.entityManager.createQuery(
-                "select parent from TeiDiv parent left outer join parent.dbChildren c where c is null",
-                TeiDiv.class);
-
-        query.setFirstResult(rnd_value);
-        query.setMaxResults(1);
-        final TeiDiv singleResult = query.getSingleResult();
-        return singleResult;
+    private List<Long> bottomDivIds() {
+        final long now = System.currentTimeMillis();
+        if (this.bottomDivIdsCache.isEmpty() || now - this.bottomDivIdsCacheAt > BOTTOM_DIV_IDS_TTL_MS) {
+            this.bottomDivIdsCache = this.teiDivRepository.getBottomDivIds();
+            this.bottomDivIdsCacheAt = now;
+        }
+        return this.bottomDivIdsCache;
     }
 
 }

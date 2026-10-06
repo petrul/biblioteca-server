@@ -28,10 +28,15 @@ import java.util.Optional;
 @Log4j2
 public class LanguageDetectionService {
 
-    // Long documents don't need to be fed in full for reliable detection -
-    // a representative prefix is enough, and keeps this fast even for a
+    // Long documents don't need to be fed in full for reliable detection - a
+    // representative prefix is enough, and keeps this fast even for a
     // large TEI file (some are whole books).
     private static final int SAMPLE_CHARS = 3000;
+
+    // Below this much plain prose the sample is label-like noise, not a
+    // document's language - "XI." alone gets a confident Latin call.
+    // Return empty and let the directory hint decide instead.
+    private static final int MIN_DETECT_CHARS = 80;
 
     private final LanguageDetector detector;
     private final Map<Language, Languages> linguaToOurs;
@@ -43,8 +48,11 @@ public class LanguageDetectionService {
                 final Language lingua = Language.valueOf(ours.getEnName().toUpperCase());
                 mapping.put(lingua, ours);
             } catch (IllegalArgumentException e) {
-                // Lingua has no model for this one (e.g. Latin, Breton) -
-                // detect() below will just never return it.
+                // Lingua has no model for this one (currently Breton and
+                // Norwegian) - detect() below will just never return it.
+                // Note Latin IS modeled: a Latin-looking sample gets a
+                // confident LA call, which is why detect() samples the
+                // document's prose, not its header (see below).
                 log.info("No Lingua language model for {} ({}) - it will never be auto-detected.",
                         ours, ours.getEnName());
             }
@@ -66,9 +74,22 @@ public class LanguageDetectionService {
         if (rawTeiXml == null || rawTeiXml.isBlank())
             return Optional.empty();
 
-        final String plain = rawTeiXml.replaceAll("<[^>]+>", " ");
+        // Sample the document's own PROSE, not the whole raw file: the
+        // teiHeader is markup-heavy boilerplate (titles, bare roman
+        // labels like "XI.", publisher and source metadata) that can
+        // fill the whole window and - being label-like - Lingua reads it
+        // as Latin with full confidence. That is how whole Hungarian
+        // books under /hu/ were assigned LA (krudy/bukfenc): detection
+        // "succeeded" on the header, so the directory hint never ran.
+        final int bodyStart = rawTeiXml.indexOf("</teiHeader>");
+        final String prose = bodyStart >= 0 ? rawTeiXml.substring(bodyStart) : rawTeiXml;
+
+        final String plain = prose.replaceAll("<[^>]+>", " ");
         final String sample = plain.length() > SAMPLE_CHARS ? plain.substring(0, SAMPLE_CHARS) : plain;
-        if (sample.isBlank())
+        // Too little text to trust content over the directory hint: a
+        // bare label still gets a confident-but-wrong call ("XI." alone
+        // detects as Latin), so short samples defer to the path hint.
+        if (sample.strip().length() < MIN_DETECT_CHARS)
             return Optional.empty();
 
         final Language detected = this.detector.detectLanguageOf(sample);
