@@ -48,7 +48,7 @@ public class RuntimeConfigService {
             new Spec("repo.tei.repos", "TEI_REPOS", false, true),
             new Spec("work.dir", "WORK_DIR", false, true),
             new Spec("vector.store", "VECTOR_STORE", false, true),
-            new Spec("vector.collection", "VECTOR_COLLECTION", false, true),
+            new Spec("vector.collection", "QDRANT_COLLECTION", false, true),
             new Spec("vector.collection.prefix", "VECTOR_COLLECTION_PREFIX", false, true),
             new Spec("vectorizer.para.minChars", "VECTORIZER_PARA_MIN_CHARS", false, true),
             new Spec("vectorizer.para.maxChars", "VECTORIZER_PARA_MAX_CHARS", false, true),
