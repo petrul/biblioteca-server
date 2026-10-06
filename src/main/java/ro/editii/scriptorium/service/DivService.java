@@ -110,7 +110,13 @@ public class DivService {
         final var elem = this.retrieveElem(author, opus, rejoined);
 
         assert elem.getTeiFile() != null;
-        return elem;
+        // @Cacheable hands back the instance cached by some EARLIER request's
+        // transaction - detached by now, and walking its still-lazy
+        // collections (dbChildren, for depth pruning and text rendering)
+        // throws LazyInitializationException: no session. Same re-attach as
+        // getToc's disk-cache hit below: merge into the CURRENT session so
+        // lazy loading works on cache hits too.
+        return this.entityManager.merge(elem);
     }
 
     /**
