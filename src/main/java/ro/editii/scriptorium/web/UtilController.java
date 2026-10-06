@@ -9,6 +9,7 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseBody;
@@ -45,6 +46,13 @@ public class UtilController {
 
     @GetMapping("/random")
     @ResponseBody
+    // One read-only transaction for the whole random pick: the div's EAGER
+    // opusMetadata and the parent-chain walk issue follow-up selects, and
+    // without an open transaction each statement auto-commits - after which
+    // Derby invalidates the CLOB locators of the div's @Lob columns
+    // (XJ215/XJ217) and getSingleResult() fails with "Unable to access lob
+    // stream" for roughly every fourth random pick.
+    @Transactional(readOnly = true)
     public ResponseEntity<String> random(HttpServletRequest request, UriComponentsBuilder uriComponentsBuilder) {
 
         TeiDiv div = this.getAcceptableRandomDiv();
