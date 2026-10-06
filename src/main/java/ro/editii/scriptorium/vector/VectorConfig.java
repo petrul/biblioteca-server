@@ -13,6 +13,7 @@ import org.springframework.context.annotation.Primary;
 import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.web.client.RestTemplate;
 import java.util.concurrent.TimeUnit;
+import java.net.URI;
 import ro.editii.scriptorium.client.BibliotecaClient;
 import ro.editii.scriptorium.health.OllamaHealthTracker;
 import ro.editii.scriptorium.search.content.UrlContentResolver;
@@ -170,8 +171,20 @@ public class VectorConfig {
             @Value("${vector.collection:biblioteca_paragraphs_bge_m3}") String collectionBaseName,
             @Value("${vector.collection.prefix:}") String collectionPrefix,
             @Qualifier("qdrantRestTemplate") RestTemplate qdrantRestTemplate) {
-        final QdrantCollection col = new QdrantCollection(vectorStoreAddress,
-                prefixedCollectionName(collectionPrefix, collectionBaseName), qdrantRestTemplate);
+        final String configuredName = prefixedCollectionName(collectionPrefix, collectionBaseName);
+        final URI configured = URI.create(vectorStoreAddress.contains("://")
+                ? vectorStoreAddress : "http://" + vectorStoreAddress);
+        final String[] segments = configured.getPath() == null
+                ? new String[0]
+                : configured.getPath().split("/");
+        final String suffix = segments.length == 0 ? "" : segments[segments.length - 1];
+        final boolean hasCollectionSuffix = !suffix.isBlank();
+        final String collectionName = hasCollectionSuffix ? suffix : configuredName;
+        final String baseAddress = hasCollectionSuffix
+                ? configured.getScheme() + "://" + configured.getAuthority()
+                : vectorStoreAddress;
+        log.info("Qdrant endpoint {} collection {}", baseAddress, collectionName);
+        final QdrantCollection col = new QdrantCollection(baseAddress, collectionName, qdrantRestTemplate);
         log.info(col.toString());
         return col;
     }
