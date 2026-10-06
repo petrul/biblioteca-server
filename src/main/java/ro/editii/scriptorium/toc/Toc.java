@@ -49,7 +49,8 @@ public class Toc implements Iterable<TeiDiv>, Serializable {
             return;
 
         for (TeiElem c : children) {
-            parcurge_rec((TeiDiv) c, buffer);
+            if (c instanceof TeiDiv childDiv)
+                parcurge_rec(childDiv, buffer);
         }
     }
 

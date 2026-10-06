@@ -2,6 +2,7 @@ package ro.editii.scriptorium.toc
 
 import org.junit.jupiter.api.Test
 import ro.editii.scriptorium.model.TeiDiv
+import ro.editii.scriptorium.model.TeiElem
 
 import static org.junit.jupiter.api.Assertions.*
 
@@ -11,8 +12,8 @@ class TocIteratorTest {
         def first = new TeiDiv(id: 3L)
         def second = new TeiDiv(id: 4L, dbChildren: [])
         def last = new TeiDiv(id: 5L)
-        def branch = new TeiDiv(id: 2L, dbChildren: [first, second])
-        def root = new TeiDiv(id: 1L, dbChildren: [branch, last])
+        def branch = new TeiDiv(id: 2L, dbChildren: [first, new TeiElem(id: 6L), second])
+        def root = new TeiDiv(id: 1L, dbChildren: [branch, new TeiElem(id: 7L), last])
         def iterator = new TocIterator(root)
         assertTrue(iterator.hasNext())
         assertTrue(iterator.hasNext())

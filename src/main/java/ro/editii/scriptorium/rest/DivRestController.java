@@ -42,7 +42,7 @@ public class DivRestController {
     @ExceptionHandler(RuntimeException.class)
     public ResponseEntity<String> handleTeiFailure(RuntimeException error) {
         final String summary = RestUtil.summarize(error);
-        log.error("TEI API request failed: {}", summary);
+        log.error("TEI API request failed: {}", summary, error);
 
         // Do not turn an expected HTTP error (most importantly a missing opus)
         // into a 500.  Consumers use 404/400 to discard stale Kafka events;
