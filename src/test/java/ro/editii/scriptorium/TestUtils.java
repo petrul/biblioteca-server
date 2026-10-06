@@ -22,6 +22,31 @@ public class TestUtils {
         return System.getProperty("java.io.tmpdir");
     }
 
+    /**
+     * The store's base address from a VECTORSTORE_URL that may carry its
+     * collection as the final path segment (see VectorConfig.qdrantProdCollection:
+     * the suffix wins over vector.collection). A test that wants its OWN
+     * random-named collection must strip the suffix before using the value as
+     * a REST base address or as vectorstore.address.
+     */
+    public static String vectorStoreBaseAddress(String raw) {
+        if (raw == null || raw.isBlank()) {
+            return raw;
+        }
+        try {
+            final java.net.URI uri = java.net.URI.create(raw.contains("://") ? raw : "http://" + raw);
+            final String[] segments = uri.getPath() == null ? new String[0] : uri.getPath().split("/");
+            final String suffix = segments.length == 0 ? "" : segments[segments.length - 1];
+            if (!suffix.isBlank()) {
+                return uri.getScheme() + "://" + uri.getAuthority();
+            }
+        } catch (Exception ignored) {
+            // Not parseable - hand it through untouched, exactly like
+            // VectorConfig.qdrantProdCollection's own fallback.
+        }
+        return raw;
+    }
+
     public static void truncateAllTables(JdbcTemplate jt) {
         // DELETE FROM, not TRUNCATE + SET FOREIGN_KEY_CHECKS - see
         // AdminService.destroyAllExistingAndReimportAllTeis's own comment

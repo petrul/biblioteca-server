@@ -35,7 +35,10 @@ import ro.editii.scriptorium.TestUtils
 class QdrantCollectionITest {
 
     static QdrantCollection connect(String name) {
-        final address = System.getenv('VECTORSTORE_URL') ?: System.getenv('MILVUS_URL')
+        // Suffix-stripped: VECTORSTORE_URL may carry its collection as the
+        // final path segment (see VectorConfig.qdrantProdCollection), and a
+        // raw suffixed address would put that segment into every REST path.
+        final address = TestUtils.vectorStoreBaseAddress(System.getenv('VECTORSTORE_URL') ?: System.getenv('MILVUS_URL'))
         Assumptions.assumeTrue(address != null, 'no VECTORSTORE_URL/MILVUS_URL configured - nothing to test against')
         final factory = new SimpleClientHttpRequestFactory()
         factory.setConnectTimeout(2_000)
@@ -138,7 +141,7 @@ class QdrantCollectionITest {
 
     /** The collection's points_count, via the same RestTemplate the collection uses. */
     private static long pointCount(QdrantCollection col) {
-        final address = System.getenv('VECTORSTORE_URL') ?: System.getenv('MILVUS_URL')
+        final address = TestUtils.vectorStoreBaseAddress(System.getenv('VECTORSTORE_URL') ?: System.getenv('MILVUS_URL'))
         final restTemplate = new RestTemplate()
         final Map<String, Object> info = restTemplate.getForObject(
                 "${address}/collections/${col.name}", Map.class)

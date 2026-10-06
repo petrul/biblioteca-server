@@ -53,13 +53,10 @@ import static ro.editii.scriptorium.TestUtils.TEI_ELEM
         "spring.main.allow-bean-definition-overriding=true",
         "spring.jpa.hibernate.ddl-auto=create",
         // The store under test: qdrant is the default (matchIfMissing), the
-        // address comes from the profile env (VECTORSTORE_URL) with the
-        // known dev instance as the direct-gradlew fallback. \$ so Groovy
-        // leaves the placeholder for Spring's own environment resolution.
-        "vectorstore.address=\${VECTORSTORE_URL:http://srv2.local:20126}",
-        // The collection below is this test's own random-named one - the
-        // per-env prefix (dev-, meant for sharing the prod qdrant) must not
-        // apply to it.
+        // address comes from the profile env (VECTORSTORE_URL) - registered
+        // suffix-stripped in qdrantCollection's @DynamicPropertySource below,
+        // because a URL-carried collection would win over this test's own
+        // vector.collection.
         "vector.collection.prefix=",
         "embeddings.host=mini.local",
         "embeddings.port=11200",
@@ -92,6 +89,21 @@ class SearchITest {
 
     @DynamicPropertySource
     static void qdrantCollection(DynamicPropertyRegistry registry) {
+        // VECTORSTORE_URL may carry its own collection as the final path
+        // segment (see VectorConfig.qdrantProdCollection) - and that suffix
+        // WINS over vector.collection, which would point the app bean (and
+        // VectorTextSearchService's model/collection compatibility check)
+        // at the profile's stage collection instead of this run's
+        // random-named one. The stripped value must ALSO be registered
+        // under the raw VECTORSTORE_URL key: RuntimeConfigService installs
+        // its map as the FIRST property source and derives
+        // vectorstore.address from environment.getProperty("VECTORSTORE_URL"),
+        // so it would outrank a plain vectorstore.address override and
+        // feed the suffixed URL back to the bean.
+        final String rawAddress = System.getenv('VECTORSTORE_URL') ?: 'http://srv2.local:20126'
+        final String baseAddress = TestUtils.vectorStoreBaseAddress(rawAddress)
+        registry.add("VECTORSTORE_URL", { baseAddress })
+        registry.add("vectorstore.address", { baseAddress })
         registry.add("vector.collection", { TEST_COLLECTION })
     }
 
@@ -239,7 +251,11 @@ class SearchITest {
     }
 
     private QdrantCollection connect() {
-        final address = System.getenv('VECTORSTORE_URL') ?: 'http://srv2.local:20126'
+        // Suffix-stripped like vectorstore.address above: this handle must
+        // talk to the same base address the app bean does, not to a URL
+        // whose trailing collection segment would end up in every REST
+        // path as garbage.
+        final address = TestUtils.vectorStoreBaseAddress(System.getenv('VECTORSTORE_URL') ?: 'http://srv2.local:20126')
         final factory = new SimpleClientHttpRequestFactory()
         factory.setConnectTimeout(2_000)
         factory.setReadTimeout(60_000)
