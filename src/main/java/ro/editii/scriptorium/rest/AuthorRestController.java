@@ -10,6 +10,7 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.util.UriComponentsBuilder;
+import ro.editii.scriptorium.dao.AuthorMediaAssociationRepository;
 import ro.editii.scriptorium.dao.AuthorRepository;
 import ro.editii.scriptorium.dao.TeiDivRepository;
 import ro.editii.scriptorium.dto.AuthorDto;
@@ -33,12 +34,15 @@ public class AuthorRestController extends CommonControllerUtil {
     final TeiDivRepository teiDivRepository;
     final AuthorRepository authorRepository;
     final DivService divService;
+    final AuthorMediaAssociationRepository authorMedia;
 
-    public AuthorRestController(Environment environment, TeiDivRepository teiDivRepository, AuthorRepository authorRepository, DivService divService) {
+    public AuthorRestController(Environment environment, TeiDivRepository teiDivRepository, AuthorRepository authorRepository,
+                                DivService divService, AuthorMediaAssociationRepository authorMedia) {
         super(environment);
         this.teiDivRepository = teiDivRepository;
         this.authorRepository = authorRepository;
         this.divService = divService;
+        this.authorMedia = authorMedia;
     }
 
     @GetMapping("/")
@@ -102,6 +106,12 @@ public class AuthorRestController extends CommonControllerUtil {
         authorDto.setOpera(operadto.toArray(OpusDto[]::new));
         authorDto.setImage_href(this
                 .getAuthorImage(authorDto.getStrId(), uriComponentsBuilder, httpServletRequest));
+        // Every image associated with the author (enrichment's Wikimedia
+        // URLs) - biblioteca-nestjs picks one per cover it orders.
+        authorDto.setImageUrls(this.authorMedia.findAllByAuthorPath(authorDto.getStrId()).stream()
+                .map(it -> it.getMediaRef().getUrl())
+                .distinct()
+                .toList());
 
         return authorDto;
     }

@@ -48,6 +48,8 @@ public class AuthorDto  {
     Long worksCount;
     OpusDto[] opera;
     String image_href;
+    /** Associated image URLs (author_media); filled by GET /api/authors/{strId} only. */
+    java.util.List<String> imageUrls;
 
     public static AuthorDto from(Author author) {
         if (author == null) return null;
