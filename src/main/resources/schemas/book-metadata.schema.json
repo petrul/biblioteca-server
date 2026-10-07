@@ -1,0 +1,73 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "BookMetadata",
+  "description": "Schema representing book metadata fields available to themes",
+  "type": "object",
+  "required": ["title", "author", "publisher", "date"],
+  "properties": {
+    "title": {
+      "type": "string",
+      "description": "Main title of the book"
+    },
+    "subtitle": {
+      "type": "string",
+      "description": "Subtitle or descriptive heading"
+    },
+    "author": {
+      "type": "string",
+      "description": "Primary author or creator"
+    },
+    "editor": {
+      "type": "string",
+      "description": "Editor or compiler"
+    },
+    "translator": {
+      "type": "string",
+      "description": "Translator"
+    },
+    "publisher": {
+      "type": "string",
+      "description": "Publishing house / imprint name"
+    },
+    "pubPlace": {
+      "type": "string",
+      "description": "City or place of publication"
+    },
+    "date": {
+      "type": "string",
+      "description": "Publication year / date"
+    },
+    "isbn": {
+      "type": "string",
+      "description": "ISBN identifier"
+    },
+    "series": {
+      "type": "string",
+      "description": "Book series or collection title"
+    },
+    "volume": {
+      "type": "string",
+      "description": "Volume number or designation (e.g. 'I', '2', 'Vol. 1')"
+    },
+    "taglineQuote": {
+      "type": "string",
+      "description": "Epigraph quote or front cover blurb"
+    },
+    "genre": {
+      "type": "string",
+      "description": "Genre / subject classification"
+    },
+    "editionNotice": {
+      "type": "string",
+      "description": "Notice such as 'First Edition', 'Critical Edition', etc."
+    },
+    "language": {
+      "type": "string",
+      "description": "Language code or name"
+    },
+    "rawTei": {
+      "type": "string",
+      "description": "Raw TEI-XML source if imported from TEI"
+    }
+  }
+}

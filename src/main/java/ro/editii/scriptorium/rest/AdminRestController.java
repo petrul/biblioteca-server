@@ -5,9 +5,16 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.env.Environment;
 import org.springframework.data.rest.core.annotation.RestResource;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import ro.editii.scriptorium.VersionProperties;
+import ro.editii.scriptorium.dao.DivMediaAssociationRepository;
+import ro.editii.scriptorium.dao.MediaRefRepository;
+import ro.editii.scriptorium.dao.TeiDivRepository;
 import ro.editii.scriptorium.dto.TeiRepoDto;
+import ro.editii.scriptorium.media.DivMediaAssociation;
+import ro.editii.scriptorium.media.MediaRef;
+import ro.editii.scriptorium.model.TeiDiv;
 import ro.editii.scriptorium.scheduled.NoWriter;
 import ro.editii.scriptorium.service.AdminService;
 import ro.editii.scriptorium.service.AuthorMergeService;
@@ -15,6 +22,7 @@ import ro.editii.scriptorium.tei.CombinedTeiRepo;
 import ro.editii.scriptorium.tei.TeiRepo;
 
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.stream.Collectors;
 
@@ -29,6 +37,47 @@ public class AdminRestController {
     final AuthorMergeService authorMergeService;
     final Environment environment;
     final VersionProperties versionProperties;
+    final TeiDivRepository teiDivRepository;
+    final DivMediaAssociationRepository divMedia;
+    final MediaRefRepository mediaRefs;
+
+    // Distinct from EnrichmentRestController's "enrichment" role: a manual
+    // admin attachment must never be skipped by the automated pipeline's
+    // fill-only gate (existsByDivPathAndMediaRefRole(path, "enrichment")),
+    // and vice versa - the two are deliberately independent pools so a
+    // hand-picked cover candidate always lands regardless of what
+    // enrichment has or hasn't found already.
+    private static final String MANUAL_ROLE = "manual";
+
+    /**
+     * Attach an already-uploaded image (e.g. a JPG pushed to MinIO by hand)
+     * to a work/page as a potential cover-art candidate - the admin-facing
+     * counterpart to EnrichmentRestController's automated, fill-only write
+     * path. Multiple images may be attached to the same div/opus; nothing
+     * here caps or replaces earlier ones. biblioteca-nestjs's cover
+     * ordering picks randomly among whatever a work has (see
+     * CoverEnrichmentService/authorArts' sibling opus-art lookup) once
+     * that lookup is extended to the "manual" role too.
+     */
+    @PostMapping("/divs/{id}/media")
+    public ResponseEntity<?> attachDivMedia(@PathVariable long id, @RequestParam String url) {
+        final TeiDiv div = this.teiDivRepository.findById(id).filter(TeiDiv.class::isInstance).map(TeiDiv.class::cast).orElse(null);
+        if (div == null) return ResponseEntity.notFound().build();
+        final String divPath = div.getCompletePath();
+        if (this.divMedia.existsByDivPathAndMediaRefUrl(divPath, url))
+            return ResponseEntity.ok(Map.of("divPath", divPath, "alreadyAssociated", true));
+        final MediaRef ref = this.mediaRefs.findById(url).orElseGet(() ->
+                this.mediaRefs.save(MediaRef.builder().url(url).contentType(contentType(url)).role(MANUAL_ROLE).build()));
+        this.divMedia.save(new DivMediaAssociation(null, divPath, ref));
+        return ResponseEntity.ok(Map.of("divPath", divPath, "url", url, "associated", true));
+    }
+
+    private static String contentType(String url) {
+        final String lower = url.toLowerCase(Locale.ROOT);
+        if (lower.contains(".png")) return "image/png";
+        if (lower.contains(".webp")) return "image/webp";
+        return "image/jpeg";
+    }
 
     @GetMapping("/version")
     public @ResponseBody Map version() {

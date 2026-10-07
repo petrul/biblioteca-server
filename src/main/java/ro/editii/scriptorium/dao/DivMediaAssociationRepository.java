@@ -17,6 +17,9 @@ public interface DivMediaAssociationRepository extends JpaRepository<DivMediaAss
 
     List<DivMediaAssociation> findAllByDivPathStartingWith(String divPath);
 
+    /** This div's own attached media only - not its children's (see the -StartingWith variant above). */
+    List<DivMediaAssociation> findAllByDivPath(String divPath);
+
     @RestResource(exported = false)
     @Override
     <S extends DivMediaAssociation> S save(S entity);

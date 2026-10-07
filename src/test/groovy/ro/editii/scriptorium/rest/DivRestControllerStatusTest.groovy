@@ -14,7 +14,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals
  */
 class DivRestControllerStatusTest {
 
-    private final DivRestController controller = new DivRestController(null, null, null, null)
+    private final DivRestController controller = new DivRestController(null, null, null, null, null, null)
 
     @Test
     void preservesNotFoundForMissingOpus() {
