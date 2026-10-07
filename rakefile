@@ -4,6 +4,7 @@ require 'shellwords'
 require 'tmpdir'
 require 'open3'
 require 'socket'
+require_relative 'lib/minio_mount'
 
 GRADLE = "./gradlew"
 
@@ -182,6 +183,19 @@ task :'sync-openapi', [:task_profile] do |_task, args|
   load_profile_env(task_profile)
   puts "Synchronizing OpenAPI from local #{task_profile} application..."
   sh "#{GRADLE} -Pprofile=#{Shellwords.escape(task_profile)} syncOpenApi --no-daemon"
+end
+
+desc "Mount the profile's MinIO bucket read-write at ~/s3-mount/biblioteca-PROFILE"
+task :'minio-mount', [:task_profile] do |_task, args|
+  task_profile = args[:task_profile] || profile
+  MinioMount.mountpoint(task_profile) # Validate before accessing the pass store.
+  load_profile_env(task_profile)
+  MinioMount.mount(task_profile)
+end
+
+desc "Unmount ~/s3-mount/biblioteca-PROFILE (defaults to the machine profile)"
+task :'minio-unmount', [:task_profile] do |_task, args|
+  MinioMount.unmount(args[:task_profile] || profile)
 end
 
 # Injects biblioteca/ci/* from the local `pass` store as real process

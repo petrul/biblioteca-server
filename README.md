@@ -125,6 +125,27 @@ nestjs `:3000`, reader `:3333` (what Caddy's test vhost proxies). The database
 is the shared Derby Network Server; `WORK_DIR` is per-profile, so the Lucene
 index resumes across restarts.
 
+### Mounting the profile's MinIO bucket
+
+```bash
+rake minio-mount          # machine profile, or PROFILE if set
+rake minio-mount[zmeu]    # explicitly loads biblioteca/zmeu
+rake minio-unmount[zmeu]
+```
+
+The bucket is mounted **read-write** at `~/s3-mount/biblioteca-<profile>`.
+`MINIO_URL` supplies the S3 endpoint and bucket (for example
+`http://host:9000/biblioteca`); `MINIO_CREDS` supplies `access-key:secret-key`.
+Both come from the selected pass-store profile using the existing environment
+loader. No credentials are written to disk or passed as command arguments.
+Install the local mount tools with `sudo apt install s3fs` on Ubuntu.
+
+Unmounting uses the same profile default but does not load secrets or contact
+MinIO. Close files and terminals using the mount before unmounting. Repeating a
+mount/unmount is harmless; an existing read-only mount must be unmounted before
+the read-write task can use that path. These mounts are manual, not persistent
+across reboots.
+
 ## Docker
 
 ```bash
