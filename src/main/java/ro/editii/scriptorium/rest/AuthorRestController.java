@@ -14,14 +14,18 @@ import ro.editii.scriptorium.dao.AuthorMediaAssociationRepository;
 import ro.editii.scriptorium.dao.AuthorRepository;
 import ro.editii.scriptorium.dao.TeiDivRepository;
 import ro.editii.scriptorium.dto.AuthorDto;
+import ro.editii.scriptorium.dto.AuthorMediaDto;
 import ro.editii.scriptorium.dto.CatalogPageDto;
 import ro.editii.scriptorium.dto.OpusDto;
 import ro.editii.scriptorium.dto.TeiDivDto;
+import ro.editii.scriptorium.media.AuthorMediaAssociation;
 import ro.editii.scriptorium.model.Author;
 import ro.editii.scriptorium.model.TeiDiv;
 import ro.editii.scriptorium.service.DivService;
 
+import java.util.Comparator;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
@@ -114,6 +118,37 @@ public class AuthorRestController extends CommonControllerUtil {
                 .toList());
 
         return authorDto;
+    }
+
+    /**
+     * Every author's full set of enrichment-collected media (Wikipedia/
+     * Wikimedia image URLs) in one call - the bulk companion to the
+     * single-author imageUrls above, for reviewing what art enrichment has
+     * gathered across the whole corpus at once. Only authors with at least
+     * one image are included; a literal path segment like this one is
+     * matched before {strId} regardless of declaration order, so it never
+     * collides with GET /api/authors/{strId}.
+     */
+    @GetMapping("/media")
+    @Transactional(readOnly = true)
+    public List<AuthorMediaDto> getAllAuthorMedia() {
+        final Map<String, Author> authorsByStrId = this.authorRepository.findAll().stream()
+                .collect(Collectors.toMap(Author::getStrId, it -> it, (a, b) -> a));
+        final Map<String, List<String>> urlsByAuthorPath = this.authorMedia.findAll().stream()
+                .collect(Collectors.groupingBy(
+                        AuthorMediaAssociation::getAuthorPath,
+                        Collectors.mapping(it -> it.getMediaRef().getUrl(), Collectors.toList())));
+        return urlsByAuthorPath.entrySet().stream()
+                .map(entry -> {
+                    final Author author = authorsByStrId.get(entry.getKey());
+                    return AuthorMediaDto.builder()
+                            .strId(entry.getKey())
+                            .displayName(author != null ? author.getVisualName() : entry.getKey())
+                            .imageUrls(entry.getValue().stream().distinct().toList())
+                            .build();
+                })
+                .sorted(Comparator.comparing(AuthorMediaDto::getStrId))
+                .collect(Collectors.toList());
     }
 
     @GetMapping("/{strId}/opera")
