@@ -118,17 +118,43 @@ public class DivRestController {
      * is accurate, not a bug. date specifically reads editionStmt/edition/
      * date, which in this corpus is the digitization date, not an original
      * publication date - there usually isn't one to read.
+     *
+     * {id} is either the numeric div id, or its stable path with every
+     * '/' replaced by '-' (alecsandri/poezii -> alecsandri-poezii) - a
+     * literal '/' can't ride inside a single {id} path segment, and this
+     * corpus's own path fragments never contain a real hyphen (checked:
+     * multi-word segments are underscore-joined throughout), so the
+     * replacement is unambiguous to reverse.
      */
+    @Operation(operationId = "getCoverMetadata",
+            summary = "Book metadata for a cover theme (BookMetadata schema)",
+            description = "Returns one work's metadata in the cover renderer's own BookMetadata shape " +
+                    "(schemas/book-metadata.schema.json, stored in this project). title/author/publisher/date " +
+                    "always come back, possibly as \"\"; every other field is only present when this work's TEI " +
+                    "source actually carries it - which is uncommon in this corpus, so expect most of those to " +
+                    "be missing most of the time. Pass ?includeRawTei=true to also get the raw TEI XML.")
     @GetMapping("/{id}/cover-metadata")
     @Transactional(readOnly = true)
     public @ResponseBody BookMetadataDto getCoverMetadata(
-            @PathVariable(name = "id") long id,
+            @Parameter(description = "Either the numeric div id (from GET /api/divs?path=...), or the work's own " +
+                    "stable path with every '/' replaced by '-' - e.g. the path alecsandri/poezii becomes " +
+                    "alecsandri-poezii here, so you never have to look up the numeric id first.",
+                    example = "alecsandri-poezii")
+            @PathVariable(name = "id") String id,
+            @Parameter(description = "Also include the raw TEI-XML source in the response's rawTei field. " +
+                    "Off by default - it can be large.")
             @RequestParam(required = false, defaultValue = "false") boolean includeRawTei
     ) {
-        final TeiDiv teiDiv = this.teiDivRepository.findById(id)
-                .filter(TeiDiv.class::isInstance)
-                .map(TeiDiv.class::cast)
-                .orElse(null);
+        TeiDiv teiDiv = null;
+        try {
+            teiDiv = this.teiDivRepository.findById(Long.parseLong(id))
+                    .filter(TeiDiv.class::isInstance)
+                    .map(TeiDiv.class::cast)
+                    .orElse(null);
+        } catch (NumberFormatException notNumeric) {
+            final var elem = this.divService.getByPath(id.replace('-', '/'));
+            if (elem instanceof TeiDiv asDiv) teiDiv = asDiv;
+        }
         if (teiDiv == null) RestUtil.throw404();
         teiDiv.setTeiRepo(this.teiRepo);
 
