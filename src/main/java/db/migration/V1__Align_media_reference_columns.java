@@ -63,8 +63,14 @@ public class V1__Align_media_reference_columns extends BaseJavaMigration {
     private static void alterIfColumnExists(Context context, DatabaseMetaData metadata,
                                             String table, String column, boolean derby) throws Exception {
         if (!columnExists(metadata, table, column)) return;
+        // PostgreSQL branch added by the postgres migration (same
+        // product-branching pattern as V4): the legacy else-branch is
+        // MySQL-only syntax. Derby behavior is unchanged.
+        String product = metadata.getDatabaseProductName().toLowerCase(Locale.ROOT);
         String sql = derby
                 ? "ALTER TABLE " + table + " ALTER COLUMN " + column + " SET DATA TYPE VARCHAR(500)"
+                : product.contains("postgres")
+                ? "ALTER TABLE " + table + " ALTER COLUMN " + column + " TYPE VARCHAR(500)"
                 : "ALTER TABLE " + table + " MODIFY COLUMN " + column + " VARCHAR(500)";
         try (Statement statement = context.getConnection().createStatement()) {
             statement.execute(sql);

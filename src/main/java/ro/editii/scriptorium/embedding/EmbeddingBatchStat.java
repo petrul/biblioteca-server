@@ -29,7 +29,11 @@ import java.time.Instant;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-@Comment("One embedding batch's timing, reported by whichever worker called the encoder.")
+// Note: @Comment texts below must not contain apostrophes - Hibernate
+// emits them verbatim, unescaped, in the PostgreSQL "comment on ... is
+// '...'" DDL (unlike Derby, which has no COMMENT ON at all), where a
+// stray apostrophe terminates the string literal and fails the DDL.
+@Comment("Timing of one embedding batch, reported by whichever worker called the encoder.")
 public class EmbeddingBatchStat {
 
     @Id
@@ -38,19 +42,19 @@ public class EmbeddingBatchStat {
     @Comment("Surrogate primary key.")
     Long id;
 
-    @Comment("When this batch was recorded, server-side (not the caller's clock).")
+    @Comment("When this batch was recorded, server-side (not the caller clock).")
     Instant recordedAt;
 
     @Comment("Number of texts/paragraphs in this batch.")
     Integer batchSize;
 
-    @Comment("Total character count of every text in the batch - the raw input size the embedding call's cost actually scales with.")
+    @Comment("Total character count of every text in the batch - the raw input size the embedding cost actually scales with.")
     Long totalChars;
 
     @Comment("Output vector dimension the embedder produced for this batch, e.g. 1024 for bge-m3.")
     Integer vectorDimension;
 
-    @Comment("Which embedder/model produced this batch, e.g. 'bge-m3' (Ollama) or 'all-MiniLM-L6-v2' (STS).")
+    @Comment("Which embedder/model produced this batch, e.g. bge-m3 (Ollama) or all-MiniLM-L6-v2 (STS).")
     String embedderModel;
 
     @Comment("Wall-clock time the embedding call itself took, milliseconds - store+flush time is not part of this.")

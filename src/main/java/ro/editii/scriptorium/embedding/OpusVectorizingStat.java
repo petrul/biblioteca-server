@@ -29,7 +29,11 @@ import java.time.Instant;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-@Comment("One opus's vectorizing run, reported by whichever worker walked it.")
+// Note: @Comment texts below must not contain apostrophes - Hibernate
+// emits them verbatim, unescaped, in the PostgreSQL "comment on ... is
+// '...'" DDL (unlike Derby, which has no COMMENT ON at all), where a
+// stray apostrophe terminates the string literal and fails the DDL.
+@Comment("Vectorizing run of one opus, reported by whichever worker walked it.")
 public class OpusVectorizingStat {
 
     @Id
@@ -38,10 +42,10 @@ public class OpusVectorizingStat {
     @Comment("Surrogate primary key.")
     Long id;
 
-    @Comment("When this run was recorded, server-side (not the caller's clock).")
+    @Comment("When this run was recorded, server-side (not the caller clock).")
     Instant recordedAt;
 
-    @Comment("The opus's TeiDiv id (biblioteca-nestjs never has a path of its own to report - see BibliotecaClient).")
+    @Comment("The TeiDiv id of the opus (biblioteca-nestjs never has a path of its own to report - see BibliotecaClient).")
     Long opusId;
 
     @Comment("Total paragraphs processed for this opus - includes ones reused/repointed, not just newly embedded.")
@@ -50,7 +54,7 @@ public class OpusVectorizingStat {
     @Comment("Number of batches that actually called the embedder - 0 means every paragraph was already stored.")
     Integer totalBatches;
 
-    @Comment("Which embedder/model this run used, e.g. 'bge-m3' (Ollama) or 'all-MiniLM-L6-v2' (STS).")
+    @Comment("Which embedder/model this run used, e.g. bge-m3 (Ollama) or all-MiniLM-L6-v2 (STS).")
     String embedderModel;
 
     @Comment("Wall-clock time the whole opus took, milliseconds - from the first paragraph fetched to the last vector flushed.")

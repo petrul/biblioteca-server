@@ -283,6 +283,13 @@ dependencies {
     // the client jar: this app is a client of a standalone Derby Network
     // Server (see docker/biblioteca's derby service), never embedded.
     runtimeOnly 'org.apache.derby:derbyclient:10.17.1.0'
+    // PostgreSQL JDBC driver - the runtime engine per the postgres
+    // migration (DB_URL's prefix decides the engine, see DbEngineDefaults).
+    // Stays beside derbyclient until the Derby runtime is fully retired:
+    // the tests still use Derby, and profiles that have not switched their
+    // pass-store DB_URL yet keep booting on Derby too. Version is the Boot
+    // BOM's own.
+    runtimeOnly 'org.postgresql:postgresql'
 
 	implementation group: 'commons-io', name: 'commons-io', version: '2.6'
     implementation group: 'org.apache.commons', name: 'commons-collections4', version: '4.4'
@@ -656,17 +663,26 @@ tasks.withType(ProcessForkOptions).configureEach { task ->
             addFallback('MILVUS_URL', addressFrom('MILVUS_HOST', 'MILVUS_PORT'))
             addFallback('EMBEDDER_URL', addressFrom('EMBEDDER_HOST', 'EMBEDDER_PORT'))
 
-            // DB_URL carries the credentials as Derby connection attributes
-            // (see application.properties) - one value, nothing else to
-            // synthesize for the database.
+            // DB_URL carries the credentials in the URL itself (see
+            // application.properties) - one value, nothing else to
+            // synthesize for the database. The engine of the synthesized
+            // fallback URL is DB_ENGINE's choice: "postgres" builds a
+            // PostgreSQL URL (jdbc:postgresql://, ?user=..&password=..),
+            // anything else keeps the historic Derby fallback
+            // (jdbc:derby://, ;user=..;password=..).
             final dbHost = addressFrom('DB_HOST', 'DB_PORT')
             final dbName = props.getProperty('DB_NAME')
             if (dbHost != null && dbName != null) {
                 final dbUser = props.getProperty('DB_USER')
                 final dbPassword = props.getProperty('DB_PASSWORD')
-                final creds = (dbUser != null && dbPassword != null)
-                        ? ";user=${dbUser};password=${dbPassword}" : ''
-                addFallback('DB_URL', "jdbc:derby://${dbHost}/${dbName};create=true${creds}")
+                final hasCreds = (dbUser != null && dbPassword != null)
+                if ('postgres' == props.getProperty('DB_ENGINE')) {
+                    final creds = hasCreds ? "?user=${dbUser}&password=${dbPassword}" : ''
+                    addFallback('DB_URL', "jdbc:postgresql://${dbHost}/${dbName}${creds}")
+                } else {
+                    final creds = hasCreds ? ";user=${dbUser};password=${dbPassword}" : ''
+                    addFallback('DB_URL', "jdbc:derby://${dbHost}/${dbName};create=true${creds}")
+                }
             }
             println "> Applied ${fallbackCount} local fallback value(s) from ${envFile.name} to task '${task.name}'"
         }
