@@ -38,7 +38,7 @@ public class TeiImportScheduler {
     // corpus walk every cycle.
     @Scheduled(fixedRate = 60 * 1000)
     public void importTeis() {
-        synchronized (Globals.IMPORT_TEIS_WORKING) {
+        try (Globals.ImportLock ignored = Globals.lockImports()) {
             try {
                 adminService.reimportFresherTeis(new NoWriter());
             } catch (RuntimeException e) {
@@ -60,7 +60,7 @@ public class TeiImportScheduler {
      */
     @Scheduled(fixedDelay = 60 * 60 * 1000, initialDelay = 60 * 1000)
     public void pruneRemovedTeis() {
-        synchronized (Globals.IMPORT_TEIS_WORKING) {
+        try (Globals.ImportLock ignored = Globals.lockImports()) {
             try {
                 adminService.pruneRemovedTeis(new NoWriter());
             } catch (RuntimeException e) {
@@ -79,7 +79,7 @@ public class TeiImportScheduler {
      */
     @Scheduled(fixedDelay = 60 * 60 * 1000, initialDelay = 60 * 1000)
     public void pruneOrphanedElems() {
-        synchronized (Globals.IMPORT_TEIS_WORKING) {
+        try (Globals.ImportLock ignored = Globals.lockImports()) {
             try {
                 adminService.pruneOrphanedElems(new NoWriter());
             } catch (RuntimeException e) {
@@ -101,7 +101,7 @@ public class TeiImportScheduler {
      */
     @Scheduled(fixedDelay = 60 * 60 * 1000, initialDelay = 60 * 1000)
     public void pruneOrphanedAuthors() {
-        synchronized (Globals.IMPORT_TEIS_WORKING) {
+        try (Globals.ImportLock ignored = Globals.lockImports()) {
             try {
                 this.authorMergeService.pruneOrphanedAuthors(new NoWriter());
             } catch (RuntimeException e) {
@@ -110,4 +110,3 @@ public class TeiImportScheduler {
         }
     }
 }
-

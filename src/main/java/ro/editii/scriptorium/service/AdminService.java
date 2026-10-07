@@ -19,10 +19,12 @@ import ro.editii.scriptorium.model.TeiFile;
 import ro.editii.scriptorium.search.lucene.LuceneIndexService;
 import ro.editii.scriptorium.tei.TeiFileAlreadyImportedException;
 import ro.editii.scriptorium.tei.TeiRepo;
+import ro.editii.scriptorium.tei.CombinedTeiRepo;
 
 import java.io.File;
 import java.io.IOException;
 import java.io.Writer;
+import java.nio.file.Files;
 import java.sql.Timestamp;
 import java.util.HashSet;
 import java.util.List;
@@ -122,7 +124,7 @@ public class AdminService {
     }
 
     public void reimportFresherTeis(Writer logActivity) {
-        synchronized (Globals.IMPORT_TEIS_WORKING) {
+        try (Globals.ImportLock ignored = Globals.lockImports()) {
             final List<String> filenames = teiRepo.list();
             final Map<String, Timestamp> existingTimestamps = fetchExistingTimestamps();
 
@@ -171,7 +173,7 @@ public class AdminService {
     }
 
     public void reimportFile(String filename, Writer logActivity) {
-        synchronized (Globals.IMPORT_TEIS_WORKING) {
+        try (Globals.ImportLock ignored = Globals.lockImports()) {
             writeLn(logActivity,String.format("will now import %s ...", filename));
             File file = teiRepo.getFile(filename);
             Optional<TeiFile> optionalTeiFile = this.teiFileRepository.getByFilename(filename);
@@ -194,7 +196,7 @@ public class AdminService {
     }
 
     public void reimportAllTeis(Writer logActivity) {
-        synchronized (Globals.IMPORT_TEIS_WORKING) {
+        try (Globals.ImportLock ignored = Globals.lockImports()) {
             writeLn(logActivity, "will now import ...");
             List<String> filenames = teiRepo.list();
             final Map<String, Timestamp> existingTimestamps = fetchExistingTimestamps();
@@ -250,7 +252,7 @@ public class AdminService {
      * /api/admin/teirepos/pruneRemoved.
      */
     public void pruneRemovedTeis(Writer logActivity) {
-        synchronized (Globals.IMPORT_TEIS_WORKING) {
+        try (Globals.ImportLock ignored = Globals.lockImports()) {
             final Set<String> filesOnDisk = new HashSet<>(this.teiRepo.list());
             final List<TeiFile> allTeiFiles = this.teiFileRepository.findAll();
 
@@ -259,9 +261,6 @@ public class AdminService {
                     continue;
                 }
 
-                final List<String> opusPaths = this.teiDivRepository.getOperaPathsForTeiFileId(teiFile.getId());
-
-                log.info("will prune removed TeiFile {} ({} opera)", teiFile.getFilename(), opusPaths.size());
                 writeLn(logActivity, "will prune removed TeiFile " + teiFile.getFilename());
 
                 // Per-file isolation: one failing file must not abort the
@@ -270,20 +269,74 @@ public class AdminService {
                 // bad row would otherwise keep all removed files' cleanup
                 // from ever completing.
                 try {
-                    this.teiFileDbService.deleteTeiFile(teiFile.getFilename());
+                    this.pruneRemovedTei(teiFile);
                 } catch (RuntimeException e) {
                     log.error("Failed to prune removed TeiFile {} - continuing with the remaining files "
                             + "(it will be retried on the next prune)", teiFile.getFilename(), e);
                     continue;
                 }
 
-                for (String opusPath : opusPaths) {
-                    try {
-                        this.textbaseEventsPublisher.signalOpusRemoved(OpusRemovedDto.builder().path(opusPath).build());
-                    } catch (RuntimeException e) {
-                        log.error("Failed to signal removal of opus {} - downstream consumers may miss it", opusPath, e);
-                    }
-                }
+            }
+        }
+    }
+
+    /**
+     * Called after a failed content request's transaction has ended. Validate
+     * the original repository before deleting only this source file's rows.
+     * The import lock protects against application-managed reimports; an
+     * external corpus rebuild must still publish files atomically.
+     */
+    public void pruneMissingTeiOnRequest(String filename) {
+        // Open-in-view can retain this request's JDBC connection even after
+        // the content transaction rolled back. Waiting for a batch prune's
+        // lock would starve that batch of connections and deadlock the pool.
+        // Return the 404 immediately instead; the scheduled sweep will prune.
+        try (Globals.ImportLock acquired = Globals.tryLockImports()) {
+            if (acquired == null) {
+                log.debug("Deferring request cleanup of {} to the scheduled prune: import/prune busy", filename);
+                return;
+            }
+            final Optional<TeiFile> found = teiFileRepository.getByFilename(filename);
+            if (found.isEmpty()) return;
+            final TeiFile file = found.get();
+            final TeiRepo originalRepo = findEnabledRepo(teiRepo, file.getRepoName());
+            // Unknown/disabled repository provenance is not proof of deletion.
+            if (originalRepo == null) return;
+            // list() must succeed before absence is trusted: missing mounts,
+            // permission failures and disabled repos must preserve DB rows.
+            if (originalRepo.list().contains(filename) || teiRepo.has(filename)) return;
+            // notExists is deliberately stronger than !exists: an unknown
+            // result (e.g. denied access) must not authorize deletion. Check
+            // the physical file too, independent of repository filters.
+            if (!Files.notExists(originalRepo.getFile(filename).toPath())) return;
+            pruneRemovedTei(file);
+            teiFileDbService.evictAllCaches();
+        }
+    }
+
+    private TeiRepo findEnabledRepo(TeiRepo repo, String name) {
+        if (name == null || !repo.isEnabled()) return null;
+        if (repo instanceof CombinedTeiRepo combined) {
+            for (TeiRepo child : combined.getRepos()) {
+                final TeiRepo match = findEnabledRepo(child, name);
+                if (match != null) return match;
+            }
+            return null;
+        }
+        return name.equals(repo.getName()) && repo.isReady() ? repo : null;
+    }
+
+    /** Shared DB cascade and removal notifications; search data is retained. */
+    private void pruneRemovedTei(TeiFile file) {
+        final List<String> opusPaths = teiDivRepository.getOperaPathsForTeiFileId(file.getId());
+        log.info("will prune removed TeiFile {} ({} opera)", file.getFilename(), opusPaths.size());
+        // The proxied delete commits before removal events or the 404 response.
+        teiFileDbService.deleteTeiFile(file.getFilename());
+        for (String opusPath : opusPaths) {
+            try {
+                textbaseEventsPublisher.signalOpusRemoved(OpusRemovedDto.builder().path(opusPath).build());
+            } catch (RuntimeException e) {
+                log.error("Failed to signal removal of opus {} - downstream consumers may miss it", opusPath, e);
             }
         }
     }
@@ -309,7 +362,7 @@ public class AdminService {
      * 404s until then.
      */
     public void pruneOrphanedElems(Writer logActivity) {
-        synchronized (Globals.IMPORT_TEIS_WORKING) {
+        try (Globals.ImportLock ignored = Globals.lockImports()) {
             // queryForList(sql) (not the typed (sql, Class) overload):
             // deliberately the plainest overload - the typed one cannot be
             // stubbed from the Groovy test suite, where Mockito's
@@ -376,7 +429,7 @@ public class AdminService {
      * from the TEI XML's in the TEI repo.
      */
     public void destroyAllExistingAndReimportAllTeis(Writer logActivity, boolean iUnderstandThatThisIsAPotentiallyDangerousOperation) {
-        synchronized (Globals.IMPORT_TEIS_WORKING) {
+        try (Globals.ImportLock ignored = Globals.lockImports()) {
             writeLn(logActivity, "will first destroy existing data...");
 
             // DELETE FROM, not TRUNCATE: Derby refuses to TRUNCATE any table

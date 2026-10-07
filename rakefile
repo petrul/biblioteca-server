@@ -269,6 +269,14 @@ task :test, [:task_profile, :test_filter] do |_task, args|
     task_profile = args[:task_profile] || profile
     test_filter = args[:test_filter]
     puts "Running unit and integration tests..."
+    if test_filter && !test_filter.empty?
+        # The conventional Gradle test task includes both tag groups. Running
+        # a filter once there avoids a false "No tests found" in whichever
+        # phase does not contain the selected test, while preserving failures
+        # for genuinely unmatched selectors.
+        run_rake_tests(task_profile, test_filter, 'test', 'Running selected tests...')
+        next
+    end
     Rake::Task[:unittest].invoke(task_profile, test_filter)
     Rake::Task[:itest].invoke(task_profile, test_filter)
 end

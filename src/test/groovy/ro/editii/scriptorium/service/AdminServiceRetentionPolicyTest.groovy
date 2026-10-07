@@ -36,7 +36,7 @@ class AdminServiceRetentionPolicyTest {
     /** Records deleteTeiFile calls instead of touching the DB. */
     static class RecordingTeiFileDbService extends TeiFileDbService {
         final List<String> deleted = []
-        RecordingTeiFileDbService() { super(null, null, null, null, null, null, null, null, null, null, null, null) }
+        RecordingTeiFileDbService() { super(null, null, null, null, null, null, null, null, null, null, null, null, null) }
         @Override
         void deleteTeiFile(String teiFilename) { this.deleted << teiFilename }
     }
