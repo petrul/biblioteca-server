@@ -34,6 +34,10 @@ public class TeiDivDto extends TeiElemDto implements Comparable<TeiDivDto> {
     boolean leaf; // true if has no children
     boolean opus; // true if root-level work
 
+    /** Media (DivMediaAssociation) attached to this exact div - manual cover-art candidates and/or
+     * enrichment-found art. Filled by GET /api/divs/{id} only, same as AuthorDto.imageUrls. */
+    java.util.List<String> imageUrls;
+
     @Builder(builderMethodName = "teiDivDtoBuilder")
     public TeiDivDto(String path, String urlFragment, String head,  String url, int depth,
                      int size, int wordSize,
