@@ -54,6 +54,10 @@ idea {
 
 group = 'ro.editii'
 version = '0.9.13-SNAPSHOT'
+// The name of the family release this snapshot is heading toward - the
+// biblioteca-* family cuts releases together (see README's Releases
+// section: the name is fixed at random when the previous release is cut).
+releaseName = 'Bronze Basilica'
 
 java {
     sourceCompatibility = '25'

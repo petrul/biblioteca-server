@@ -438,3 +438,112 @@ Originally named `scriptorium-repo`. The design goal from the start was a text
 database addressable down to the paragraph, word, and letter — not another
 ebook store. Source content is authored as flat-ODT and piped through an
 odt → TEI → web pipeline at import time.
+
+---
+
+## Releases
+
+Every release carries a name: an abstract adjective welded to an antiquity
+noun, alliterative, walking the alphabet one release at a time. The first
+named release is 0.9.12, *Amber Amphora*. When a release is cut, the next
+one's name is fixed at random and stamped as the `releaseName` property
+into every family manifest — `build.gradle` here, `package.json` in the
+vectorizer, reader and covers — so every repo knows which named family
+release its `-SNAPSHOT` is heading toward (the family cuts together, one
+name per family quartet; `git-do-release.sh` bumps the versions). The next
+release is *Bronze Basilica*.
+
+The current release is *Amber Amphora*, cut 2026-10-07 — one row per
+`biblioteca-*` project: the stable it shipped in this release, and the
+short SHA of that stable's `Release <version>` commit (each repo's
+`v<version>` branch tip — `git show <sha>` gives back the exact state
+that shipped):
+
+| Project | Stable (*Amber Amphora*) | Release commit |
+| --- | --- | --- |
+| `biblioteca-server` (this repo) | 0.9.12 | `789a349` |
+| `biblioteca-nestjs` (vectorizer) | 0.9.11 | `8b0296d` |
+| `biblioteca-reader` | 0.1.13 | `1679515` |
+| `biblioteca-covers` | 0.0.2 | `ac95566` |
+
+### Keeping this section current
+
+For whoever (human or agent) cuts the next family release —
+`git-do-release.sh` prints everything needed:
+
+1. Rebuild the table above for the just-cut release — one row per
+   `biblioteca-*` project: its stable in the new release and the short
+   SHA of its `Release <version>` commit (the `v<version>` branch tip).
+   Move the previous release's rows
+   into its subsection below (create it, headed by the name and the
+   release date), with a bullet list of its major improvements, each
+   linked to its commit.
+2. Fix the *next* release's name at random — next letter of the alphabet,
+   abstract adjective + antiquity noun — stamp it as `releaseName` in all
+   four family manifests (`build.gradle` here, `package.json` in the
+   siblings), and start its subsection with a table of the snapshot
+   versions the repos are heading toward it on.
+
+Names began with 0.9.12 (*Amber Amphora*); earlier releases predate the
+scheme and are archived in the last subsection.
+
+### Amber Amphora (2026-10-07)
+
+The first named release, cut 2026-10-07:
+
+| Project | Stable | Release commit |
+| --- | --- | --- |
+| `biblioteca-server` | 0.9.12 | `789a349` |
+| `biblioteca-nestjs` (vectorizer) | 0.9.11 | `8b0296d` |
+| `biblioteca-reader` | 0.1.13 | `1679515` |
+| `biblioteca-covers` | 0.0.2 | `ac95566` |
+
+- Per-reader UI preferences — `GET/PUT /api/users/me/preferences`
+([7bf927d](https://github.com/petrul/biblioteca-server/commit/7bf927d))
+- Google auth: profile refresh endpoint and legacy account linking
+([f927ff6](https://github.com/petrul/biblioteca-server/commit/f927ff6))
+- TEI language exposed in div metadata
+([8d3b196](https://github.com/petrul/biblioteca-server/commit/8d3b196))
+- Author image URLs on `GET /api/authors/{strId}`
+([03cb65b](https://github.com/petrul/biblioteca-server/commit/03cb65b))
+- Qdrant collection parsed from `VECTORSTORE_URL`
+([010a35a](https://github.com/petrul/biblioteca-server/commit/010a35a))
+
+When it was cut, the next release's name was fixed at random:
+*Bronze Basilica*.
+
+### Bronze Basilica (next — in development)
+
+The family release every `biblioteca-*` snapshot is heading toward; its
+name is stamped as `releaseName` in all four manifests. Each repo's main
+is working toward it on its own next version:
+
+| Project | Snapshot |
+| --- | --- |
+| `biblioteca-server` (this repo) | 0.9.13-SNAPSHOT |
+| `biblioteca-nestjs` (vectorizer) | 0.9.12-SNAPSHOT |
+| `biblioteca-reader` | 0.1.14-SNAPSHOT |
+| `biblioteca-covers` | 0.0.3-SNAPSHOT |
+
+When the family cuts this release, the versions above become its stables
+(add each `Release <version>` commit), the rows move up into the main
+table, and the next release's name is fixed at random.
+
+### Before the naming began (0.9.1 – 0.9.11)
+
+The pre-name releases, kept for the record — the server version and the
+sibling stables that shipped in each batch, each with its release commit:
+
+| Server | Date | Vectorizer | Reader | Covers | Notes |
+| --- | --- | --- | --- | --- | --- |
+| 0.9.11 `6d706f1` | 2026-10-03 | 0.9.10 `b710f45` | 0.1.12 `5ad4901` | 0.0.1 `7a2f95a` | First release with `biblioteca-covers` in the family; Lucene 10; interactive Derby `ij` shell (`rake ij`); vector-search failures surface as errors, not empty results. |
+| 0.9.10 `330f92b` | 2026-09-29 | 0.9.9 `cf70dc3` | 0.1.10 `9f706f5` | — | Schema V3 (reseeded id sequences); `domPath`-positional TEI node resolution; Saxon pinned for XPath/DOM serialization; fresher-sweep batched and slowed to 60s. |
+| 0.9.9 `78c73be` | 2026-09-28 | 0.9.9 `cf70dc3` | 0.1.10 `9f706f5` | — | MySQL → Apache Derby migration (Network Server, in-repo `docker/derby` image, Flyway, `DB_URL` creds as connection attributes); TeiDiv referenced by stable path; hourly TEI prune. |
+| 0.9.8 `9548da7` | 2026-09-27 | 0.9.8 `cb566b7` | 0.1.8 `d2a790f` | — | Search data is precious: retain on removal, manual-only drops; anti-bulk-download `robots.txt`; enrichment fetching moved to the vectorizer; public/internal API split settled. |
+| 0.9.7 `889fce6` | 2026-09-27 | 0.9.8 `cb566b7` | 0.1.8 `d2a790f` | — | Pluggable vector store — Qdrant (default) alongside Milvus; seamless degradation while the vector store is absent; Actuator + Lucene rebuild progress endpoint. |
+| 0.9.6 `72f812a` | 2026-09-25 | 0.9.7 `7cb860e` | 0.1.7 `5f05afb` | — | GraalVM native image boots the JPA layer (hibernate-graalvm + classpath resources); Milvus collection renamed `biblioteca_paras_bge_m3` with the nlist-8192 index pairing; public `/api/info` build identity. |
+| 0.9.5 `097d7ca` | 2026-09-24 | 0.9.4 `9197cb3` | 0.1.5 `ac2e028` | — | `TextbaseServer` → `BibliotecaServer`; orphan sweep for vanished TEI sources; `ci-graalvm` pipeline. |
+| 0.9.4 `f5e54d2` | 2026-09-22 | 0.9.2 `aa318fe` | 0.1.3 `f1c7755` | — | The `textbase` → `biblioteca` rename fallout: `BIBLIOTECA_EXTERNAL_URL`, pass-store keys, int-server asyncapi wiring. |
+| 0.9.3 `0f3f814` | 2026-09-20 | 0.9.1 `ed15362` | 0.1.2 `908a1a2` | — | `git` in the runtime image + document-conversion toolbox base; non-blocking initial repo clone; Google One Tap FedCM. |
+| 0.9.2 `c5d01b3` | 2026-09-19 | 0.9.1 `ed15362` | 0.1.2 `908a1a2` | — | Git-backed TEI repositories; enrichment switched from Ollama-generated to search-based. |
+| 0.9.1 `63cac91` | 2026-09-15 | — | — | — | First stable of the 0.9 line: Google sign-in, auto-built Lucene index, Kafka login events, Ollama/SearXNG author bios and opus summaries. |

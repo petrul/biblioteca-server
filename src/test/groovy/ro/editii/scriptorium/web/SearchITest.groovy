@@ -8,6 +8,7 @@ import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.autoconfigure.EnableAutoConfiguration
 import org.springframework.boot.kafka.autoconfigure.KafkaAutoConfiguration
 import org.springframework.boot.test.context.SpringBootTest
+import org.springframework.boot.test.web.server.LocalServerPort
 import org.springframework.context.annotation.Lazy
 import org.springframework.http.client.SimpleClientHttpRequestFactory
 import org.springframework.jdbc.core.JdbcTemplate
@@ -20,10 +21,13 @@ import ro.editii.scriptorium.TestUtils
 import ro.editii.scriptorium.BibliotecaServer
 import ro.editii.scriptorium.client.BibliotecaClient
 import ro.editii.scriptorium.dto.HitDto
+import ro.editii.scriptorium.dto.TeiDivDto
 import ro.editii.scriptorium.service.AdminService
 import ro.editii.scriptorium.vector.Content
+import ro.editii.scriptorium.vector.FakeEmbedderTestConfig
 import ro.editii.scriptorium.vector.FakeQwen3Embedder
 import ro.editii.scriptorium.vector.QdrantCollection
+import ro.editii.scriptorium.vector.VectorSearchAvailability
 
 import java.nio.file.Files
 
@@ -65,7 +69,7 @@ import static ro.editii.scriptorium.TestUtils.TEI_ELEM
 ])
 @SpringBootTest(
         webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT,
-        classes = [BibliotecaServer.class, TestConfig.class, ro.editii.scriptorium.vector.FakeEmbedderTestConfig.class])
+        classes = [BibliotecaServer.class, TestConfig.class, FakeEmbedderTestConfig.class])
 @EnableAutoConfiguration(exclude= KafkaAutoConfiguration.class)
 @Tag("integration-test")
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
@@ -111,8 +115,8 @@ class SearchITest {
     @Autowired @Lazy BibliotecaClient tbc;
     @Autowired AdminService adminService
     @Autowired JdbcTemplate jdbcTemplate
-    @Autowired ro.editii.scriptorium.vector.VectorSearchAvailability vectorSearchAvailability
-    @org.springframework.boot.test.web.server.LocalServerPort int port
+    @Autowired VectorSearchAvailability vectorSearchAvailability
+    @LocalServerPort int port
 
     /** The 12 fixture points' urls: this server's own echo endpoint. */
     private String fixtureUrl(int i) {
@@ -162,7 +166,7 @@ class SearchITest {
             assert vect.size() > 0
 
             divs.each {
-                final dto = (ro.editii.scriptorium.dto.TeiDivDto) it.data
+                final dto = (TeiDivDto) it.data
                 assert dto.head.toLowerCase().contains('moldov')
             }
         }
@@ -216,7 +220,7 @@ class SearchITest {
      */
     @BeforeAll
     void setupQdrantCollection() {
-        final col = this.connect()
+        final col = connect()
         try {
             // Every operation, including the initial existence probe, is a
             // network operation.  Log the exact sanitized endpoint and the
@@ -249,12 +253,12 @@ class SearchITest {
             final endpoint = TestUtils.vectorStoreBaseAddress(System.getenv('VECTORSTORE_URL') ?: 'http://srv2.local:20126')
             System.err.println("SearchITest: Qdrant unavailable or setup failed at ${endpoint}; full exception follows")
             setupFailure.printStackTrace(System.err)
-            this.dropBestEffort(col, setupFailure)
+            dropBestEffort(col, setupFailure)
             throw setupFailure
         }
     }
 
-    private QdrantCollection connect() {
+    private static QdrantCollection connect() {
         // Suffix-stripped like vectorstore.address above: this handle must
         // talk to the same base address the app bean does, not to a URL
         // whose trailing collection segment would end up in every REST
@@ -274,8 +278,8 @@ class SearchITest {
      */
     @AfterAll
     void teardownQdrantCollection() {
-        final col = this.connect()
-        this.dropBestEffort(col, null)
+        final col = connect()
+        dropBestEffort(col, null)
     }
 
     /**
@@ -284,7 +288,7 @@ class SearchITest {
      * run when nothing had failed before it - on setup failures and test
      * failures it is logged, never rethrown.
      */
-    private void dropBestEffort(QdrantCollection col, Throwable primary) {
+    private static void dropBestEffort(QdrantCollection col, Throwable primary) {
         try {
             if (col.exists()) col.drop()
             assert !col.exists()
