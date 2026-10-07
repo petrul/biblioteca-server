@@ -3,6 +3,7 @@ package ro.editii.scriptorium.rest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.transaction.annotation.Isolation;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -25,7 +26,7 @@ public class WorkCatalogRestController {
     private final TeiDivRepository teiDivRepository;
 
     @GetMapping
-    @Transactional(readOnly = true)
+    @Transactional(readOnly = true, isolation = Isolation.READ_UNCOMMITTED)
     public CatalogPageDto<TeiDivDto> page(
             @RequestParam(defaultValue = "1") int page,
             @RequestParam(defaultValue = "12") int size,

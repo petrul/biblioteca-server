@@ -134,6 +134,29 @@
         <p class="l"><xsl:apply-templates /></p>
     </xsl:template>
 
+    <!-- Drama: a speech (sp), its printed speaker line, and stage
+         directions - produced by the scriptorium-masters post hook
+         over the hardcoded drama work list. The who pointer rides
+         along as data-who (character-level features in the reader). -->
+    <xsl:template match="tei:sp">
+        <div class="sp">
+            <xsl:if test="@who">
+                <xsl:attribute name="data-who">
+                    <xsl:value-of select="translate(@who, '#', '')" />
+                </xsl:attribute>
+            </xsl:if>
+            <xsl:apply-templates />
+        </div>
+    </xsl:template>
+
+    <xsl:template match="tei:speaker">
+        <span class="speaker"><xsl:apply-templates /></span>
+    </xsl:template>
+
+    <xsl:template match="tei:stage">
+        <p class="stage"><xsl:apply-templates /></p>
+    </xsl:template>
+
     <xsl:template match="tei:epigraph">
         <p class="epigraph"><xsl:apply-templates /></p>
     </xsl:template>

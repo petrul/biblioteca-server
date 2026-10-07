@@ -10,8 +10,10 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.HttpStatus;
+import org.springframework.transaction.annotation.Isolation;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
@@ -47,11 +49,28 @@ public class DivRestController {
     @ExceptionHandler(RuntimeException.class)
     public ResponseEntity<String> handleTeiFailure(RuntimeException error) {
         final String summary = RestUtil.summarize(error);
-        log.error("TEI API request failed: {}", summary, error);
 
-        // Do not turn an expected HTTP error (most importantly a missing opus)
-        // into a 500.  Consumers use 404/400 to discard stale Kafka events;
-        // returning 500 here makes them retain and retry those events forever.
+        // A read that timed out waiting for the importer's write locks is
+        // expected while an import runs (Derby has no MVCC): 503 + Retry-After
+        // and one warn line, so consumers retry instead of treating a 500.
+        if (RestUtil.isDbBusy(error)) {
+            log.warn("database busy, serving 503: {}", summary);
+            return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
+                    .header(HttpHeaders.RETRY_AFTER, "30").body(summary);
+        }
+
+        // An expected client error (most importantly a missing opus) is a
+        // warn line without a stack trace, not an ERROR screenful per request.
+        //
+        // Do not turn it into a 500 either.  Consumers use 404/400 to discard
+        // stale Kafka events; returning 500 here makes them retain and retry
+        // those events forever.
+        if (RestUtil.isClientError(error)) {
+            log.warn("TEI API request failed: {}", summary);
+        } else {
+            log.error("TEI API request failed: {}", summary, error);
+        }
+
         for (Throwable cause = error; cause != null; cause = cause.getCause()) {
             if (cause instanceof ResponseStatusException responseStatus) {
                 return ResponseEntity.status(responseStatus.getStatusCode()).body(summary);
@@ -65,7 +84,7 @@ public class DivRestController {
      */
     @Operation(operationId = "getElemByPath",  description = "retrieves TeiElemDto information for a given path, i.e. /alecsandri/versuri")
     @GetMapping("")
-    @Transactional
+    @Transactional(readOnly = true, isolation = Isolation.READ_UNCOMMITTED)
     @ResponseBody TeiElemDto get_by_path(
             @RequestParam(name = "path") String path,
             UriComponentsBuilder uriComponentsBuilder) {
@@ -82,7 +101,7 @@ public class DivRestController {
      * get TeiDiv by long id
      */
     @GetMapping("/{id}")
-    @Transactional(readOnly = true)
+    @Transactional(readOnly = true, isolation = Isolation.READ_UNCOMMITTED)
     public @ResponseBody TeiDivDto get_id(
             @PathVariable(name = "id") long id,
             UriComponentsBuilder uriComponentsBuilder,
@@ -134,7 +153,7 @@ public class DivRestController {
                     "source actually carries it - which is uncommon in this corpus, so expect most of those to " +
                     "be missing most of the time. Pass ?includeRawTei=true to also get the raw TEI XML.")
     @GetMapping("/{id}/cover-metadata")
-    @Transactional(readOnly = true)
+    @Transactional(readOnly = true, isolation = Isolation.READ_UNCOMMITTED)
     public @ResponseBody BookMetadataDto getCoverMetadata(
             @Parameter(description = "Either the numeric div id (from GET /api/divs?path=...), or the work's own " +
                     "stable path with every '/' replaced by '-' - e.g. the path alecsandri/poezii becomes " +
@@ -187,7 +206,7 @@ public class DivRestController {
      * @return the {@link Toc} of the {@link TeiDiv} indicated by the id param
      */
     @GetMapping("/{id}/toc")
-    @Transactional(readOnly = true)
+    @Transactional(readOnly = true, isolation = Isolation.READ_UNCOMMITTED)
     public @ResponseBody TeiDivDto[] get_id_toc(
             @PathVariable(name = "id") long id,
             @RequestParam(value = "page", defaultValue = "0") int pageNr,
@@ -223,7 +242,7 @@ public class DivRestController {
     @Operation(summary = "Get div paragraphs",
             description = "Returns all child elements of the given div")
     @GetMapping("/{divId}/paras")
-    @Transactional
+    @Transactional(readOnly = true, isolation = Isolation.READ_UNCOMMITTED)
     public @ResponseBody TeiElemDto[] get_id_paras(
             @PathVariable(name = "divId")
             @Parameter(description = "the div id. this id must be the database numeric id of a pre-parsed TeiDiv")
@@ -266,7 +285,7 @@ public class DivRestController {
     }
 
     @GetMapping("/")
-    @Transactional(readOnly = true)
+    @Transactional(readOnly = true, isolation = Isolation.READ_UNCOMMITTED)
     public List<TeiDivDto> getAllTeiDivs(
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size,

@@ -16,6 +16,7 @@ import ro.editii.scriptorium.model.Author;
 import ro.editii.scriptorium.model.Languages;
 import ro.editii.scriptorium.model.TeiDiv;
 import ro.editii.scriptorium.model.TeiFile;
+import ro.editii.scriptorium.rest.RestUtil;
 import ro.editii.scriptorium.search.lucene.LuceneIndexService;
 import ro.editii.scriptorium.tei.TeiFileAlreadyImportedException;
 import ro.editii.scriptorium.tei.TeiRepo;
@@ -123,6 +124,35 @@ public class AdminService {
         return this.luceneIndexService.rebuildIndex();
     }
 
+    /**
+     * Import one file, retrying once on transient Derby contention - a
+     * lock wait timeout (SQLState 40XL1) or a deadlock victim (40001).
+     * Derby has no MVCC and the per-JVM import lock cannot serialize two
+     * instances, so a sweep can lose its write locks mid-file (an
+     * overlapping sweep from before a restart, most commonly). The
+     * failed transaction rolled back atomically, so one retry in a
+     * fresh transaction is safe - and without it the file stays
+     * deleted-but-not-imported until the next scheduled sweep.
+     */
+    private void importWithContentionRetry(String filename, Writer logActivity) throws TeiFileAlreadyImportedException {
+        try {
+            this.teiFileDbService.importTeiFile(filename, true);
+        } catch (RuntimeException first) {
+            if (!RestUtil.isDbBusy(first)) throw first;
+            log.warn("database contention importing {} ({}), retrying once",
+                    filename, brief(RestUtil.summarize(first)));
+            writeLn(logActivity, "database contention importing " + filename + ", retrying once");
+            this.teiFileDbService.importTeiFile(filename, true);
+        }
+        this.postImportHooks(filename);
+    }
+
+    /** One short line for the log - never a Derby lock-cycle dump. */
+    private static String brief(String summary) {
+        final String firstLine = summary.split("\n", 2)[0];
+        return firstLine.length() > 160 ? firstLine.substring(0, 160) + "..." : firstLine;
+    }
+
     public void reimportFresherTeis(Writer logActivity) {
         try (Globals.ImportLock ignored = Globals.lockImports()) {
             final List<String> filenames = teiRepo.list();
@@ -144,8 +174,7 @@ public class AdminService {
                     try {
                         log.info("will import {} ", filename);
                         writeLn(logActivity, "will delete existing import for " + filename);
-                        this.teiFileDbService.importTeiFile(filename, true);
-                        this.postImportHooks(filename);
+                        this.importWithContentionRetry(filename, logActivity);
                     } catch (TeiFileAlreadyImportedException e) {
                         log.error(e.getMessage(), e);
                     } catch (RuntimeException e) {
@@ -187,8 +216,7 @@ public class AdminService {
             try {
                 log.info("will import {} ", filename);
                 writeLn(logActivity, "will import " + filename);
-                this.teiFileDbService.importTeiFile(filename, true);
-                this.postImportHooks(filename);
+                this.importWithContentionRetry(filename, logActivity);
             } catch (TeiFileAlreadyImportedException e) {
                 log.error(e.getMessage(), e);
             }
@@ -217,8 +245,7 @@ public class AdminService {
                     try {
                         log.info("will import {} ", filename);
                         writeLn(logActivity, "will delete existing import for " + filename);
-                        this.teiFileDbService.importTeiFile(filename, true);
-                        this.postImportHooks(filename);
+                        this.importWithContentionRetry(filename, logActivity);
                     } catch (TeiFileAlreadyImportedException e) {
                         log.error(e.getMessage(), e);
                     }

@@ -15,6 +15,7 @@ import org.springframework.data.rest.webmvc.ResourceNotFoundException;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Controller;
+import org.springframework.transaction.annotation.Isolation;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.ui.Model;
 import org.springframework.util.MimeTypeUtils;
@@ -119,7 +120,7 @@ public class DivController {
     }
 
     @GetMapping("/")
-    @Transactional
+    @Transactional(readOnly = true, isolation = Isolation.READ_UNCOMMITTED)
     public String index(Model model,
                         @RequestHeader(value = HttpHeaders.USER_AGENT, required = false) String userAgent,
                         @RequestParam(value = "noredirect", required = false) String noRedirect) {
@@ -166,7 +167,7 @@ public class DivController {
     }
 
     @GetMapping(AUTHOR_REGEX)
-    @Transactional
+    @Transactional(readOnly = true, isolation = Isolation.READ_UNCOMMITTED)
     public ModelAndView get_authorId(
             @PathVariable(name = "authorId") String authorId,
             Model model,
@@ -203,7 +204,7 @@ public class DivController {
      * catch-all dispatcher for urls like: /{author}/{opus}/div1/div2/div3.ext
      */
     @GetMapping(value = { OPUS_REGEX, DIVPAGE_REGEX })
-    @Transactional
+    @Transactional(readOnly = true, isolation = Isolation.READ_UNCOMMITTED)
     public void catchAllDivDispatcher(@PathVariable(name = "authorId") String authorId,
                                        @PathVariable(name = "opusId") String opusId,
                                        @RequestParam(name = "depth", required = false)
@@ -264,6 +265,13 @@ public class DivController {
             RestUtil.throw400(e.getMessage());
         } catch (Exception e) {
             final String summary = RestUtil.summarize(e);
+            // A read that timed out waiting for the importer's write locks is
+            // expected while an import runs (Derby has no MVCC): 503 so browsers
+            // and crawlers retry, not an error page.
+            if (RestUtil.isDbBusy(e)) {
+                log.warn("database busy, serving 503: {}", summary);
+                throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE, summary);
+            }
             log.error("TEI request failed: {}", summary);
             // Do not attach the parser exception as a cause here. Spring's
             // servlet logger would otherwise print the complete XML parser

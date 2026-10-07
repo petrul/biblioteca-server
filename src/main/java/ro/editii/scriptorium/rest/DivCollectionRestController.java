@@ -5,6 +5,8 @@ import lombok.Value;
 import lombok.extern.log4j.Log4j2;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.security.core.Authentication;
+import org.springframework.transaction.annotation.Isolation;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 import ro.editii.scriptorium.collection.DivCollectionService;
 import ro.editii.scriptorium.dao.AppUserRepository;
@@ -117,6 +119,7 @@ public class DivCollectionRestController {
     }
 
     @GetMapping("/mine")
+    @Transactional(readOnly = true, isolation = Isolation.READ_UNCOMMITTED)
     public List<DivCollectionDto> mine(Authentication authentication) {
         return this.divCollectionService.listCollections(currentUser(authentication)).stream()
                 .map(this::toDto)
@@ -134,6 +137,7 @@ public class DivCollectionRestController {
     }
 
     @GetMapping("/mine/{name}")
+    @Transactional(readOnly = true, isolation = Isolation.READ_UNCOMMITTED)
     public DivCollectionDto get(Authentication authentication, @PathVariable String name) {
         try {
             return toDto(this.divCollectionService.getCollection(currentUser(authentication), name));
@@ -198,6 +202,7 @@ public class DivCollectionRestController {
     );
 
     @GetMapping("/system/by-language/{lang}")
+    @Transactional(readOnly = true, isolation = Isolation.READ_UNCOMMITTED)
     public List<TeiDivDto> byLanguage(@PathVariable String lang, UriComponentsBuilder ucb) {
         final Languages language = Languages.from(lang);
         if (language == null) {
@@ -211,6 +216,7 @@ public class DivCollectionRestController {
     }
 
     @GetMapping("/system/by-author/{authorStrId}")
+    @Transactional(readOnly = true, isolation = Isolation.READ_UNCOMMITTED)
     public List<TeiDivDto> byAuthor(@PathVariable String authorStrId, UriComponentsBuilder ucb) {
         return this.teiDivRepository.findOperaForAuthorStrId(authorStrId).stream()
                 .map(it -> TeiDivDto.fromTeiDiv(it, ucb))
@@ -218,6 +224,7 @@ public class DivCollectionRestController {
     }
 
     @GetMapping("/system/by-repo/{repoName}")
+    @Transactional(readOnly = true, isolation = Isolation.READ_UNCOMMITTED)
     public List<TeiDivDto> byRepo(@PathVariable String repoName, UriComponentsBuilder ucb) {
         final List<TeiFile> teiFiles = this.teiFileRepository.findByRepoName(repoName);
         return teiFiles.stream()
@@ -227,6 +234,7 @@ public class DivCollectionRestController {
     }
 
     @GetMapping("/system/repos")
+    @Transactional(readOnly = true, isolation = Isolation.READ_UNCOMMITTED)
     public List<String> repoNames() {
         return this.teiFileRepository.findDistinctRepoNames();
     }
@@ -237,7 +245,7 @@ public class DivCollectionRestController {
      * order, so unrelated newly imported works cannot appear here by chance.
      */
     @GetMapping("/system/featured")
-    @org.springframework.transaction.annotation.Transactional(readOnly = true)
+    @Transactional(readOnly = true, isolation = Isolation.READ_UNCOMMITTED)
     public List<TeiDivDto> featured(UriComponentsBuilder ucb) {
         return FEATURED_WORK_PATHS.stream()
                 .map(DivCollectionRestController::stablePathParts)

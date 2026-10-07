@@ -7,6 +7,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.transaction.annotation.Isolation;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.util.UriComponentsBuilder;
@@ -50,7 +51,7 @@ public class AuthorRestController extends CommonControllerUtil {
     }
 
     @GetMapping("/")
-    @Transactional(readOnly = true)
+    @Transactional(readOnly = true, isolation = Isolation.READ_UNCOMMITTED)
     public List<AuthorDto> getAuthors(UriComponentsBuilder uriComponentsBuilder, HttpServletRequest httpServletRequest) {
         log.info("/authors/");
         List<AuthorDto> authors = this.authorRepository.findAll().stream()
@@ -71,7 +72,7 @@ public class AuthorRestController extends CommonControllerUtil {
 
     /** Online catalogue endpoint: only the requested author page is loaded. */
     @GetMapping("/page")
-    @Transactional(readOnly = true)
+    @Transactional(readOnly = true, isolation = Isolation.READ_UNCOMMITTED)
     public CatalogPageDto<AuthorDto> getAuthorPage(
             @RequestParam(defaultValue = "1") int page,
             @RequestParam(defaultValue = "12") int size,
@@ -93,7 +94,7 @@ public class AuthorRestController extends CommonControllerUtil {
 
 
     @GetMapping("/{strId}")
-    @Transactional(readOnly = true)
+    @Transactional(readOnly = true, isolation = Isolation.READ_UNCOMMITTED)
     public AuthorDto getAuthor(@PathVariable(name = "strId") String strId, UriComponentsBuilder uriComponentsBuilder, HttpServletRequest httpServletRequest) {
         final Optional<Author> opt = this.authorRepository.getByStrId(strId);
         if (opt.isEmpty())
@@ -130,7 +131,7 @@ public class AuthorRestController extends CommonControllerUtil {
      * collides with GET /api/authors/{strId}.
      */
     @GetMapping("/media")
-    @Transactional(readOnly = true)
+    @Transactional(readOnly = true, isolation = Isolation.READ_UNCOMMITTED)
     public List<AuthorMediaDto> getAllAuthorMedia() {
         final Map<String, Author> authorsByStrId = this.authorRepository.findAll().stream()
                 .collect(Collectors.toMap(Author::getStrId, it -> it, (a, b) -> a));
@@ -152,7 +153,7 @@ public class AuthorRestController extends CommonControllerUtil {
     }
 
     @GetMapping("/{strId}/opera")
-    @Transactional(readOnly = true)
+    @Transactional(readOnly = true, isolation = Isolation.READ_UNCOMMITTED)
     public @ResponseBody TeiDivDto[] getOpera(@PathVariable("strId") String strId, UriComponentsBuilder uriComponentsBuilder) {
         final Optional<Author> byStrId = this.authorRepository.getByStrId(strId);
         if (byStrId.isEmpty())
