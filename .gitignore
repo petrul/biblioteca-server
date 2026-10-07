@@ -37,3 +37,4 @@
 # Angular/Ionic build output, .angular cache) - generated, not source. #
 src/main/webapp/
 derby.log
+test-results/
