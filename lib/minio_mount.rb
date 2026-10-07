@@ -33,6 +33,20 @@ module MinioMount
     system('mountpoint', '-q', '--', path)
   end
 
+  def open_directory(path)
+    opener = %w[open xdg-open].find do |command|
+      ENV.fetch('PATH', '').split(File::PATH_SEPARATOR).any? do |directory|
+        executable = File.join(directory, command)
+        File.file?(executable) && File.executable?(executable)
+      end
+    end
+    unless opener
+      warn "No directory opener found (open or xdg-open); browse #{path} manually"
+      return
+    end
+    warn "Could not open #{path}; the bucket remains mounted" unless system(opener, path)
+  end
+
   def mount(profile, env = ENV)
     path = mountpoint(profile)
     endpoint, bucket, key, secret = configuration(env)
@@ -42,6 +56,7 @@ module MinioMount
         raise "Existing mount is not read-write; run rake minio-unmount[#{profile}] first"
       end
       puts "Already mounted read-write at #{path}"
+      open_directory(path)
       return
     end
     FileUtils.mkdir_p(path)
@@ -58,6 +73,7 @@ module MinioMount
     30.times do
       if mounted?(path)
         puts "Mounted read-write at #{path}"
+        open_directory(path)
         return
       end
       sleep 0.2

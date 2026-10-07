@@ -134,6 +134,7 @@ rake minio-unmount[zmeu]
 ```
 
 The bucket is mounted **read-write** at `~/s3-mount/biblioteca-<profile>`.
+After mounting, the task opens the directory with `open` or `xdg-open`.
 `MINIO_URL` supplies the S3 endpoint and bucket (for example
 `http://host:9000/biblioteca`); `MINIO_CREDS` supplies `access-key:secret-key`.
 Both come from the selected pass-store profile using the existing environment
