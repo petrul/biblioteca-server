@@ -101,6 +101,10 @@ Rake equivalents (loading the pass-store profile env): `rake unittest[dev]`,
 `rake itest[dev]`, `rake test[dev]`; `rake ci` runs the full pipeline
 (clean, test, build, Docker publish).
 
+Filtered runs such as `rake test[yoga,TeiSourceMissingAdviceTest]` run the
+matching classes once through Gradle's combined `test` task, whether they
+are unit or integration tests. Unfiltered `rake test` still runs both phases.
+
 Mocking in Groovy tests: prefer map-coercion fakes (`[exists: { false }] as
 VectorCollection`), hand-rolled Groovy fakes for class-typed collaborators, and
 real cheap instances (temp-dir `LuceneIndexService`, plain `JdbcTemplate`)
@@ -299,6 +303,19 @@ disposable indexes:
   `opusRemoved`; the vectorizer logs it and *retains* the vectors). The
   manual-only escape hatches are `POST /api/admin/lucene/reindex` and the
   vectorizer's `POST /api/vector-store/remove-opus` / `reset`.
+- **Missing source requests clean up stale DB rows.** A content request returns
+  404 and removes the missing TEI file's opera, descendants and orphaned authors
+  using the same cascade as the scheduled prune. Cleanup requires the recorded
+  original repository to be configured, enabled, ready and successfully listed,
+  followed by a fresh physical absence check under the import lock. Unknown
+  repository provenance or failed access preserves the rows for later cleanup.
+  If an import/prune already owns the lock, the request returns 404 without
+  waiting and leaves cleanup to the scheduled sweep. Waiting while the HTTP
+  session retains a JDBC connection can otherwise exhaust the pool and prevent
+  the lock-owning scheduler from making progress.
+  External corpus rebuilds should publish replacements atomically; a temporary
+  deletion in an otherwise readable repository is indistinguishable from a
+  permanent removal. Lucene documents and vectors remain retained.
 - **Stale hits are filtered, not deleted** — a removed book's urls 404 and the
   resolver drops null-content hits, so users never see dead links while the
   data stays recoverable.

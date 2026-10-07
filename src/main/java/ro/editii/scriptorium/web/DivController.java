@@ -42,6 +42,7 @@ import ro.editii.scriptorium.service.ControllerTool;
 import ro.editii.scriptorium.service.DivService;
 import ro.editii.scriptorium.service.ElemInfo;
 import ro.editii.scriptorium.tei.TeiRepo;
+import ro.editii.scriptorium.tei.TeiResourceNotFoundException;
 import ro.editii.scriptorium.toc.Toc;
 import ro.editii.scriptorium.xslt.XsltTool;
 
@@ -251,6 +252,10 @@ public class DivController {
                 // default to decorated html
                 this.requestForDecoratedHtml(authorId, opusId, request, response, model, uriComponentsBuilder, depth);
             }
+        } catch (TeiResourceNotFoundException e) {
+            // Let the request transaction roll back before the advice performs
+            // missing-source cleanup in a separate, committed transaction.
+            throw e;
         } catch (ResponseStatusException e) {
             throw e;
         } catch (ResourceNotFoundException e) {

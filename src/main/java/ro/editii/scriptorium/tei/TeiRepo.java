@@ -11,6 +11,8 @@ public interface TeiRepo {
 
     String getName();
     default boolean isEnabled() { return true; }
+    /** Whether an empty listing can be trusted, rather than an initial sync. */
+    default boolean isReady() { return isEnabled(); }
     InputStream getStreamForName(String resName);
     boolean has(String resName);
     File getFile(String resName);

@@ -1,6 +1,8 @@
 package ro.editii.scriptorium.dao;
 
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
+import org.springframework.data.repository.query.Param;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.rest.core.annotation.RepositoryRestResource;
 import org.springframework.data.rest.core.annotation.RestResource;
@@ -18,6 +20,12 @@ public interface TeiFileRepository extends JpaRepository<TeiFile, Long> {
     List<TeiFile> findByFilename(String filename);
 
     Optional<TeiFile> getByFilename(String filename);
+
+    /** Reserve the file row before Hibernate removes its many-to-many author links. */
+    // SELECT FOR UPDATE uses Derby U locks; reserve a real X lock instead.
+    @Modifying
+    @Query(value = "update \"_tei_file\" set id = id where id = :id", nativeQuery = true)
+    int lockForDeletion(@Param("id") long id);
 
     List<TeiFile> findByRepoName(String repoName);
 

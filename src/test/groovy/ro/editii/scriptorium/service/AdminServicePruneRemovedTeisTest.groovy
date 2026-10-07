@@ -1,6 +1,7 @@
 package ro.editii.scriptorium.service
 
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.io.TempDir
 import org.mockito.ArgumentCaptor
 import org.mockito.Mockito
 import ro.editii.scriptorium.dao.TeiDivRepository
@@ -16,6 +17,7 @@ import ro.editii.scriptorium.tei.TeiRepo
 import org.springframework.jdbc.core.JdbcTemplate
 
 import static org.junit.jupiter.api.Assertions.assertEquals
+import static org.junit.jupiter.api.Assertions.assertThrows
 
 /**
  * Pure Mockito unit test (no Spring context - AdminService has no
@@ -31,6 +33,9 @@ import static org.junit.jupiter.api.Assertions.assertEquals
  * cleanup logic pruneRemovedTeis introduces.
  */
 class AdminServicePruneRemovedTeisTest {
+
+    @TempDir
+    File repoDirectory
 
     final TeiRepo teiRepo = Mockito.mock(TeiRepo)
     final TeiFileRepository teiFileRepository = Mockito.mock(TeiFileRepository)
@@ -115,5 +120,82 @@ class AdminServicePruneRemovedTeisTest {
         adminService.pruneRemovedTeis(new NoWriter())
 
         Mockito.verify(teiFileDbService, Mockito.times(1)).deleteTeiFile("also-gone.xml")
+    }
+
+    private void missingRequestFixture() {
+        final removed = teiFile(2L, 'gone.xml')
+        removed.setRepoName('corpus')
+        Mockito.when(teiFileRepository.getByFilename('gone.xml')).thenReturn(Optional.of(removed))
+        Mockito.when(teiRepo.getName()).thenReturn('corpus')
+        Mockito.when(teiRepo.isEnabled()).thenReturn(true)
+        Mockito.when(teiRepo.isReady()).thenReturn(true)
+        Mockito.when(teiRepo.getFile('gone.xml')).thenReturn(new File(repoDirectory, 'gone.xml'))
+        Mockito.when(teiRepo.list()).thenReturn([])
+        Mockito.when(teiDivRepository.getOperaPathsForTeiFileId(2L)).thenReturn(['author/work', 'author/other'])
+    }
+
+    @Test
+    void requestPrunesOnlyTheMissingSourceAndSignalsAllItsOpera() {
+        missingRequestFixture()
+
+        adminService.pruneMissingTeiOnRequest('gone.xml')
+
+        Mockito.verify(teiFileDbService).deleteTeiFile('gone.xml')
+        Mockito.verify(teiFileDbService).evictAllCaches()
+        Mockito.verify(eventsPublisher, Mockito.times(2)).signalOpusRemoved(Mockito.any())
+        Mockito.verify(teiFileRepository, Mockito.never()).findAll()
+        Mockito.verifyNoInteractions(luceneIndexService)
+    }
+
+    @Test
+    void requestDoesNotDeleteWhenSourceReappearedAfterTheFailedRead() {
+        missingRequestFixture()
+        Mockito.when(teiRepo.has('gone.xml')).thenReturn(true)
+
+        adminService.pruneMissingTeiOnRequest('gone.xml')
+
+        Mockito.verifyNoInteractions(teiFileDbService, eventsPublisher)
+    }
+
+    @Test
+    void requestDoesNotDeleteWhenOriginalRepoCannotBeListed() {
+        missingRequestFixture()
+        Mockito.when(teiRepo.list()).thenThrow(new RuntimeException('repo unavailable'))
+
+        assertThrows(RuntimeException, { adminService.pruneMissingTeiOnRequest('gone.xml') })
+
+        Mockito.verifyNoInteractions(teiFileDbService, eventsPublisher)
+    }
+
+    @Test
+    void requestDoesNotDeleteWhenOriginalRepoIsDisabledOrReconfigured() {
+        missingRequestFixture()
+        Mockito.when(teiRepo.isEnabled()).thenReturn(false)
+        adminService.pruneMissingTeiOnRequest('gone.xml')
+        Mockito.when(teiRepo.isEnabled()).thenReturn(true)
+        Mockito.when(teiRepo.getName()).thenReturn('different-corpus')
+        adminService.pruneMissingTeiOnRequest('gone.xml')
+
+        Mockito.verifyNoInteractions(teiFileDbService, eventsPublisher)
+    }
+
+    @Test
+    void requestDoesNotDeleteWhileOriginalRepoIsStillSyncing() {
+        missingRequestFixture()
+        Mockito.when(teiRepo.isReady()).thenReturn(false)
+
+        adminService.pruneMissingTeiOnRequest('gone.xml')
+
+        Mockito.verifyNoInteractions(teiFileDbService, eventsPublisher)
+    }
+
+    @Test
+    void requestDoesNotDeleteAnExistingFileExcludedByRepoFilters() {
+        missingRequestFixture()
+        new File(repoDirectory, 'gone.xml').text = '<TEI/>'
+
+        adminService.pruneMissingTeiOnRequest('gone.xml')
+
+        Mockito.verifyNoInteractions(teiFileDbService, eventsPublisher)
     }
 }

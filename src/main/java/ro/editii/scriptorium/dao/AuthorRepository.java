@@ -3,6 +3,7 @@ package ro.editii.scriptorium.dao;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
@@ -24,6 +25,13 @@ public interface AuthorRepository extends JpaRepository<Author, Long> {
 
     @Query("select tf from TeiFile tf join tf.authors a where a.id = ?1")
     List<TeiFile> getTeiFiles(long authorId);
+
+    /** Lock authors before deleting their file/element rows, matching catalog lock order. */
+    // Derby SELECT FOR UPDATE only takes U locks, compatible with readers' S
+    // locks. A no-op update obtains X until commit without changing metadata.
+    @Modifying
+    @Query(value = "update author set id = id where id = :id", nativeQuery = true)
+    int lockForFileDeletion(@Param("id") long id);
 
     Page<Author> findByLastNameContainingIgnoreCase(String excerpt, Pageable page);
     Page<Author> findByLastNameIgnoreCase(String excerpt, Pageable page);

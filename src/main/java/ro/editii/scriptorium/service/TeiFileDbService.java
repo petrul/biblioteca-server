@@ -12,6 +12,7 @@ import ro.editii.scriptorium.dao.AuthorRepository;
 import ro.editii.scriptorium.dao.TeiDivRepository;
 import ro.editii.scriptorium.dao.TeiFileRepository;
 import ro.editii.scriptorium.dao.TeiOpusRepository;
+import ro.editii.scriptorium.dao.TeiElemRepository;
 import ro.editii.scriptorium.kafka.TextbaseEventsPublisher;
 import ro.editii.scriptorium.model.*;
 import ro.editii.scriptorium.tei.AuthorStrIdComputer;
@@ -47,6 +48,7 @@ public class TeiFileDbService {
     final TextbaseConfig textbaseConfig;
     final TeifileParser teifileParser;
     final LanguageDetectionService languageDetectionService;
+    final TeiElemRepository teiElemRepository;
 
 //
 //    ParseTeiFileIntoDb newParser(String filename, InputStream is, Languages langHint) {
@@ -74,14 +76,27 @@ public class TeiFileDbService {
     }
 
     protected void deleteTeiFile(TeiFile dbTeiFile) {
+        final List<Author> authors = dbTeiFile.getAuthors();
+        // Catalog reads visit authors before their TEI files/elements. Taking
+        // author write locks only after deleting a file inverted that order:
+        // the reader held author S and waited for file S, while this writer
+        // held file X and waited for author X. Acquire author locks first,
+        // consistently by ID for files with multiple authors.
+        authors.stream().map(Author::getId).distinct().sorted()
+                .forEach(authorRepository::lockForFileDeletion);
+
+        // Hibernate deletes the author join rows before the file itself.
+        // Without this early file lock, a catalog count can hold file S while
+        // waiting for those join rows, and our delete holds join X while
+        // waiting for file X. Reserve the file before any deletion is queued.
+        teiFileRepository.lockForDeletion(dbTeiFile.getId());
+
         final List<TeiDiv> opuses = this.teiDivRepository.getOperaForTeiFileId(dbTeiFile.getId());
 
         for (TeiDiv op: opuses) {
             this.delete_rec(op);
         }
         this.teiFileRepository.delete(dbTeiFile);
-
-        final List<Author> authors = dbTeiFile.getAuthors();
 
         for (Author author : authors) {
             // if author has no attached teifiles, delete the author too
@@ -92,14 +107,19 @@ public class TeiFileDbService {
         }
     }
 
-    protected void delete_rec(TeiDiv div) {
-        final List<TeiElem> children = div.getDbChildren();
+    protected void delete_rec(TeiElem elem) {
+        final List<TeiElem> children = elem.getDbChildren();
 
-        for (TeiElem child: children)
-            this.delete_rec((TeiDiv) child);
+        if (children != null) {
+            for (TeiElem child : children)
+                this.delete_rec(child);
+        }
 
-        this.teiOpusRepository.deleteByTeiDivId(div.getId());
-        this.teiDivRepository.deleteById(div.getId());
+        if (elem instanceof TeiDiv)
+            this.teiOpusRepository.deleteByTeiDivId(elem.getId());
+        // The single-table inheritance tree also contains paragraphs, notes,
+        // heads, etc. Delete all element types through the base repository.
+        this.teiElemRepository.delete(elem);
     }
 
     /**

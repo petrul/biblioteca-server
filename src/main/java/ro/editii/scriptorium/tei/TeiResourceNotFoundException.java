@@ -12,11 +12,19 @@ package ro.editii.scriptorium.tei;
  */
 public class TeiResourceNotFoundException extends RuntimeException {
 
+    private final String resourceName;
+
+    public String getResourceName() {
+        return resourceName;
+    }
+
     public TeiResourceNotFoundException(String resName) {
         super("no res named " + resName);
+        this.resourceName = resName;
     }
 
     public TeiResourceNotFoundException(String resName, Throwable cause) {
         super("no res named " + resName, cause);
+        this.resourceName = resName;
     }
 }

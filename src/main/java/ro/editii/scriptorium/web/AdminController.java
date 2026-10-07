@@ -59,7 +59,7 @@ public class AdminController {
     @PostMapping("/reinit")
     @Transactional
     public void reinit(HttpServletResponse httpServletResponse) {
-        synchronized (Globals.IMPORT_TEIS_WORKING) {
+        try (Globals.ImportLock ignored = Globals.lockImports()) {
             try {
                 PrintWriter writer = httpServletResponse.getWriter();
                 this.adminService.destroyAllExistingAndReimportAllTeis(writer, true);

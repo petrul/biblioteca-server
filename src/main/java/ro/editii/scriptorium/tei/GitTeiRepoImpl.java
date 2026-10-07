@@ -113,6 +113,9 @@ public class GitTeiRepoImpl implements TeiRepo {
     public boolean isEnabled() { return enabled; }
 
     @Override
+    public boolean isReady() { return enabled && ready; }
+
+    @Override
     public InputStream getStreamForName(String resName) {
         if (!ready) {
             throw new IllegalStateException("Git TEI repo " + url + " has not finished its initial sync yet");

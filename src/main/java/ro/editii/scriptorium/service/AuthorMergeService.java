@@ -255,7 +255,7 @@ public class AuthorMergeService {
      * aborts the rest of the sweep.
      */
     public int pruneOrphanedAuthors(final java.io.Writer logActivity) {
-        synchronized (Globals.IMPORT_TEIS_WORKING) {
+        try (Globals.ImportLock ignored = Globals.lockImports()) {
             final List<Author> orphans = this.authorRepository.findOrphanedAuthors();
             int pruned = 0;
             for (final Author orphan : orphans) {
