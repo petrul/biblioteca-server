@@ -492,36 +492,50 @@ public class TeifileParser {
             replaceLbWithBlank(headNode, 0);
 
             // strange things that you might occasionally find in a <head>
-            DomTool.removeSubnodesByNodenames(headNode, new String[] {"label", "note", "figure", "binaryObject"});
+            DomTool.removeSubnodesByNodenames(headNode, new String[] {"note", "figure", "binaryObject"});
 
-            StringBuilder sb = new StringBuilder();
-            /* because there is an apparent bug in the java dom :
-             * XPathTool.applyXpathForNodeSet(".//text()")
-             * after removeChild, so use the following workaround
-             */
-            NodeList nodeSet = XpathTool.from(headNode, true).select(it -> it.getNodeType() == Node.TEXT_NODE);
-            for (int i = 0; i < nodeSet.getLength(); i++) {
-                Node crt = nodeSet.item(i);
-                final String crtText = crt.getTextContent();
-                final String whitespaceRemoved = this.removeWhitespace(crtText);
-                if (whitespaceRemoved.isEmpty() && crtText.contains("\n")) {
-                    // interstitial whitespace between tags, just ignore them
-                } else {
-                    sb.append(crtText);
-                }
-            }
+            // The label is a sur-title ("IV" in <head><label>IV</label> Fuga</head>)
+            // and normally stays out of the TOC head. But a head that is ONLY a
+            // label (<head><label>CHAPTER I.</label></head>, e.g. Gutenberg
+            // imports) has no other title: dropping the label there left the
+            // head empty, so parse() skipped every chapter div and the opus
+            // ended up with no leaves for its chapter text.
+            final Node headWithoutLabel = DomTool.deepCopy(headNode);
+            DomTool.removeSubnodesByNodenames(headWithoutLabel, new String[] {"label"});
+            String head = this.headText(headWithoutLabel);
+            if (head.isEmpty())
+                head = this.headText(headNode);
 
-            String head = this.nbspToSpace(sb.toString())
-                    .replaceAll("\\n", "")
-                    .replaceAll("\\s+", " ")
-                    .trim();
-
-            if (head != null && !head.isEmpty())
+            if (!head.isEmpty())
                 headBuilder.add(head);
 
         }
 
         return String.join(" ", headBuilder);
+    }
+
+    private String headText(Node headNode) {
+        StringBuilder sb = new StringBuilder();
+        /* because there is an apparent bug in the java dom :
+         * XPathTool.applyXpathForNodeSet(".//text()")
+         * after removeChild, so use the following workaround
+         */
+        NodeList nodeSet = XpathTool.from(headNode, true).select(it -> it.getNodeType() == Node.TEXT_NODE);
+        for (int i = 0; i < nodeSet.getLength(); i++) {
+            Node crt = nodeSet.item(i);
+            final String crtText = crt.getTextContent();
+            final String whitespaceRemoved = this.removeWhitespace(crtText);
+            if (whitespaceRemoved.isEmpty() && crtText.contains("\n")) {
+                // interstitial whitespace between tags, just ignore them
+            } else {
+                sb.append(crtText);
+            }
+        }
+
+        return this.nbspToSpace(sb.toString())
+                .replaceAll("\\n", "")
+                .replaceAll("\\s+", " ")
+                .trim();
     }
 
     // replace &nbsp; with regular trimmable space

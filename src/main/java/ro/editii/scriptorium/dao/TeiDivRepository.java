@@ -4,7 +4,9 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 import ro.editii.scriptorium.dav.DavOperaRow;
@@ -46,6 +48,32 @@ public interface TeiDivRepository extends JpaRepository<TeiDiv, Long> {
             where div.parent is null and tf.id = ?1
             """)
     List<String> getOperaPathsForTeiFileId(long teiFileId);
+
+    // Orphan sweep (AdminService.pruneOrphanedElems), in JPQL on purpose:
+    // the FK column's stored name differs per engine (Hibernate's teiFile_id
+    // keeps its case on Derby, PostgreSQL folds it to teifile_id), so any
+    // hand-quoted native spelling breaks on one of them - it failed every
+    // scheduler cycle on PostgreSQL. Hibernate resolves the mapping itself.
+
+    /** Root divs whose tei_file row is gone: NULL or dangling teiFile FK. */
+    @Query("""
+            select div.id from TeiDiv div
+            left join div.teiFile tf
+            where tf.id is null and div.parent is null
+            """)
+    List<Long> findOrphanedOperaIds();
+
+    /**
+     * Bulk-deletes every elem (any kind, any depth) whose tei_file row is
+     * gone - the leftovers no root reaches anymore.
+     */
+    @Modifying
+    @Transactional
+    @Query("""
+            delete from TeiElem e
+            where e.teiFile is null or e.teiFile.id not in (select tf.id from TeiFile tf)
+            """)
+    int deleteElemsWithoutTeiFile();
 
     // Random-discovery picks, in native SQL on purpose: the JPQL equivalent
     // (full-entity join + setFirstResult, or even the slim `dbChildren is

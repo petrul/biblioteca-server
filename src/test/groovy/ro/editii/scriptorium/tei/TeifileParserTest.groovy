@@ -147,6 +147,40 @@ class TeifileParserTest {
         verify(eventsPublisher, times(1)).signalNewOpusImported(any(TeiDivDto.class))
     }
 
+    @Test
+    void labelOnlyHeadBecomesTheDivHead() {
+        given: 'Gutenberg-style chapters whose head is nothing but a label'
+        def tei = teiOf("""
+            <div>
+                <head>The Last of the Mohicans</head>
+                <div>
+                    <head>INTRODUCTION</head>
+                    <p>intro</p>
+                </div>
+                <div>
+                    <head>
+                        <label>CHAPTER I.</label>
+                    </head>
+                    <p>chapter one</p>
+                </div>
+                <div>
+                    <head><label>IV</label> Fuga</head>
+                    <p>labelled chapter with its own title</p>
+                </div>
+                <div>
+                    <head/>
+                    <p>odt2tei empty-head wrapper</p>
+                </div>
+            </div>
+        """)
+
+        when:
+        def imported = parser.parse('label-heads.xml', tei, Languages.RO)
+
+        then: 'a label-only head is titled by its label; label + title keeps the title only; an empty head is still skipped'
+        assert imported*.head == ['The Last of the Mohicans', 'INTRODUCTION', 'CHAPTER I.', 'Fuga']
+    }
+
     static List<Node> n2l(NodeList nodeList) {
         return nodeSet2List(nodeList)
     }

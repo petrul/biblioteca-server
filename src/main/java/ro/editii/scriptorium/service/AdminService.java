@@ -390,25 +390,10 @@ public class AdminService {
      */
     public void pruneOrphanedElems(Writer logActivity) {
         try (Globals.ImportLock ignored = Globals.lockImports()) {
-            // queryForList(sql) (not the typed (sql, Class) overload):
-            // deliberately the plainest overload - the typed one cannot be
-            // stubbed from the Groovy test suite, where Mockito's
-            // all-matchers rule meets Groovy's runtime overload dispatch
-            // (matchers return null, and (sql, null) is ambiguous between
-            // the Class and Object... overloads).
-            // "teiFile_id"/"parent_id": quoted to match the actual stored
-            // column names exactly - Derby folds an UNQUOTED identifier to
-            // uppercase before matching, which does not find these
-            // quoted-lowercase/mixed-case columns (confirmed live against
-            // the real schema: SQLSyntaxErrorException 42X04 on
-            // D.PARENT_ID, which does not exist - only parent_id does).
-            final List<Long> orphanedOperaIds = this.jdbcTemplate.queryForList(
-                            "SELECT d.id FROM " + Util.TEI_ELEM + " d"
-                            + " LEFT JOIN \"_tei_file\" f ON f.id = d.\"teiFile_id\""
-                                            + " WHERE f.id IS NULL AND d.\"parent_id\" IS NULL AND d.name = 'div'")
-                            .stream()
-                            .map(row -> ((Number) row.get("id")).longValue())
-                            .toList();
+            // JPQL, not native SQL: see TeiDivRepository.findOrphanedOperaIds
+            // - the hand-quoted FK column name could not match both Derby
+            // and PostgreSQL, and failed every cycle on PostgreSQL.
+            final List<Long> orphanedOperaIds = this.teiDivRepository.findOrphanedOperaIds();
 
             int pruned = 0;
             for (final Long id : orphanedOperaIds) {
@@ -427,21 +412,9 @@ public class AdminService {
 
             // Leftovers: orphaned rows with no (reachable) root. Nothing
             // can navigate to these, so a bulk delete is safe and final.
-            // Portable form of MySQL's multi-table "DELETE e FROM tei_elem e
-            // LEFT JOIN tei_file f ON f.id = e.tei_file_id WHERE f.id IS
-            // NULL" (Derby has no multi-table DELETE at all) - the OR
-            // tei_file_id IS NULL clause preserves the LEFT JOIN's exact
-            // semantics (a plain NOT IN alone would silently miss null
-            // tei_file_id rows, which the LEFT JOIN caught).
-            final int leftovers = this.jdbcTemplate.update(
-                    "DELETE FROM " + Util.TEI_ELEM
-                            // "teiFile_id" - the stored, quoted camelCase FK
-                            // column (Hibernate's naming), exactly as the
-                            // SELECT above references it. Unquoted
-                            // tei_file_id uppercases to TEI_FILE_ID, which
-                            // does not exist - the sweep failed on this
-                            // every cycle.
-                            + " WHERE \"teiFile_id\" IS NULL OR \"teiFile_id\" NOT IN (SELECT id FROM \"_tei_file\")");
+            // The "is null or not in" form keeps a LEFT JOIN's semantics (a
+            // plain NOT IN alone would silently miss NULL teiFile rows).
+            final int leftovers = this.teiDivRepository.deleteElemsWithoutTeiFile();
 
             if (pruned > 0 || leftovers > 0) {
                 log.info("Orphan sweep: {} opera trees and {} leftover elems removed", pruned, leftovers);
