@@ -1,6 +1,5 @@
 package ro.editii.scriptorium;
 
-import java.io.File;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Duration;
@@ -35,17 +34,8 @@ class SessionConfigTest {
     }
 
     @Test
-    void aTildeWorkDirResolvesToTheHomeDirectoryLikeTheRestOfTheServer() {
-        // zmeu's dev profile sets WORK_DIR=~/.biblioteca, which Spring does not expand.
-        String unique = ".biblioteca-session-test-" + System.nanoTime();
-        Session session = SessionConfig.persistentSession("~/" + unique, true);
-        File expected = new File(System.getProperty("user.home"), unique + File.separator + "sessions");
-        try {
-            assertEquals(expected, session.getStoreDir());
-            assertTrue(session.getCookie().getSecure(), "secure flag passed through");
-        } finally {
-            expected.delete();
-            expected.getParentFile().delete();
-        }
+    void theSecureFlagIsPassedThrough() throws Exception {
+        Session session = SessionConfig.persistentSession(Files.createTempDirectory("biblioteca-work").toString(), true);
+        assertTrue(session.getCookie().getSecure());
     }
 }

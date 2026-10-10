@@ -1,2 +1,3 @@
 org.springframework.boot.env.EnvironmentPostProcessor=\
-  ro.editii.scriptorium.DbEngineDefaults
+  ro.editii.scriptorium.DbEngineDefaults,\
+  ro.editii.scriptorium.WorkDirTilde

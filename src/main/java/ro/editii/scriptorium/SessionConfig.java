@@ -32,7 +32,8 @@ public class SessionConfig {
         Session session = new Session();
         session.setTimeout(SESSION_LIFETIME);
         session.setPersistent(true);
-        File storeDir = new File(Util.replaceTilde(workDir), "sessions");
+        // work.dir arrives with ~ already expanded (WorkDirTilde).
+        File storeDir = new File(workDir, "sessions");
         storeDir.mkdirs();
         session.setStoreDir(storeDir);
         session.getCookie().setMaxAge(SESSION_LIFETIME);
