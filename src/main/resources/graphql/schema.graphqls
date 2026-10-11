@@ -1,0 +1,6 @@
+# Entity types, filters and repository queries are added from the JPA metamodel.
+# Keep the initial Author query names as aliases of authorList and author.
+type Query {
+    authors(page: Int = 0, size: Int = 20, filter: AuthorFilter): [Author!]!
+    authorById(id: ID!): Author
+}

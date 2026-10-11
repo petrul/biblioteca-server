@@ -1,0 +1,193 @@
+scalar JSON
+
+# REST read equivalents: catalogue pages use the REST 1-based page convention;
+# TOC and paragraphs use the REST 0-based convention. JPA *List queries remain 0-based.
+extend type Query {
+    authorDirectory: [AuthorDto!]!
+    divCatalog(page: Int! = 0, size: Int! = 20): [TeiDivDto!]!
+    currentUser: CurrentUser!
+    authorCatalog(page: Int! = 1, size: Int! = 12, q: String): AuthorCatalogPage!
+    workCatalog(page: Int! = 1, size: Int! = 12, q: String, lang: String): WorkCatalogPage!
+    authorDetails(strId: String!): AuthorDto
+    authorWorks(strId: String!): [TeiDivDto!]!
+    authorMedia: [AuthorMediaDto!]!
+    divByPath(path: String!): TeiElemDto
+    divDetails(id: ID!): TeiDivDto
+    divToc(id: ID!, page: Int! = 0, size: Int! = 20): [TeiDivDto!]!
+    divParagraphs(divId: ID!, page: Int! = 0, size: Int! = 20, withContent: Boolean = false): [TeiElemDto!]!
+    coverMetadata(id: String!, includeRawTei: Boolean = false): BookMetadataDto
+    worksByLanguage(lang: String!): [TeiDivDto!]!
+    worksByAuthor(authorStrId: String!): [TeiDivDto!]!
+    worksByRepo(repoName: String!): [TeiDivDto!]!
+    repoNames: [String!]!
+    featuredWorks: [TeiDivDto!]!
+    myCollections: [DivCollectionDto!]!
+    myCollection(name: String!): DivCollectionDto
+    myReadingProgress: [ReadingProgressDto!]!
+    myWorkReadingProgress(opusPath: String!): ReadingProgressDto
+    myPreferences: JSON!
+    searchAuthors(q: String!, limit: Int! = 10): [EntitySearchHit!]!
+    searchDivHeads(q: String!, limit: Int! = 10): [EntitySearchHit!]!
+}
+
+type AuthorCatalogPage {
+    items: [AuthorDto!]!
+    page: Int!
+    size: Int!
+    totalItems: Long!
+    totalPages: Int!
+}
+
+type WorkCatalogPage {
+    items: [TeiDivDto!]!
+    page: Int!
+    size: Int!
+    totalItems: Long!
+    totalPages: Int!
+}
+
+type AuthorDto {
+    strId: String
+    lastName: String
+    firstName: String
+    displayName: String
+    description: String
+    bio: String
+    bioSourceUrl: String
+    birthDate: String
+    deathDate: String
+    birthPlace: String
+    country: String
+    writingLanguage: String
+    worksCount: Long
+    opera: [TeiDivDto!]
+    image_href: String
+    imageUrls: [String!]
+}
+
+type AuthorMediaDto {
+    strId: String
+    displayName: String
+    imageUrls: [String!]
+}
+
+# Nullable subtype fields expose work/chapter details when divByPath returns a
+# TeiDivDto, while paragraph/other element DTOs still share this common result.
+type TeiElemDto {
+    id: ID
+    parent: TeiElemDto
+    name: String
+    path: String
+    xpath: String
+    urlFragment: String
+    url: String
+    text: String
+    text_sha256: String
+    language: String
+    size: Int
+    wordSize: Int
+    head: String
+    depth: Int
+    author: AuthorDto
+    children: [TeiDivDto!]
+    leaf: Boolean
+    opus: Boolean
+    summarySourceUrl: String
+    coverUrl: String
+    description: String
+    significantQuote: String
+    imageUrls: [String!]
+}
+
+type TeiDivDto {
+    id: ID
+    parent: TeiElemDto
+    name: String
+    path: String
+    xpath: String
+    urlFragment: String
+    url: String
+    text: String
+    text_sha256: String
+    language: String
+    size: Int
+    wordSize: Int
+    head: String
+    depth: Int
+    author: AuthorDto
+    authors: [AuthorDto!]
+    children: [TeiDivDto!]
+    leaf: Boolean
+    opus: Boolean
+    summarySourceUrl: String
+    coverUrl: String
+    description: String
+    significantQuote: String
+    imageUrls: [String!]
+}
+
+type BookMetadataDto {
+    title: String
+    subtitle: String
+    author: String
+    editor: String
+    translator: String
+    publisher: String
+    pubPlace: String
+    date: String
+    isbn: String
+    series: String
+    volume: String
+    taglineQuote: String
+    genre: String
+    editionNotice: String
+    language: String
+    rawTei: String
+}
+
+type DivCollectionDto {
+    id: ID
+    name: String
+    isFavorites: Boolean
+    createdAt: String
+    items: [DivCollectionItemDto!]
+}
+
+type DivCollectionItemDto {
+    id: ID
+    kind: String
+    divPath: String
+    divHead: String
+    fragmentStart: String
+    fragmentEnd: String
+    fragmentText: [String!]
+    addedAt: String
+}
+
+type ReadingProgressDto {
+    opusPath: String
+    divPath: String
+    divHead: String
+    updatedAt: String
+    touchCount: Int
+    read: Boolean
+    attentionSeconds: Long
+    scrollFraction: Float
+}
+
+union EntitySearchData = AuthorDto | TeiDivDto
+
+type EntitySearchHit {
+    type: String
+    url: String
+    score: Float
+    content: String
+    data: EntitySearchData
+}
+
+type CurrentUser {
+    authenticated: Boolean!
+    username: String
+    isAdmin: Boolean
+    avatarUrl: String
+}
