@@ -221,6 +221,9 @@ dependencies {
 //	implementation('org.springframework.boot:spring-boot-starter-data-cassandra')
 //	implementation('org.springframework.boot:spring-boot-starter-data-elasticsearch')
 	implementation('org.springframework.boot:spring-boot-starter-data-jpa')
+    implementation("org.springframework.boot:spring-boot-starter-graphql")
+    implementation 'com.graphql-java:graphql-java-extended-scalars:22.0'
+
 	// Native-image support for Hibernate: substitutions plus a GraalVM
 	// feature that registers JPA entity classes (reflection/class-init) at
 	// image build time. Without it the AOT-processed app starts Tomcat and
