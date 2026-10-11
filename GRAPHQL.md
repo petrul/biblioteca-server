@@ -162,3 +162,25 @@ for author hits or `data { ... on TeiDivDto { path head } }` for division hits.
 Run both GraphQL test classes with
 `./gradlew unittest --tests '*GraphQL*Test'`. Tests compare GraphQL with real REST
 handlers backed by embedded Derby, with fixture-only TEI and no external services.
+
+## Separate smoke integration test
+
+`GraphQLSmokeITest` is a Groovy test tagged `integration-test`. It starts its own
+HTTP server on a random port, uses a fresh embedded Derby database, and mocks
+external services with `@MockitoBean`. GraphQL wiring, JPA repositories, security
+and REST read handlers remain real. No running server or shared corpus is needed.
+
+It checks all 16 entity query pairs, every public entity list, filters and nested
+relations, aliases/fragments, REST/catalog parity, stable work paths, TOC and
+paragraph content, cover metadata, typed entity search, authorization and paging
+validation.
+
+Run it separately on Yoga (the Gradle integration task requires profile settings):
+
+```bash
+source /home/petru/secrets/load-env.sh biblioteca/yoga
+./gradlew -Pprofile=yoga integrationTest --tests '*GraphQLSmokeITest'
+```
+
+The test overrides the datasource with its own in-memory database and does not
+load the shared datasource. `unittest` excludes this test via its integration tag.
