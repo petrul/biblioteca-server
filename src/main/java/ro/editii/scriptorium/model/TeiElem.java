@@ -53,8 +53,9 @@ public class TeiElem implements Comparable<TeiElem>, Serializable  {
         } catch (RuntimeException ignored) {
             // Malformed legacy namespace metadata; use nodeName below.
         }
-        String name = node.getNodeName();
-        if (name == null) return null;
+        final String name = node.getNodeName();
+        if (name == null)
+            return null;
         int colon = name.indexOf(':');
         return colon >= 0 ? name.substring(colon + 1) : name;
     }
