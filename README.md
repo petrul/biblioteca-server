@@ -540,20 +540,20 @@ into every family manifest — `build.gradle` here, `package.json` in the
 vectorizer, reader and covers — so every repo knows which named family
 release its `-SNAPSHOT` is heading toward (the family cuts together, one
 name per family quartet; `git-do-release.sh` bumps the versions). The next
-release is *Creative Cella*.
+release is *Dusky Discus*.
 
-The current release is *Bronze Basilica*, cut 2026-10-11 — one row per
+The current release is *Creative Cella*, cut 2026-10-12 — one row per
 `biblioteca-*` project: the stable it shipped in this release, and the
 short SHA of that stable's `Release <version>` commit (each repo's
 `v<version>` branch tip — `git show <sha>` gives back the exact state
 that shipped):
 
-| Project | Stable (*Bronze Basilica*) | Release commit |
+| Project | Stable (*Creative Cella*) | Release commit |
 | --- | --- | --- |
-| `biblioteca-server` | 0.9.13 | `8bcc136` |
-| `biblioteca-nestjs` | 0.9.12 | `4a89625` |
-| `biblioteca-reader` | 0.1.14 | `b78d34f` |
-| `biblioteca-covers` | 0.0.3 | `558fb78` |
+| `biblioteca-server` | 0.9.14 | `e546a6d` |
+| `biblioteca-nestjs` | 0.9.13 | `54a2566` |
+| `biblioteca-reader` | 0.1.15 | `b87e83c` |
+| `biblioteca-covers` | 0.0.4 | `4ebdfb0` |
 
 ### Keeping this section current
 
@@ -629,17 +629,40 @@ When it was cut, the next release's name was fixed at random:
 
 When it was cut, the next release's name was fixed at random: *Creative Cella*.
 
-### Creative Cella (next — in development)
+### Creative Cella (2026-10-12)
 
-The next family release, named with the next alphabet letter, C. Its name
+| Project | Stable | Release commit |
+| --- | --- | --- |
+| `biblioteca-server` | 0.9.14 | `e546a6d` |
+| `biblioteca-nestjs` | 0.9.13 | `54a2566` |
+| `biblioteca-reader` | 0.1.15 | `b87e83c` |
+| `biblioteca-covers` | 0.0.4 | `4ebdfb0` |
+
+A fix release for Bronze Basilica:
+
+- Post-import hooks (incremental Lucene reindex, author language backfill)
+  run in a transaction, so PostgreSQL can read the imported opera's large
+  objects - every import used to skip them with "Unable to access lob stream"
+([95671e8](https://github.com/petrul/biblioteca-server/commit/95671e8)).
+- Sign-out no longer fails when Google's script is missing or only partly
+  loaded, which left the reader signed in
+([e8517b1](http://mini.local:7080/gitlab/editii/biblioteca-reader/-/commit/e8517b1)).
+- Tests keep their work files inside the build, also on CI agents
+([5a9e06d](https://github.com/petrul/biblioteca-server/commit/5a9e06d)).
+
+When it was cut, the next release's name was fixed at random: *Dusky Discus*.
+
+### Dusky Discus (next — in development)
+
+The next family release, named with the next alphabet letter, D. Its name
 is stamped as `releaseName` in all four next-snapshot manifests.
 
 | Project | Snapshot |
 | --- | --- |
-| `biblioteca-server` | 0.9.14-SNAPSHOT |
-| `biblioteca-nestjs` | 0.9.13-SNAPSHOT |
-| `biblioteca-reader` | 0.1.15-SNAPSHOT |
-| `biblioteca-covers` | 0.0.4-SNAPSHOT |
+| `biblioteca-server` | 0.9.15-SNAPSHOT |
+| `biblioteca-nestjs` | 0.9.14-SNAPSHOT |
+| `biblioteca-reader` | 0.1.16-SNAPSHOT |
+| `biblioteca-covers` | 0.0.5-SNAPSHOT |
 
 ### Before the naming began (0.9.1 – 0.9.11)
 

@@ -57,7 +57,7 @@ version = '0.9.15-SNAPSHOT'
 // The name of the family release this snapshot is heading toward - the
 // biblioteca-* family cuts releases together (see README's Releases
 // section: the name is fixed at random when the previous release is cut).
-ext.releaseName = 'Creative Cella'
+ext.releaseName = 'Dusky Discus'
 
 java {
     sourceCompatibility = '25'
