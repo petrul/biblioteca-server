@@ -2,6 +2,8 @@ package ro.editii.scriptorium.service;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
+import org.springframework.transaction.support.TransactionTemplate;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -46,6 +48,15 @@ public class AdminService {
     final AuthorRepository authorRepository;
     final TextbaseEventsPublisher textbaseEventsPublisher;
 
+    // postImportHooks runs in one transaction: the opera it loads carry @Lob
+    // fields (TeiDiv.summary), which PostgreSQL keeps as large objects that
+    // cannot be read in auto-commit mode ("Unable to access lob stream" made
+    // every import skip its incremental Lucene reindex and author backfill),
+    // and teiFile.getAuthors() is lazy. Optional so tests building an
+    // AdminService by hand keep working without one.
+    @Autowired(required = false)
+    TransactionTemplate transactionTemplate;
+
     @Value("${lucene.incremental.enabled:true}")
     boolean incrementalLuceneEnabled = true;
 
@@ -72,6 +83,19 @@ public class AdminService {
      * aborting a full Lucene rebuild.
      */
     private void postImportHooks(String filename) {
+        if (this.transactionTemplate == null) {
+            runPostImportHooks(filename);
+            return;
+        }
+        try {
+            this.transactionTemplate.executeWithoutResult(status -> runPostImportHooks(filename));
+        } catch (RuntimeException e) {
+            // Same contract as the hooks' own guards: never abort the import.
+            log.error("Post-import hooks failed for {} - the TEI import itself still succeeded", filename, e);
+        }
+    }
+
+    private void runPostImportHooks(String filename) {
         final Optional<TeiFile> optionalTeiFile = this.teiFileRepository.getByFilename(filename);
         if (optionalTeiFile.isEmpty()) return;
         final TeiFile teiFile = optionalTeiFile.get();
