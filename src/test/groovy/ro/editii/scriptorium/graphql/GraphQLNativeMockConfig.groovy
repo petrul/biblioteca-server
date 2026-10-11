@@ -3,7 +3,7 @@ package ro.editii.scriptorium.graphql
 import groovy.util.ProxyGenerator
 import jakarta.persistence.EntityManager
 import org.springframework.context.annotation.Bean
-import org.springframework.context.annotation.Configuration
+import org.springframework.boot.test.context.TestConfiguration
 import org.springframework.core.env.Environment
 import ro.editii.scriptorium.collection.*
 import ro.editii.scriptorium.dao.*
@@ -43,7 +43,7 @@ class GraphQLNativeMocks {
     }
 }
 
-@Configuration(proxyBeanMethods = false)
+@TestConfiguration(proxyBeanMethods = false)
 class GraphQLNativeMockConfig {
     @Bean GraphQLNativeMocks nativeMocks() { new GraphQLNativeMocks() }
     @Bean ControllerTool controllerTool(GraphQLNativeMocks mocks) { mocks.controllerTool }

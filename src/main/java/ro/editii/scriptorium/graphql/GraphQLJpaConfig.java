@@ -68,7 +68,7 @@ public class GraphQLJpaConfig {
         var schema = new StringBuilder("scalar Long\nextend type Query {\n");
         for (var entity : entities) {
             // Fail at startup rather than silently leave an entity's queries unresolved.
-            repository(repositories, entity);
+            repository(repositories, context, entity);
             var name = Introspector.decapitalize(entity.getName());
             schema.append(name).append("(id: ID!): ").append(outputType(entity.getJavaType(), polymorphic)).append('\n')
                     .append(name).append("List(page: Int = 0, size: Int = 20, filter: ")
@@ -103,7 +103,7 @@ public class GraphQLJpaConfig {
                                 env.getSchema().getObjectType((String) env.<Map<String, Object>>getObject().get("__jpaType"))));
                     var queries = TypeRuntimeWiring.newTypeWiring("Query");
                     for (var entity : entities) {
-                        var repo = repository(repositories, entity);
+                        var repo = repository(repositories, context, entity);
                         var name = Introspector.decapitalize(entity.getName());
                         graphql.schema.DataFetcher<Object> single = env -> transaction.execute(status -> {
                             authorize(entity, admins);
@@ -135,8 +135,13 @@ public class GraphQLJpaConfig {
     }
 
     @SuppressWarnings("unchecked")
-    private static JpaRepository<Object, Object> repository(Repositories repositories, EntityType<?> entity) {
-        return (JpaRepository<Object, Object>) repositories.getRepositoryFor(entity.getJavaType()).orElseThrow();
+    private static JpaRepository<Object, Object> repository(Repositories repositories,
+            ApplicationContext context, EntityType<?> entity) {
+        // Bean overrides and decorators may not retain Spring Data factory metadata.
+        return (JpaRepository<Object, Object>) repositories.getRepositoryFor(entity.getJavaType())
+                .orElseGet(() -> context.getBeanProvider(org.springframework.core.ResolvableType
+                        .forClassWithGenerics(JpaRepository.class, entity.getJavaType(),
+                                entity.getIdType().getJavaType())).getObject());
     }
 
     private static List<Attribute<?, ?>> attributes(EntityType<?> entity) {
