@@ -1,5 +1,6 @@
 package ro.editii.scriptorium.rest;
 
+import ro.editii.scriptorium.service.CoverEnrichmentRequests;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.log4j.Log4j2;
 import org.springframework.core.env.Environment;
@@ -40,14 +41,17 @@ public class AuthorRestController extends CommonControllerUtil {
     final AuthorRepository authorRepository;
     final DivService divService;
     final AuthorMediaAssociationRepository authorMedia;
+    final CoverEnrichmentRequests coverEnrichmentRequests;
 
     public AuthorRestController(Environment environment, TeiDivRepository teiDivRepository, AuthorRepository authorRepository,
-                                DivService divService, AuthorMediaAssociationRepository authorMedia) {
+                                DivService divService, AuthorMediaAssociationRepository authorMedia,
+                                CoverEnrichmentRequests coverEnrichmentRequests) {
         super(environment);
         this.teiDivRepository = teiDivRepository;
         this.authorRepository = authorRepository;
         this.divService = divService;
         this.authorMedia = authorMedia;
+        this.coverEnrichmentRequests = coverEnrichmentRequests;
     }
 
     @GetMapping("/")
@@ -165,6 +169,7 @@ public class AuthorRestController extends CommonControllerUtil {
         final TeiDivDto[] dtos = opera.stream()
                 .map(it ->  TeiDivDto.fromTeiDiv(it, uriComponentsBuilder))
                 .toList().toArray(TeiDivDto[]::new);
+        this.coverEnrichmentRequests.requestMissing(dtos);
         return dtos;
     }
 

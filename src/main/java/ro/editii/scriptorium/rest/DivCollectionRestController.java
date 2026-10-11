@@ -1,5 +1,6 @@
 package ro.editii.scriptorium.rest;
 
+import ro.editii.scriptorium.service.CoverEnrichmentRequests;
 import lombok.RequiredArgsConstructor;
 import lombok.Value;
 import lombok.extern.log4j.Log4j2;
@@ -53,6 +54,7 @@ public class DivCollectionRestController {
     final TeiDivRepository teiDivRepository;
     final TeiFileRepository teiFileRepository;
     final FragmentResolutionService fragmentResolutionService;
+    final CoverEnrichmentRequests coverEnrichmentRequests;
 
     private AppUser currentUser(Authentication authentication) {
         return this.appUserRepository.findByUsername(authentication.getName())
@@ -209,28 +211,28 @@ public class DivCollectionRestController {
             RestUtil.throw400("unknown language code: " + lang);
             return null;
         }
-        return this.teiDivRepository.findOperaByLang(language, PageRequest.of(0, SYSTEM_COLLECTION_LIMIT))
+        return requestMissingCovers(this.teiDivRepository.findOperaByLang(language, PageRequest.of(0, SYSTEM_COLLECTION_LIMIT))
                 .stream()
                 .map(it -> TeiDivDto.fromTeiDiv(it, ucb))
-                .toList();
+                .toList());
     }
 
     @GetMapping("/system/by-author/{authorStrId}")
     @Transactional(readOnly = true, isolation = Isolation.READ_UNCOMMITTED)
     public List<TeiDivDto> byAuthor(@PathVariable String authorStrId, UriComponentsBuilder ucb) {
-        return this.teiDivRepository.findOperaForAuthorStrId(authorStrId).stream()
+        return requestMissingCovers(this.teiDivRepository.findOperaForAuthorStrId(authorStrId).stream()
                 .map(it -> TeiDivDto.fromTeiDiv(it, ucb))
-                .toList();
+                .toList());
     }
 
     @GetMapping("/system/by-repo/{repoName}")
     @Transactional(readOnly = true, isolation = Isolation.READ_UNCOMMITTED)
     public List<TeiDivDto> byRepo(@PathVariable String repoName, UriComponentsBuilder ucb) {
         final List<TeiFile> teiFiles = this.teiFileRepository.findByRepoName(repoName);
-        return teiFiles.stream()
+        return requestMissingCovers(teiFiles.stream()
                 .flatMap(tf -> this.teiDivRepository.getOperaForTeiFileId(tf.getId()).stream())
                 .map(it -> TeiDivDto.fromTeiDiv(it, ucb))
-                .toList();
+                .toList());
     }
 
     @GetMapping("/system/repos")
@@ -247,11 +249,17 @@ public class DivCollectionRestController {
     @GetMapping("/system/featured")
     @Transactional(readOnly = true, isolation = Isolation.READ_UNCOMMITTED)
     public List<TeiDivDto> featured(UriComponentsBuilder ucb) {
-        return FEATURED_WORK_PATHS.stream()
+        return requestMissingCovers(FEATURED_WORK_PATHS.stream()
                 .map(DivCollectionRestController::stablePathParts)
                 .flatMap(parts -> this.teiDivRepository.findOperaByStablePath(parts.authorId(), parts.opusId()).stream())
                 .map(it -> featuredDto(it, ucb))
-                .toList();
+                .toList());
+    }
+
+    /** Works served without a cover get one requested (CoverEnrichmentRequests). */
+    private List<TeiDivDto> requestMissingCovers(List<TeiDivDto> works) {
+        this.coverEnrichmentRequests.requestMissing(works);
+        return works;
     }
 
     private record StablePath(String authorId, String opusId) {}
@@ -283,6 +291,10 @@ public class DivCollectionRestController {
         dto.setXpath(div.getXpath());
         dto.setLeaf(div.isLeaf());
         dto.setOpus(div.isOpus());
+        // Same cover precedence as TeiDivDto.fromTeiDiv; the carousel used to
+        // get no coverUrl at all and showed placeholders for covered works.
+        dto.setCoverUrl(div.getCoverUrl() != null ? div.getCoverUrl()
+                : div.getOpusMetadata() != null ? div.getOpusMetadata().getCoverUrl() : null);
         dto.setAuthor(AuthorDto.from(div.getTeiFile().getAuthors().stream()
                 .filter(a -> path.startsWith(a.getStrId() + "/"))
                 .findFirst().orElseThrow()));

@@ -15,6 +15,7 @@ public class KafkaProps {
     String opusReimportedTopicName = "biblioteca_opusReimportedTopic";
     String opusRemovedTopicName = "biblioteca_opusRemovedTopic";
     String loginTopicName = "biblioteca_loginTopic";
+    String enrichWorkTopicName = "biblioteca_enrichWorkTopic";
 
     // No inline default here on purpose, unlike before - it used to be
     // "kafka:9092", silently different from application.properties's own

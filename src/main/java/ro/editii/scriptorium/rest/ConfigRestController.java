@@ -102,6 +102,7 @@ public class ConfigRestController {
                         .newOpusImportedTopic(this.kafkaProps.getNewOpusImportedTopicName())
                         .opusReimportedTopic(this.kafkaProps.getOpusReimportedTopicName())
                         .opusRemovedTopic(this.kafkaProps.getOpusRemovedTopicName())
+                        .enrichWorkTopic(this.kafkaProps.getEnrichWorkTopicName())
                         .build())
                 .milvus(milvusInfo)
                 .embedder(embedderInfo)

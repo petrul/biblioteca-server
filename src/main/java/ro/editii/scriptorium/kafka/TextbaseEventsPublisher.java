@@ -1,5 +1,6 @@
 package ro.editii.scriptorium.kafka;
 
+import ro.editii.scriptorium.dto.EnrichWorkDto;
 import ro.editii.scriptorium.dto.OpusRemovedDto;
 import ro.editii.scriptorium.dto.TeiDivDto;
 import ro.editii.scriptorium.dto.UserLoggedInDto;
@@ -17,4 +18,7 @@ public interface TextbaseEventsPublisher {
     void signalOpusRemoved(OpusRemovedDto event);
 
     void signalUserLoggedIn(UserLoggedInDto event);
+
+    /** A served work lacks enrichment (a cover); see CoverEnrichmentRequests. */
+    void signalEnrichWork(EnrichWorkDto event);
 }

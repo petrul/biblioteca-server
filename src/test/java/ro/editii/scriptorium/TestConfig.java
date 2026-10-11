@@ -17,6 +17,7 @@ import org.springframework.web.client.RestTemplate;
 import ro.editii.scriptorium.cache.CacheConf;
 import ro.editii.scriptorium.cache.DiskCache;
 import ro.editii.scriptorium.client.BibliotecaClient;
+import ro.editii.scriptorium.dto.EnrichWorkDto;
 import ro.editii.scriptorium.dto.OpusRemovedDto;
 import ro.editii.scriptorium.dto.TeiDivDto;
 import ro.editii.scriptorium.dto.UserLoggedInDto;
@@ -114,6 +115,7 @@ public class TestConfig {
         final List<TeiDivDto> reimportedOpus = new ArrayList<>();
         final List<OpusRemovedDto> removedOpus = new ArrayList<>();
         final List<UserLoggedInDto> logins = new ArrayList<>();
+        final List<EnrichWorkDto> enrichWork = new ArrayList<>();
 
         @Override
         public void signalNewOpusImported(TeiDivDto div) {
@@ -133,6 +135,11 @@ public class TestConfig {
         @Override
         public void signalUserLoggedIn(UserLoggedInDto event) {
             this.logins.add(event);
+        }
+
+        @Override
+        public void signalEnrichWork(EnrichWorkDto event) {
+            this.enrichWork.add(event);
         }
     }
 }

@@ -2,6 +2,7 @@ package ro.editii.scriptorium.kafka;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
+import ro.editii.scriptorium.dto.EnrichWorkDto;
 import ro.editii.scriptorium.dto.OpusRemovedDto;
 import ro.editii.scriptorium.dto.TeiDivDto;
 import ro.editii.scriptorium.dto.UserLoggedInDto;
@@ -27,5 +28,10 @@ public class KafkaTextbaseEventsPublisher implements TextbaseEventsPublisher {
 
     public void signalUserLoggedIn(UserLoggedInDto event) {
         this.kafkaProducer.sendAsJson(this.kafkaProps.getLoginTopicName(), event);
+    }
+
+    @Override
+    public void signalEnrichWork(EnrichWorkDto event) {
+        this.kafkaProducer.sendAsJson(this.kafkaProps.getEnrichWorkTopicName(), event);
     }
 }

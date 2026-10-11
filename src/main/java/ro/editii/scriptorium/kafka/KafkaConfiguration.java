@@ -84,4 +84,9 @@ public class KafkaConfiguration {
     public NewTopic removeOpus() {
         return TopicBuilder.name(this.kafkaProps.getOpusRemovedTopicName()).build();
     }
+
+    @Bean
+    public NewTopic enrichWork() {
+        return TopicBuilder.name(this.kafkaProps.getEnrichWorkTopicName()).build();
+    }
 }

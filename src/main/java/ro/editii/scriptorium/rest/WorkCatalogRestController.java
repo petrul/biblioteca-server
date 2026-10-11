@@ -1,5 +1,6 @@
 package ro.editii.scriptorium.rest;
 
+import ro.editii.scriptorium.service.CoverEnrichmentRequests;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -24,6 +25,7 @@ import java.util.List;
 @RequiredArgsConstructor
 public class WorkCatalogRestController {
     private final TeiDivRepository teiDivRepository;
+    private final CoverEnrichmentRequests coverEnrichmentRequests;
 
     @GetMapping
     @Transactional(readOnly = true, isolation = Isolation.READ_UNCOMMITTED)
@@ -42,6 +44,7 @@ public class WorkCatalogRestController {
         final List<TeiDivDto> items = result.getContent().stream()
                 .map(it -> TeiDivDto.fromTeiDiv(it, uriComponentsBuilder))
                 .toList();
+        this.coverEnrichmentRequests.requestMissing(items);
         return new CatalogPageDto<>(items, safePage, safeSize, result.getTotalElements(), result.getTotalPages());
     }
 }

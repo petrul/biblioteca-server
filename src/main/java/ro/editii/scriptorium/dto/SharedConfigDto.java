@@ -17,6 +17,7 @@ public class SharedConfigDto {
         String newOpusImportedTopic;
         String opusReimportedTopic;
         String opusRemovedTopic;
+        String enrichWorkTopic;
     }
 
     /**

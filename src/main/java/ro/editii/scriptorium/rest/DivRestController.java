@@ -1,5 +1,6 @@
 package ro.editii.scriptorium.rest;
 
+import ro.editii.scriptorium.service.CoverEnrichmentRequests;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import jakarta.persistence.EntityManager;
@@ -44,6 +45,7 @@ public class DivRestController {
     final ControllerTool controllerTool;
     final EntityManager entityManager;
     final TeiRepo teiRepo;
+    final CoverEnrichmentRequests coverEnrichmentRequests;
     final ro.editii.scriptorium.dao.DivMediaAssociationRepository divMedia;
 
     @ExceptionHandler(RuntimeException.class)
@@ -94,6 +96,7 @@ public class DivRestController {
             elem =  this.entityManager.merge(elem); // because it may come from cache
 
         final var dto = elem.toDto(uriComponentsBuilder);
+        if (dto instanceof TeiDivDto div) this.coverEnrichmentRequests.requestMissing(div);
         return dto;
     }
 
