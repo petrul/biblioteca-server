@@ -540,20 +540,20 @@ into every family manifest — `build.gradle` here, `package.json` in the
 vectorizer, reader and covers — so every repo knows which named family
 release its `-SNAPSHOT` is heading toward (the family cuts together, one
 name per family quartet; `git-do-release.sh` bumps the versions). The next
-release is *Bronze Basilica*.
+release is *Creative Cella*.
 
-The current release is *Amber Amphora*, cut 2026-10-07 — one row per
+The current release is *Bronze Basilica*, cut 2026-10-11 — one row per
 `biblioteca-*` project: the stable it shipped in this release, and the
 short SHA of that stable's `Release <version>` commit (each repo's
 `v<version>` branch tip — `git show <sha>` gives back the exact state
 that shipped):
 
-| Project | Stable (*Amber Amphora*) | Release commit |
+| Project | Stable (*Bronze Basilica*) | Release commit |
 | --- | --- | --- |
-| `biblioteca-server` (this repo) | 0.9.12 | `789a349` |
-| `biblioteca-nestjs` (vectorizer) | 0.9.11 | `8b0296d` |
-| `biblioteca-reader` | 0.1.13 | `1679515` |
-| `biblioteca-covers` | 0.0.2 | `ac95566` |
+| `biblioteca-server` | 0.9.13 | `8bcc136` |
+| `biblioteca-nestjs` | 0.9.12 | `4a89625` |
+| `biblioteca-reader` | 0.1.14 | `b78d34f` |
+| `biblioteca-covers` | 0.0.3 | `558fb78` |
 
 ### Keeping this section current
 
@@ -601,22 +601,45 @@ The first named release, cut 2026-10-07:
 When it was cut, the next release's name was fixed at random:
 *Bronze Basilica*.
 
-### Bronze Basilica (next — in development)
+### Bronze Basilica (2026-10-11)
 
-The family release every `biblioteca-*` snapshot is heading toward; its
-name is stamped as `releaseName` in all four manifests. Each repo's main
-is working toward it on its own next version:
+| Project | Stable | Release commit |
+| --- | --- | --- |
+| `biblioteca-server` | 0.9.13 | `8bcc136` |
+| `biblioteca-nestjs` | 0.9.12 | `4a89625` |
+| `biblioteca-reader` | 0.1.14 | `b78d34f` |
+| `biblioteca-covers` | 0.0.3 | `558fb78` |
+
+- Repository-backed GraphQL queries for all JPA entities and REST catalog read equivalents
+([c4534bc](https://github.com/petrul/biblioteca-server/commit/c4534bc)), with isolated native Groovy mocks and integration coverage
+([bb1fa38](https://github.com/petrul/biblioteca-server/commit/bb1fa38)).
+- Automatic missing-cover enrichment, deliberate cover replacement, and synchronous per-work cover endpoints
+([f61da1d](https://github.com/petrul/biblioteca-server/commit/f61da1d),
+[b832966](https://github.com/petrul/biblioteca-server/commit/b832966),
+[225b1ae](https://github.com/petrul/biblioteca-nestjs/commit/225b1ae)).
+- Chapter swipe navigation, card-turn animation and bookmark fixes
+([851862f](http://mini.local:7080/gitlab/editii/biblioteca-reader/-/commit/851862f),
+[215c703](http://mini.local:7080/gitlab/editii/biblioteca-reader/-/commit/215c703)); work-card blue is now `#003366`
+([5f7e037](http://mini.local:7080/gitlab/editii/biblioteca-reader/-/commit/5f7e037)).
+- Packaged reader startup is checked during builds, with its OpenAPI client bundled correctly
+([74c287b](http://mini.local:7080/gitlab/editii/biblioteca-reader/-/commit/74c287b)).
+- Cover theme configuration and saved cover request JSON
+([ff00078](https://github.com/petrul/biblioteca-covers/commit/ff00078),
+[321ca09](https://github.com/petrul/biblioteca-covers/commit/321ca09)).
+
+When it was cut, the next release's name was fixed at random: *Creative Cella*.
+
+### Creative Cella (next — in development)
+
+The next family release, named with the next alphabet letter, C. Its name
+is stamped as `releaseName` in all four next-snapshot manifests.
 
 | Project | Snapshot |
 | --- | --- |
-| `biblioteca-server` (this repo) | 0.9.13-SNAPSHOT |
-| `biblioteca-nestjs` (vectorizer) | 0.9.12-SNAPSHOT |
-| `biblioteca-reader` | 0.1.14-SNAPSHOT |
-| `biblioteca-covers` | 0.0.3-SNAPSHOT |
-
-When the family cuts this release, the versions above become its stables
-(add each `Release <version>` commit), the rows move up into the main
-table, and the next release's name is fixed at random.
+| `biblioteca-server` | 0.9.14-SNAPSHOT |
+| `biblioteca-nestjs` | 0.9.13-SNAPSHOT |
+| `biblioteca-reader` | 0.1.15-SNAPSHOT |
+| `biblioteca-covers` | 0.0.4-SNAPSHOT |
 
 ### Before the naming began (0.9.1 – 0.9.11)
 

@@ -57,7 +57,7 @@ version = '0.9.14-SNAPSHOT'
 // The name of the family release this snapshot is heading toward - the
 // biblioteca-* family cuts releases together (see README's Releases
 // section: the name is fixed at random when the previous release is cut).
-ext.releaseName = 'Bronze Basilica'
+ext.releaseName = 'Creative Cella'
 
 java {
     sourceCompatibility = '25'
@@ -424,6 +424,9 @@ tasks.withType(Test).configureEach {
     // conventional full suite runs against integration-deps.
     final resolvedProfile = resolveProfile('ci')
     systemProperty 'spring.profiles.active', resolvedProfile
+    // Session persistence and other work files must stay inside the test build,
+    // including on CI agents without the development machine's home directory.
+    systemProperty 'work.dir', layout.buildDirectory.dir("test-work/" + name).get().asFile.absolutePath
     println "${name}: spring.profiles.active = " + resolvedProfile
 
     // Lucene indexing stays off for every test run under every profile: no
