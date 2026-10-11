@@ -12,7 +12,6 @@ import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.context.annotation.Import
-import org.springframework.test.context.bean.override.mockito.MockitoBean
 import org.springframework.transaction.PlatformTransactionManager
 import org.springframework.transaction.support.TransactionTemplate
 import ro.editii.scriptorium.dao.TeiDivRepository
@@ -32,10 +31,6 @@ import java.net.http.HttpRequest
 import java.net.http.HttpResponse
 import java.time.Duration
 
-import static org.mockito.ArgumentMatchers.any
-import static org.mockito.ArgumentMatchers.anyLong
-import static org.mockito.ArgumentMatchers.anyInt
-import static org.mockito.Mockito.when
 
 /** HTTP smoke coverage with real JPA/REST handlers and mocked external dependencies. */
 @Tag('integration-test')
@@ -49,25 +44,14 @@ import static org.mockito.Mockito.when
         'spring.jpa.hibernate.ddl-auto=create-drop', 'spring.jpa.open-in-view=false',
         'spring.flyway.enabled=false', 'admin.users=admin',
         'spring.jpa.properties.hibernate.jdbc.lob.non_contextual_creation=true'])
-@Import(GraphQLCatalogTest.Fixtures)
+@Import(GraphQLNativeMockConfig)
 class GraphQLSmokeITest {
     @Value('${local.server.port}') int port
     @Autowired PlatformTransactionManager transactions
     @Autowired TeiDivRepository divs
     @PersistenceContext EntityManager em
-    @MockitoBean DivService divService
-    @MockitoBean ControllerTool controllerTool
-    @MockitoBean TeiRepo teiRepo
-    @MockitoBean CoverEnrichmentRequests covers
-    @MockitoBean AppUserRegistrationService registration
-    @MockitoBean FragmentResolutionService fragments
-    @MockitoBean VectorTextSearchService vectors
-    @MockitoBean LuceneIndexService lucene
-    @MockitoBean GrepSearchService grep
-    @MockitoBean VectorCollection vectorCollection
-    @MockitoBean Embedder embedder
-    @MockitoBean ContentResolver contentResolver
-    @MockitoBean VectorSearchAvailability vectorAvailability
+    @Autowired GraphQLNativeMocks mocks
+    TeiRepo teiRepo
 
     final client = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(5)).build()
     String strId, path
@@ -78,6 +62,8 @@ class GraphQLSmokeITest {
 
     @BeforeEach
     void fixtures() {
+        mocks.reset()
+        teiRepo = mocks.teiRepo
         strId = "smoke_${System.nanoTime()}"
         path = "$strId/work"
         new TransactionTemplate(transactions).executeWithoutResult {
@@ -93,17 +79,17 @@ class GraphQLSmokeITest {
             em.persist(new TeiDiv(teiFile: file, head: 'Chapter', parent: root,
                     urlFragment: 'chapter', xpath: '/tei:div[1]/tei:div[1]'))
         }
-        when(divService.getByPath(path)).thenAnswer { attachedDiv() }
-        when(divService.getToc(divId)).thenAnswer { new Toc(attachedDiv()) }
-        when(divService.getParagraphs(any(TeiDiv), anyLong(), anyInt())).thenAnswer {
+        mocks.byPath = { String requested -> assert requested == path; attachedDiv() }
+        mocks.toc = { Long requested -> assert requested == divId; new Toc(attachedDiv()) }
+        mocks.paragraphs = { TeiDiv requested, long offset, int size ->
             [new TeiElem(id: 9000000L, name: 'p', teiFile: attachedDiv().teiFile, parent: attachedDiv(),
                     urlFragment: 'p1', xpath: '/tei:div[1]/tei:p[1]', teiRepo: teiRepo)]
         }
         def xml = """<TEI xmlns="http://www.tei-c.org/ns/1.0"><teiHeader><fileDesc><titleStmt/>
             <publicationStmt/><sourceDesc/></fileDesc></teiHeader><text><body><div><head>Smoke work</head>
             <p>Smoke paragraph</p><div><head>Chapter</head></div></div></body></text></TEI>"""
-        when(teiRepo.getStreamForName("${strId}.xml".toString())).thenAnswer { new ByteArrayInputStream(xml.bytes) }
-        when(controllerTool.teiElemToString(any())).thenReturn('Smoke paragraph')
+        mocks.stream = { String filename -> new ByteArrayInputStream(xml.bytes) }
+        mocks.paragraphText = 'Smoke paragraph'
     }
 
     private TeiDiv attachedDiv() {

@@ -167,7 +167,7 @@ handlers backed by embedded Derby, with fixture-only TEI and no external service
 
 `GraphQLSmokeITest` is a Groovy test tagged `integration-test`. It starts its own
 HTTP server on a random port, uses a fresh embedded Derby database, and mocks
-external services with `@MockitoBean`. GraphQL wiring, JPA repositories, security
+external services with native Groovy closure/proxy mocks. GraphQL wiring, JPA repositories, security
 and REST read handlers remain real. No running server or shared corpus is needed.
 
 It checks all 16 entity query pairs, every public entity list, filters and nested

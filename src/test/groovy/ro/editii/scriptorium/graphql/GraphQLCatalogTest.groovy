@@ -9,7 +9,6 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Import;
 import org.springframework.core.env.Environment;
@@ -38,42 +37,20 @@ import java.util.List;
 import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.*;
-import static org.mockito.Mockito.*;
 
 @SpringBootTest(classes = GraphQLJpaTest.Application.class,
-        webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT, properties = {
+        webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT, properties = [
         "spring.config.name=graphql-test", "spring.datasource.url=jdbc:derby:memory:graphql-catalog-test;create=true",
         "spring.datasource.driver-class-name=org.apache.derby.iapi.jdbc.AutoloadedDriver",
         "spring.jpa.database-platform=org.hibernate.community.dialect.DerbyDialect",
         "spring.jpa.hibernate.ddl-auto=create-drop", "spring.jpa.open-in-view=false",
-        "spring.flyway.enabled=false", "admin.users=admin"})
-@Import(GraphQLCatalogTest.Fixtures.class)
+        "spring.flyway.enabled=false", "admin.users=admin"])
+@Import(GraphQLNativeMockConfig.class)
 class GraphQLCatalogTest {
-    @Configuration(proxyBeanMethods = false)
-    @Import({WorkCatalogRestController.class, AuthorRestController.class, DivRestController.class,
-            DivCollectionRestController.class, ReadingProgressRestController.class,
-            UserPreferencesRestController.class, SearchRestController.class, UserRestController.class,
-            DivCollectionService.class, ReadingProgressService.class, DbSearchService.class})
-    static class Fixtures {
-
-    }
-
-    @Value("${local.server.port}") int port;
+    @Value('${local.server.port}') int port;
     @Autowired PlatformTransactionManager transactionManager;
-    @MockitoBean DivService divService;
-    @MockitoBean ControllerTool controllerTool;
-    @MockitoBean TeiRepo teiRepo;
-    @MockitoBean CoverEnrichmentRequests covers;
-    @MockitoBean ro.editii.scriptorium.security.AppUserRegistrationService registration;
-    @MockitoBean FragmentResolutionService fragments;
-    @MockitoBean VectorTextSearchService vectorTextSearchService;
-    @MockitoBean LuceneIndexService lucene;
-    @MockitoBean GrepSearchService grep;
-    @MockitoBean VectorCollection vectorCollection;
-    @MockitoBean Embedder embedder;
-    @MockitoBean ro.editii.scriptorium.search.content.ContentResolver contentResolver;
-    @MockitoBean VectorSearchAvailability vectorSearchAvailability;
+    @Autowired GraphQLNativeMocks mocks;
+    TeiRepo teiRepo;
     @Autowired TeiDivRepository divRepository;
     @PersistenceContext EntityManager em;
     final ObjectMapper json = new ObjectMapper();
@@ -82,6 +59,8 @@ class GraphQLCatalogTest {
 
     @BeforeEach
     void seed() {
+        mocks.reset();
+        teiRepo = mocks.teiRepo;
         String suffix = Long.toString(System.nanoTime());
         strId = "catalog_" + suffix; path = strId + "/work"; chapterPath = path + "/chapter";
         collectionName = "collection_" + suffix; adminOnlyName = "admin_only_" + suffix; repoName = "repo_" + suffix;
@@ -104,25 +83,24 @@ class GraphQLCatalogTest {
             em.persist(UserPreference.builder().username("reader").preferences("{\"theme\":\"night\"}").build());
             em.persist(UserPreference.builder().username("admin").preferences("{\"private\":\"secret\"}").build());
         });
-        when(divService.getByPath(path)).thenAnswer(call -> {
+        mocks.byPath = { String requested ->
+            if (requested == chapterPath) return divRepository.findById(divId).orElseThrow().getDbChildrenAsDivs().get(0);
+            if (requested != path) return null;
             var div = divRepository.findById(divId).orElseThrow(); div.setTeiRepo(teiRepo); return div;
-        });
-        when(divService.getByPath(chapterPath)).thenAnswer(call ->
-                divRepository.findById(divId).orElseThrow().getDbChildrenAsDivs().get(0));
-        when(divService.getOpera(strId)).thenAnswer(call -> divRepository.findOperaForAuthorStrId(strId));
-        when(divService.getToc(divId)).thenAnswer(call -> new Toc(divRepository.findById(divId).orElseThrow()));
-        when(divService.getParagraphs(any(TeiDiv.class), anyLong(), anyInt())).thenAnswer(call -> {
-            long offset = call.getArgument(1); int size = call.getArgument(2);
+        };
+        mocks.opera = { String requested -> divRepository.findOperaForAuthorStrId(requested) };
+        mocks.toc = { Long requested -> new Toc(divRepository.findById(requested).orElseThrow()) };
+        mocks.paragraphs = { TeiDiv requested, long offset, int size ->
             if (offset != 0 || size == 0) return List.of();
             var root = divRepository.findById(divId).orElseThrow();
             var para = new TeiElem(); para.setId(9_000_000L); para.setName("p"); para.setTeiFile(root.getTeiFile());
             para.setParent(root); para.setUrlFragment("p1"); para.setXpath("/tei:div[1]/tei:p[1]"); para.setTeiRepo(teiRepo);
             return List.of(para);
-        });
-        String xml = "<TEI xmlns='http://www.tei-c.org/ns/1.0'><teiHeader><fileDesc><titleStmt/><publicationStmt/><sourceDesc/></fileDesc></teiHeader>"
-                + "<text><body><div><head>Fixture work</head><p>Fixture paragraph</p><div><head>Chapter</head></div></div></body></text></TEI>";
-        when(teiRepo.getStreamForName(strId + ".xml")).thenAnswer(call -> new ByteArrayInputStream(xml.getBytes(StandardCharsets.UTF_8)));
-        when(controllerTool.teiElemToString(any())).thenReturn("Fixture paragraph");
+        };
+        String xml = "<TEI xmlns='http://www.tei-c.org/ns/1.0'><teiHeader><fileDesc><titleStmt/><publicationStmt/><sourceDesc/></fileDesc></teiHeader>" +
+                "<text><body><div><head>Fixture work</head><p>Fixture paragraph</p><div><head>Chapter</head></div></div></body></text></TEI>";
+        mocks.stream = { String filename -> new ByteArrayInputStream(xml.getBytes(StandardCharsets.UTF_8)) };
+        mocks.paragraphText = "Fixture paragraph";
     }
 
     private AppUser user(String username) {
@@ -134,10 +112,10 @@ class GraphQLCatalogTest {
 
     @Test
     void cataloguePagesAndStableAuthorQueriesMatchRest() throws Exception {
-        var response = query("{ authorCatalog(q: \"" + strId + "\") { page size totalItems totalPages items { strId worksCount } } "
-                + "workCatalog(q: \"" + strId + "\", lang: \"en\") { page size totalItems items { path head language author { strId } } } "
-                + "authorDetails(strId: \"" + strId + "\") { strId displayName opera { path head } } "
-                + "authorWorks(strId: \"" + strId + "\") { path } }", null);
+        var response = query("{ authorCatalog(q: \"" + strId + "\") { page size totalItems totalPages items { strId worksCount } } " +
+                "workCatalog(q: \"" + strId + "\", lang: \"en\") { page size totalItems items { path head language author { strId } } } " +
+                "authorDetails(strId: \"" + strId + "\") { strId displayName opera { path head } } " +
+                "authorWorks(strId: \"" + strId + "\") { path } }", null);
         noErrors(response);
         var restAuthors = rest("/api/authors/page?q=" + strId, null);
         var restWorks = rest("/api/works?q=" + strId + "&lang=en", null);
@@ -147,16 +125,16 @@ class GraphQLCatalogTest {
         assertEquals(1, response.at("/data/authorCatalog/items/0/worksCount").asInt());
         assertEquals(1, response.at("/data/authorWorks").size());
         noErrors(query("{ authorDirectory { strId worksCount } divCatalog(size: 1) { path } }", null));
-        verify(covers, atLeastOnce()).requestMissing(any(ro.editii.scriptorium.dto.TeiDivDto[].class));
+        assert mocks.coverRequests.any { it instanceof ro.editii.scriptorium.dto.TeiDivDto[] };
     }
 
     @Test
     void stablePathDetailsTocParagraphContentAndCoverMetadataWork() throws Exception {
-        var response = query("{ divByPath(path: \"" + path + "\") { path head } "
-                + "divDetails(id: \"" + divId + "\") { path children { path head } } "
-                + "divToc(id: \"" + divId + "\", size: 1, page: 1) { path head } "
-                + "divParagraphs(divId: \"" + divId + "\", withContent: true) { text text_sha256 } "
-                + "coverMetadata(id: \"" + divId + "\") { title publisher author } }", null);
+        var response = query("{ divByPath(path: \"" + path + "\") { path head } " +
+                "divDetails(id: \"" + divId + "\") { path children { path head } } " +
+                "divToc(id: \"" + divId + "\", size: 1, page: 1) { path head } " +
+                "divParagraphs(divId: \"" + divId + "\", withContent: true) { text text_sha256 } " +
+                "coverMetadata(id: \"" + divId + "\") { title publisher author } }", null);
         noErrors(response);
         assertEquals(path, response.at("/data/divByPath/path").asText());
         assertEquals(chapterPath, response.at("/data/divDetails/children/0/path").asText());
@@ -170,11 +148,11 @@ class GraphQLCatalogTest {
 
     @Test
     void systemCollectionsAndEntitySearchReturnTypedResults() throws Exception {
-        var response = query("{ worksByAuthor(authorStrId: \"" + strId + "\") { path } "
-                + "worksByRepo(repoName: \"" + repoName + "\") { path } worksByLanguage(lang: \"en\") { path } "
-                + "repoNames featuredWorks { path } authorMedia { strId imageUrls } "
-                + "searchAuthors(q: \"" + strId + "\", limit: 1) { type data { ... on AuthorDto { strId } } } "
-                + "searchDivHeads(q: \"" + strId.substring(8) + "\", limit: 1) { data { ... on TeiDivDto { path } } } }", null);
+        var response = query("{ worksByAuthor(authorStrId: \"" + strId + "\") { path } " +
+                "worksByRepo(repoName: \"" + repoName + "\") { path } worksByLanguage(lang: \"en\") { path } " +
+                "repoNames featuredWorks { path } authorMedia { strId imageUrls } " +
+                "searchAuthors(q: \"" + strId + "\", limit: 1) { type data { ... on AuthorDto { strId } } } " +
+                "searchDivHeads(q: \"" + strId.substring(8) + "\", limit: 1) { data { ... on TeiDivDto { path } } } }", null);
         noErrors(response);
         assertEquals(path, response.at("/data/worksByAuthor/0/path").asText());
         assertEquals(path, response.at("/data/worksByRepo/0/path").asText());
@@ -189,9 +167,9 @@ class GraphQLCatalogTest {
         assertTrue(query("{ myCollections { name } }", null).has("errors"));
         assertTrue(query("{ myReadingProgress { opusPath } }", null).has("errors"));
         assertTrue(query("{ myPreferences }", null).has("errors"));
-        var response = query("{ myCollection(name: \"" + collectionName + "\") { name isFavorites items { divPath divHead } } "
-                + "myCollections { name } myWorkReadingProgress(opusPath: \"" + path + "\") { opusPath read attentionSeconds } "
-                + "myReadingProgress { opusPath attentionSeconds } myPreferences }", "reader");
+        var response = query("{ myCollection(name: \"" + collectionName + "\") { name isFavorites items { divPath divHead } } " +
+                "myCollections { name } myWorkReadingProgress(opusPath: \"" + path + "\") { opusPath read attentionSeconds } " +
+                "myReadingProgress { opusPath attentionSeconds } myPreferences }", "reader");
         noErrors(response);
         assertTrue(response.at("/data/myCollection/isFavorites").asBoolean());
         assertEquals(path, response.at("/data/myCollection/items/0/divPath").asText());
