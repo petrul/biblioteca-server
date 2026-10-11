@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 import org.springframework.security.core.Authentication;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PutMapping;
@@ -36,7 +37,11 @@ public class UserPreferencesRestController {
 
     private final ObjectMapper objectMapper = new ObjectMapper();
 
+    // Transactional: UserPreference.preferences is a @Lob, which Postgres
+    // stores as a large object that cannot be read in auto-commit mode
+    // ("Large Objects may not be used in auto-commit mode" -> HTTP 500).
     @GetMapping
+    @Transactional(readOnly = true)
     public Map<String, Object> get(Authentication authentication) {
         return this.userPreferenceRepository.findByUsername(authentication.getName())
                 .map(UserPreference::getPreferences)
@@ -45,6 +50,7 @@ public class UserPreferencesRestController {
     }
 
     @PutMapping
+    @Transactional
     public Map<String, Object> put(@RequestBody Map<String, Object> preferences, Authentication authentication) {
         final String username = authentication.getName();
         final UserPreference pref = this.userPreferenceRepository.findByUsername(username)

@@ -69,7 +69,15 @@ public class EnrichmentRestController {
             var metadata = opera.findByTeiDivId(o.getId()).orElseGet(() -> opera.save(new ro.editii.scriptorium.model.TeiOpus(o, null)));
             if (blank(metadata.getDescription()) && !blank(update.getSummary())) metadata.setDescription(update.getSummary());
             if (blank(metadata.getSignificantQuote()) && !blank(update.getSignificantQuote())) metadata.setSignificantQuote(update.getSignificantQuote());
-            if (blank(metadata.getCoverUrl()) && !blank(update.getCoverUrl())) metadata.setCoverUrl(update.getCoverUrl());
+            if (!blank(update.getCoverUrl()) && (update.isReplaceCover() || blank(metadata.getCoverUrl()))) {
+                metadata.setCoverUrl(update.getCoverUrl());
+                // TeiDivDto prefers TeiDiv.coverUrl over the metadata one, so a
+                // replaced cover must not stay shadowed by an older div-level URL.
+                if (update.isReplaceCover() && !blank(o.getCoverUrl())) {
+                    o.setCoverUrl(null);
+                    divs.save(o);
+                }
+            }
             opera.save(metadata);
             persistDivImages(o.getCompletePath(), update.getImageUrls());
         }
