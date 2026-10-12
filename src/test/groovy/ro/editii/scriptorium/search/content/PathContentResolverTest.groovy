@@ -7,9 +7,11 @@ import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.autoconfigure.EnableAutoConfiguration
 import org.springframework.boot.kafka.autoconfigure.KafkaAutoConfiguration
 import org.springframework.boot.test.context.SpringBootTest
+import org.springframework.cache.CacheManager
 import org.springframework.test.context.TestPropertySource
 import org.springframework.transaction.support.TransactionTemplate
 import ro.editii.scriptorium.TestConfig
+import ro.editii.scriptorium.cache.CacheConf
 import ro.editii.scriptorium.dao.RelocationRepository
 import ro.editii.scriptorium.model.Relocation
 import ro.editii.scriptorium.service.AdminService
@@ -40,11 +42,14 @@ class PathContentResolverTest {
     @Autowired RelocationRepository relocationRepository
     @Autowired TransactionTemplate transactionTemplate
     @Autowired DataSource dataSource
+    @Autowired CacheManager cacheManager
 
     @BeforeEach
     void beforeEach() {
         // just the one file these hits point into, not the full fixture set
         adminService.reimportFile("ro/Alecsandri-Poezii.xml", new NullWriter())
+        // each test resolves from the database, not an earlier test's cache
+        cacheManager.getCache(CacheConf.CACHE_HIT_TEXT).clear()
     }
 
     @Test
@@ -80,6 +85,23 @@ class PathContentResolverTest {
             assert pathContentResolver.resolve("http://server:8080${oldPath}") =~ /Dumbrava roșie/
         } finally {
             transactionTemplate.executeWithoutResult { relocationRepository.deleteById(oldPath) }
+        }
+    }
+
+    @Test
+    void resolvedTextIsCachedByPathWhateverTheHost() {
+        assert pathContentResolver.resolve("http://server:8080${PATH}") =~ /Dumbrava roșie/
+        // a miss is not cached: a source imported later resolves at once
+        assert pathContentResolver.resolve("http://server:8080/alecsandri/legende/no_such_poem") == null
+        assert cacheManager.getCache(CacheConf.CACHE_HIT_TEXT).get("/alecsandri/legende/no_such_poem") == null
+
+        // no database at all now: the same path under another host is a cache hit
+        final pool = dataSource.unwrap(HikariDataSource).hikariPoolMXBean
+        pool.suspendPool()
+        try {
+            assert pathContentResolver.resolve("http://localhost:8080${PATH}.txt") =~ /Dumbrava roșie/
+        } finally {
+            pool.resumePool()
         }
     }
 

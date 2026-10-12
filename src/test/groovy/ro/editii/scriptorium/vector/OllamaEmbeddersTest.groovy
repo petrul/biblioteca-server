@@ -4,6 +4,7 @@ import groovy.json.JsonOutput
 import org.junit.jupiter.api.Test
 import org.springframework.http.HttpMethod
 import org.springframework.http.MediaType
+import org.springframework.mock.http.client.MockClientHttpRequest
 import org.springframework.test.web.client.MockRestServiceServer
 import org.springframework.web.client.RestTemplate
 import ro.editii.scriptorium.health.OllamaHealthTracker
@@ -144,5 +145,28 @@ class OllamaEmbeddersTest {
         final nomicVector = embedderFor("nomic-embed-text", "NOMIC_EMBED_TEXT", 768, nomicRestTemplate).encode(text)
 
         assert qwenVector.length != nomicVector.length
+    }
+
+    @Test
+    void keepAliveRidesAlongOnlyWhenConfigured() {
+        // -1 (seconds, a number for Ollama) keeps the query model loaded;
+        // a duration string passes through as is
+        [["-1", -1], ["1h", "1h"]].each { configured, sent ->
+            final restTemplate = new RestTemplate()
+            MockRestServiceServer.bindTo(restTemplate).build()
+                    .expect(requestTo("http://${HOST}:${PORT}/api/embed"))
+                    .andExpect(content().json(JsonOutput.toJson(["model": "bge-m3", "keep_alive": sent])))
+                    .andRespond(withSuccess(embedResponseJson(SENTENCES, 4), MediaType.APPLICATION_JSON))
+            new OllamaEmbedder(HOST, PORT, "bge-m3", "BGE_M3", 4, restTemplate, new OllamaHealthTracker(), configured)
+                    .encode(SENTENCES)
+        }
+
+        // unset: no keep_alive at all, Ollama's own default applies
+        final restTemplate = new RestTemplate()
+        MockRestServiceServer.bindTo(restTemplate).build()
+                .expect(requestTo("http://${HOST}:${PORT}/api/embed"))
+                .andExpect({ request -> assert !((MockClientHttpRequest) request).bodyAsString.contains("keep_alive") })
+                .andRespond(withSuccess(embedResponseJson(SENTENCES, 4), MediaType.APPLICATION_JSON))
+        embedderFor("bge-m3", "BGE_M3", 4, restTemplate).encode(SENTENCES)
     }
 }

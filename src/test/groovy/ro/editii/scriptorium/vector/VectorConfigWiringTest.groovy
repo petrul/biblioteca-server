@@ -14,7 +14,7 @@ class VectorConfigWiringTest {
         final config = new VectorConfig()
         // VectorConfig now parses a URI, so the scheme is part of the
         // contract (the application value is EMBEDDER_URL).
-        final embedder = config.bgeM3Embedder("http://unused.invalid:11434", mock(RestTemplate.class), new OllamaHealthTracker())
+        final embedder = config.bgeM3Embedder("http://unused.invalid:11434", mock(RestTemplate.class), new OllamaHealthTracker(), "-1")
         final collection = config.prodCollection(mock(MilvusService.class), "biblioteca_paragraphs_bge_m3", "")
 
         assert embedder.modelName() == "BGE_M3"
@@ -29,7 +29,7 @@ class VectorConfigWiringTest {
     @Test
     void toleratesASchemePrefixOnTheAddress() {
         final config = new VectorConfig()
-        final embedder = (OllamaEmbedder) config.bgeM3Embedder("http://unused.invalid:11434", mock(RestTemplate.class), new OllamaHealthTracker())
+        final embedder = (OllamaEmbedder) config.bgeM3Embedder("http://unused.invalid:11434", mock(RestTemplate.class), new OllamaHealthTracker(), "-1")
 
         assert embedder.host == "unused.invalid"
         assert embedder.port == 11434

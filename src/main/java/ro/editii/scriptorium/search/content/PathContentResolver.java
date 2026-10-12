@@ -2,7 +2,9 @@ package ro.editii.scriptorium.search.content;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
+import org.springframework.cache.annotation.Cacheable;
 import ro.editii.scriptorium.Util;
+import ro.editii.scriptorium.cache.CacheConf;
 import ro.editii.scriptorium.dao.RelocationRepository;
 import ro.editii.scriptorium.model.Relocation;
 import ro.editii.scriptorium.service.ControllerTool;
@@ -33,6 +35,10 @@ import java.util.Optional;
  * so a stale hit must not throw across a transactional proxy - that would
  * fail the whole search at commit. DivService.findElemInfoByPath reports a
  * miss as empty instead.
+ *
+ * Resolved text is cached by path (whatever host the hit was stored with);
+ * misses are not, so a re-imported book resolves again at once. The cache
+ * is cleared on every import with the others.
  */
 @Log4j2
 @RequiredArgsConstructor
@@ -47,6 +53,8 @@ public class PathContentResolver implements ContentResolver {
     final RelocationRepository relocationRepository;
 
     @Override
+    @Cacheable(cacheNames = CacheConf.CACHE_HIT_TEXT, unless = "#result == null",
+            key = "T(ro.editii.scriptorium.search.content.PathContentResolver).pathOf(#id)")
     public String resolve(String id) {
         assert id != null;
         try {
@@ -63,7 +71,7 @@ public class PathContentResolver implements ContentResolver {
     }
 
     /** "/author/opus/div" from a full URL or a bare path, without any extension. */
-    static String pathOf(String id) {
+    public static String pathOf(String id) {
         final String path = id.contains("://") ? URI.create(id).getRawPath() : id;
         final String decoded = Util.basename(Util.urlDecode(path));
         return decoded.startsWith("/") ? decoded : "/" + decoded;
