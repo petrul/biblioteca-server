@@ -18,16 +18,14 @@ import ro.editii.scriptorium.model.TeiDiv
  * (a quoted "teiFile_id" that the PostgreSQL schema does not have, failing
  * every scheduler cycle). Mocked JdbcTemplate tests cannot see that.
  *
- * In-memory Derby by default; ORPHAN_SWEEP_TEST_DB_URL points it at a
+ * In-memory H2 by default; ORPHAN_SWEEP_TEST_DB_URL points it at a
  * throwaway PostgreSQL (the runtime engine) - never at a shared database:
  * ddl-auto=create drops and recreates the tables.
  */
 @TestPropertySource(properties = [
-        'spring.datasource.url=${ORPHAN_SWEEP_TEST_DB_URL:jdbc:derby:memory:orphanSweep;create=true}',
-        // embedded Derby needs its own driver named (the jdbc:derby: default
-        // is the network client, which rejects memory URLs); a PostgreSQL
-        // URL sets ORPHAN_SWEEP_TEST_DB_DRIVER=org.postgresql.Driver
-        'spring.datasource.driver-class-name=${ORPHAN_SWEEP_TEST_DB_DRIVER:org.apache.derby.iapi.jdbc.AutoloadedDriver}',
+        'spring.datasource.url=${ORPHAN_SWEEP_TEST_DB_URL:jdbc:h2:mem:orphanSweep;DATABASE_TO_LOWER=TRUE;DEFAULT_NULL_ORDERING=HIGH;DB_CLOSE_DELAY=-1}',
+        // a PostgreSQL URL sets ORPHAN_SWEEP_TEST_DB_DRIVER=org.postgresql.Driver
+        'spring.datasource.driver-class-name=${ORPHAN_SWEEP_TEST_DB_DRIVER:org.h2.Driver}',
         'spring.jpa.hibernate.ddl-auto=create',
         'spring.flyway.enabled=false',
         'spring.main.allow-bean-definition-overriding=true'])

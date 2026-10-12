@@ -41,9 +41,9 @@ import static org.junit.jupiter.api.Assertions.*;
 @SpringBootTest(classes = GraphQLJpaTest.Application.class,
         webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT, properties = {
         "spring.config.name=graphql-test",
-        "spring.datasource.url=jdbc:derby:memory:graphql-jpa-test;create=true",
-        "spring.datasource.driver-class-name=org.apache.derby.iapi.jdbc.AutoloadedDriver",
-        "spring.jpa.database-platform=org.hibernate.community.dialect.DerbyDialect",
+        "spring.datasource.url=jdbc:h2:mem:graphql-jpa-test;DATABASE_TO_LOWER=TRUE;DEFAULT_NULL_ORDERING=HIGH;DB_CLOSE_DELAY=-1",
+        "spring.datasource.driver-class-name=org.h2.Driver",
+        "spring.jpa.database-platform=org.hibernate.dialect.H2Dialect",
         "spring.jpa.hibernate.ddl-auto=create-drop", "spring.jpa.open-in-view=false",
         "spring.flyway.enabled=false", "admin.users=admin",
         "spring.graphql.schema.locations=classpath:graphql/**/"})

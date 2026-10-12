@@ -30,8 +30,9 @@ import org.springframework.context.annotation.Configuration;
  * initMethod=migrate) has completed.
  *
  * spring.flyway.enabled=false (on by default, see application.properties)
- * leaves the runner out entirely - the Derby in-memory test contexts need
- * that, since Flyway 10+ no longer supports Derby.
+ * leaves the runner out entirely - the remaining Derby test context
+ * (DerbyLobLocatorRegressionTest) needs that, since Flyway 10+ no longer
+ * supports Derby; the other test contexts run the migrations on H2.
  */
 @Configuration
 public class FlywayConfig {
