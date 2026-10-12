@@ -100,6 +100,9 @@ public class VectorConfig {
 
     // Ollama-backed embedders - both served by the same Ollama instance
     // (ollama.host:ollama.port), any pulled model addressable just by name.
+    // embedder.ollama.keep-alive (default -1: stay loaded) keeps the query
+    // model (bge-m3 only - the others are larger and rarely used) resident, so a search after a quiet spell does not first wait
+    // ~10s for Ollama to load it back (its own default unloads after 5min).
     // All stay reachable by their own bean names for callers/tests built
     // against them specifically.
 
@@ -108,9 +111,10 @@ public class VectorConfig {
     public Embedder bgeM3Embedder(
             @Value("${embedder.address}") String embedderAddress,
             @Qualifier("ollamaRestTemplate") RestTemplate ollamaRestTemplate,
-            OllamaHealthTracker ollamaHealthTracker
+            OllamaHealthTracker ollamaHealthTracker,
+            @Value("${embedder.ollama.keep-alive:-1}") String keepAlive
     ) {
-        final Embedder embedder = new OllamaEmbedder(hostOf(embedderAddress), portOf(embedderAddress), "bge-m3", "BGE_M3", MilvusCollection.DIM_1024, ollamaRestTemplate, ollamaHealthTracker);
+        final Embedder embedder = new OllamaEmbedder(hostOf(embedderAddress), portOf(embedderAddress), "bge-m3", "BGE_M3", MilvusCollection.DIM_1024, ollamaRestTemplate, ollamaHealthTracker, keepAlive);
         log.info(embedder.toString());
         return embedder;
     }

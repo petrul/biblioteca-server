@@ -5,6 +5,7 @@ import lombok.ToString;
 import org.springframework.web.client.RestTemplate;
 import ro.editii.scriptorium.health.OllamaHealthTracker;
 
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -37,9 +38,22 @@ public class OllamaEmbedder implements Embedder {
     private final String modelName;
     @ToString.Include
     private final int vectorDimension;
+    /**
+     * Ollama's keep_alive for the model after each request (a duration such
+     * as "1h", or "-1" to keep it loaded indefinitely); null leaves Ollama's
+     * own default (5 minutes), after which the next query first waits ~10s
+     * for the model to load back.
+     */
+    @ToString.Include
+    private final String keepAlive;
 
     public OllamaEmbedder(String host, int port, String model, String modelName, int vectorDimension,
                            RestTemplate restTemplate, OllamaHealthTracker healthTracker) {
+        this(host, port, model, modelName, vectorDimension, restTemplate, healthTracker, null);
+    }
+
+    public OllamaEmbedder(String host, int port, String model, String modelName, int vectorDimension,
+                           RestTemplate restTemplate, OllamaHealthTracker healthTracker, String keepAlive) {
         this.host = host;
         this.port = port;
         this.model = model;
@@ -47,6 +61,7 @@ public class OllamaEmbedder implements Embedder {
         this.vectorDimension = vectorDimension;
         this.restTemplate = restTemplate;
         this.healthTracker = healthTracker;
+        this.keepAlive = keepAlive == null || keepAlive.isBlank() ? null : keepAlive.trim();
     }
 
     @Override
@@ -75,10 +90,11 @@ public class OllamaEmbedder implements Embedder {
         if (!this.healthTracker.isAvailable())
             throw new IllegalStateException("Ollama at " + this.host + ":" + this.port + " is marked unavailable (cooling down)");
 
-        final Map<String, Object> request = Map.of(
-                "model", this.model,
-                "input", List.of(texts)
-        );
+        final Map<String, Object> request = new HashMap<>();
+        request.put("model", this.model);
+        request.put("input", List.of(texts));
+        if (this.keepAlive != null)
+            request.put("keep_alive", keepAliveValue(this.keepAlive));
         final EmbedResponse resp;
         try {
             resp = this.restTemplate.postForObject(getUrl("/api/embed"), request, EmbedResponse.class);
@@ -107,6 +123,11 @@ public class OllamaEmbedder implements Embedder {
         if (!path.startsWith("/"))
             path = "/" + path;
         return String.format("http://%s:%d%s", this.host, this.port, path);
+    }
+
+    /** Ollama takes a duration string ("1h") or a number of seconds (-1 = forever). */
+    static Object keepAliveValue(String keepAlive) {
+        return keepAlive.matches("-?\\d+") ? Integer.parseInt(keepAlive) : keepAlive;
     }
 
     /** Shape of Ollama's POST /api/embed JSON response (ignoring the timing/count fields we don't need). */

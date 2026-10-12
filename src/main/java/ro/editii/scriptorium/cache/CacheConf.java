@@ -16,6 +16,8 @@ public class CacheConf {
     public static final String CACHE_TOC = "cacheToc";
     public static final String CACHE_NODE = "cacheNode";
     public static final String CACHE_BINARY_OBJECT = "cacheBinaryObject";
+    /** Search hits' plain text by path (PathContentResolver). */
+    public static final String CACHE_HIT_TEXT = "hit_text";
 
     @Value("${cache.dir}")
     String cacheDir;
@@ -45,6 +47,12 @@ public class CacheConf {
                 .initialCapacity(10)
                 .maximumSize(50)
         );
+        // Far more entries than the 50 above: a search resolves 10-20 hits,
+        // each a short paragraph. Cleared with every other cache on import
+        // (TeiFileDbService.evictAllCaches), so edited text is never stale.
+        cacheManager.registerCustomCache(CACHE_HIT_TEXT, Caffeine.newBuilder()
+                .maximumSize(5_000)
+                .build());
         return cacheManager;
     }
 }
