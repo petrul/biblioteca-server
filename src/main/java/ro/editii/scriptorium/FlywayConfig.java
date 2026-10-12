@@ -5,6 +5,7 @@ import javax.sql.DataSource;
 import org.flywaydb.core.Flyway;
 import org.springframework.beans.factory.config.BeanDefinition;
 import org.springframework.beans.factory.config.BeanFactoryPostProcessor;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
@@ -27,11 +28,16 @@ import org.springframework.context.annotation.Configuration;
  * dependsOn edge Boot would have wired: the entityManagerFactory bean
  * (and so ddl-auto) is not created until the flyway bean (and its
  * initMethod=migrate) has completed.
+ *
+ * spring.flyway.enabled=false (on by default, see application.properties)
+ * leaves the runner out entirely - the Derby in-memory test contexts need
+ * that, since Flyway 10+ no longer supports Derby.
  */
 @Configuration
 public class FlywayConfig {
 
     @Bean(initMethod = "migrate")
+    @ConditionalOnProperty(name = "spring.flyway.enabled", havingValue = "true", matchIfMissing = true)
     Flyway flyway(DataSource dataSource) {
         return Flyway.configure()
                 .dataSource(dataSource)
@@ -44,6 +50,8 @@ public class FlywayConfig {
     @Bean
     static BeanFactoryPostProcessor flywayBeforeJpa() {
         return beanFactory -> {
+            if (!beanFactory.containsBeanDefinition("flyway"))
+                return;
             // Match the concrete FactoryBean class, not its product type:
             // EntityManagerFactory.class cannot be resolved from the bean
             // definition without instantiating the factory first, while

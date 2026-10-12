@@ -34,6 +34,7 @@ import ro.editii.scriptorium.tei.TeiRepo
 // destroy+reimport, not just whichever one happens to be processed first.
 @TestPropertySource(properties = [
         "spring.datasource.url=jdbc:derby:memory:destroyReimportTestDb;create=true",
+        "spring.flyway.enabled=false",
         "spring.datasource.driver-class-name=org.apache.derby.iapi.jdbc.AutoloadedDriver",
         "spring.jpa.database-platform=org.hibernate.community.dialect.DerbyDialect",
         "spring.main.allow-bean-definition-overriding=true",

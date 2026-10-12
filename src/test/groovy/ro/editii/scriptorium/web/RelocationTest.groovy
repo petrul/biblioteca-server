@@ -53,6 +53,7 @@ import static ro.editii.scriptorium.GTestUtil.p
 // for free, the same way DivRestControllerTest/UrlContentResolverTest do.
 @TestPropertySource(properties = [
         "spring.datasource.url=jdbc:derby:memory:relocationTestDb;create=true",
+        "spring.flyway.enabled=false",
         "spring.datasource.driver-class-name=org.apache.derby.iapi.jdbc.AutoloadedDriver",
         "spring.jpa.database-platform=org.hibernate.community.dialect.DerbyDialect",
         "spring.main.allow-bean-definition-overriding=true",

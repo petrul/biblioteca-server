@@ -14,6 +14,7 @@ import ro.editii.scriptorium.service.AdminService
 
 @TestPropertySource(properties = [
         "spring.datasource.url=jdbc:derby:memory:myDb;create=true",
+        "spring.flyway.enabled=false",
         "spring.datasource.driver-class-name=org.apache.derby.iapi.jdbc.AutoloadedDriver",
         "spring.jpa.database-platform=org.hibernate.community.dialect.DerbyDialect",
         "spring.main.allow-bean-definition-overriding=true",

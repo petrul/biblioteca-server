@@ -244,17 +244,16 @@ dependencies {
 	// Same minimal role as wavelen-market-data's own Flyway adoption: ddl-auto
 	// (application.properties) keeps doing the routine day-to-day schema
 	// work, Flyway is only for the rare fix-forward migration when
-	// Hibernate's auto-DDL leaves something broken behind. Pinned below
-	// Spring Boot's own BOM-managed version (12.4.0 at Boot 4.1.0)
-	// deliberately: that version dropped Apache Derby support entirely
-	// (confirmed by actually booting against it - "FlywayException:
-	// Unsupported Database: Apache Derby 10.17" - Derby was moved behind
-	// Flyway's paid Enterprise tier at some point after 9.x). Just the
-	// bare flyway-core artifact, not the spring-boot-starter-flyway
-	// wrapper - Spring Boot's FlywayAutoConfiguration only needs
-	// Flyway.class on the classpath to activate, regardless of which
-	// artifact put it there.
-	implementation('org.flywaydb:flyway-core:9.22.3')
+	// Hibernate's auto-DDL leaves something broken behind. PostgreSQL only:
+	// Flyway 10+ dropped free Apache Derby support ("FlywayException:
+	// Unsupported Database: Apache Derby 10.17" - Derby moved behind the
+	// paid Enterprise tier), which is why this was pinned to 9.22.3 until
+	// the move to PostgreSQL. Since 10, each engine's support is its own
+	// module beside flyway-core. Just the bare artifacts, not the
+	// spring-boot-starter-flyway wrapper - FlywayConfig declares the
+	// migration runner itself.
+	implementation('org.flywaydb:flyway-core:13.10.0')
+	implementation('org.flywaydb:flyway-database-postgresql:13.10.0')
 	implementation('org.springframework.boot:spring-boot-starter-data-rest')
 	implementation('org.springframework.boot:spring-boot-starter-web')
 	implementation('org.springframework.boot:spring-boot-starter-restclient')

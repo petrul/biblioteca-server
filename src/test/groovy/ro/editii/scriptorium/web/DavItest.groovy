@@ -29,6 +29,7 @@ import static ro.editii.scriptorium.TestUtils.TEI_ELEM
 // already leaves indexing off by default, which is all this class needs.
 @TestPropertySource(properties = [
         "spring.datasource.url=jdbc:derby:memory:davItestDb;create=true",
+        "spring.flyway.enabled=false",
         "spring.datasource.driver-class-name=org.apache.derby.iapi.jdbc.AutoloadedDriver",
         "spring.jpa.database-platform=org.hibernate.community.dialect.DerbyDialect",
         "spring.main.allow-bean-definition-overriding=true",
