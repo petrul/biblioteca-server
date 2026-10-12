@@ -16,7 +16,10 @@ import java.util.concurrent.TimeUnit;
 import java.net.URI;
 import ro.editii.scriptorium.client.BibliotecaClient;
 import ro.editii.scriptorium.health.OllamaHealthTracker;
-import ro.editii.scriptorium.search.content.UrlContentResolver;
+import ro.editii.scriptorium.dao.RelocationRepository;
+import ro.editii.scriptorium.search.content.PathContentResolver;
+import ro.editii.scriptorium.service.ControllerTool;
+import ro.editii.scriptorium.service.DivService;
 
 @Configuration
 @Log4j2
@@ -207,19 +210,32 @@ public class VectorConfig {
         return new BibliotecaClient(baseUrl, restTemplate);
     }
 
+    /**
+     * Search hits' text, resolved in-process from the hit URL's path (see
+     * PathContentResolver for the self-HTTP deadlock this replaces).
+     */
     @Bean
-    public UrlContentResolver urlContentResolver(@Lazy RestTemplate restTemplate) {
-        return new UrlContentResolver(restTemplate);
+    public PathContentResolver pathContentResolver(@Lazy DivService divService, @Lazy ControllerTool controllerTool,
+                                                   @Lazy RelocationRepository relocationRepository) {
+        return new PathContentResolver(divService, controllerTool, relocationRepository);
     }
 
+    /**
+     * Bounded too: SimpleClientHttpRequestFactory's default is to wait
+     * forever, and a request thread blocked on a hung peer never comes
+     * back (it is how the old self-HTTP content resolver deadlocked).
+     */
     @Bean
     public RestTemplate restTemplate() {
-        return new RestTemplate();
+        final SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();
+        factory.setConnectTimeout(5_000);
+        factory.setReadTimeout(30_000);
+        return new RestTemplate(factory);
     }
 
-    // The plain restTemplate() above has NO connect/read timeout at all
-    // (SimpleClientHttpRequestFactory defaults to "wait forever") - fine
-    // for most callers, but a real problem for Ollama specifically: a
+    // Before restTemplate() above was bounded it had NO connect/read
+    // timeout at all (SimpleClientHttpRequestFactory defaults to "wait
+    // forever") - a real problem for Ollama specifically: a
     // reachable-but-GPU-contended instance can otherwise block a request
     // thread indefinitely rather than ever throwing, which means neither
     // Util.runWithTimeout's own bound (VectorTextSearchService,

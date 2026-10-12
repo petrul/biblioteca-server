@@ -50,7 +50,7 @@ import static ro.editii.scriptorium.GTestUtil.p
 // lucene.autoindex.enabled and lucene.incremental.enabled for every test
 // task by default (WebITest is the one deliberate exception), so a plain,
 // minimal SpringBootTest config like this one gets indexing-free imports
-// for free, the same way DivRestControllerTest/UrlContentResolverTest do.
+// for free, the same way DivRestControllerTest/PathContentResolverTest do.
 @TestPropertySource(properties = [
         "spring.datasource.url=jdbc:h2:mem:relocationTestDb;DATABASE_TO_LOWER=TRUE;DEFAULT_NULL_ORDERING=HIGH;DB_CLOSE_DELAY=-1",
         "spring.datasource.driver-class-name=org.h2.Driver",

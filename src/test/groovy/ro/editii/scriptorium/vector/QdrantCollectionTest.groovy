@@ -111,6 +111,23 @@ class QdrantCollectionTest {
     }
 
     @Test
+    void searchRescoresTheQuantizedCandidatesAgainstTheOriginalVectors() {
+        final rest = new RestTemplate()
+        // Without rescore the int8 ranking alone misses the true nearest
+        // neighbours (see QdrantCollection.SEARCH_PARAMS).
+        MockRestServiceServer.bindTo(rest).build()
+                .expect(requestTo("${BASE}/collections/test_bge_m3/points/search"))
+                .andExpect(content().json('''{
+                    "vector": {"name": "embedding", "vector": [0.25, 0.5]},
+                    "limit": 2,
+                    "params": {"quantization": {"rescore": true, "oversampling": 3.0}}
+                }'''))
+                .andRespond(withSuccess('{"result":[]}', MediaType.APPLICATION_JSON))
+
+        assertEquals(0, collection(rest).searchHits([0.25f, 0.5f] as float[], 2).size())
+    }
+
+    @Test
     void findBySha256ReturnsTheStoredVectorOrNullForMissing() {
         final rest = new RestTemplate()
         // Both expectations up front - a MockRestServiceServer cannot add

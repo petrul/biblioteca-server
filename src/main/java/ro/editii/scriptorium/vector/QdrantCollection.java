@@ -60,6 +60,17 @@ public class QdrantCollection implements VectorCollection {
     // The named dense vector - mirrors MilvusCollection's FIELD_EMBEDDING.
     public static final String FIELD_EMBEDDING = "embedding";
 
+    /**
+     * Rescore the int8-quantized candidates against the original vectors,
+     * from an oversampled candidate set. Without it the ranking is the
+     * quantized one, which loses the true nearest neighbours outright on
+     * these collections: "Mircea cel bătrân" ranked distance-1.02 hits
+     * first and missed the exact 0.77-0.85 matches (Giurescu, Bolintineanu's
+     * Mircea ballads) that a rescored search returns in the same ~20ms.
+     */
+    static final Map<String, Object> SEARCH_PARAMS = Map.of(
+            "quantization", Map.of("rescore", true, "oversampling", 3.0));
+
     final String baseUrl;
     final String name;
     final RestTemplate rest;
@@ -186,6 +197,7 @@ public class QdrantCollection implements VectorCollection {
         body.put("vector", Map.of("name", FIELD_EMBEDDING, "vector", asList));
         body.put("limit", topK);
         body.put("with_payload", true);
+        body.put("params", SEARCH_PARAMS);
 
         final JsonNode result = postJson("/collections/" + this.name + "/points/search", body, HttpMethod.POST)
                 .path("result");
