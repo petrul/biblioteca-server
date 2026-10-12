@@ -105,12 +105,16 @@ Filtered runs such as `rake test[yoga,TeiSourceMissingAdviceTest]` run the
 matching classes once through Gradle's combined `test` task, whether they
 are unit or integration tests. Unfiltered `rake test` still runs both phases.
 
-Mocking in Groovy tests: prefer map-coercion fakes (`[exists: { false }] as
-VectorCollection`), hand-rolled Groovy fakes for class-typed collaborators, and
-real cheap instances (temp-dir `LuceneIndexService`, plain `JdbcTemplate`)
-over Mockito, which is fragile from Groovy (`UnfinishedStubbingException` etc.).
-Where Mockito is genuinely needed, resolve each mock to a variable first and
-never build one inside another `when()/thenReturn()` chain.
+In Spring Boot projects with Groovy tests, prefer native Groovy mocks, stubs,
+and fakes over Mockito. Use map-coercion fakes (`[exists: { false }] as
+VectorCollection`), native Groovy doubles for class collaborators, or inexpensive
+real instances such as a temporary-directory `LuceneIndexService` or a plain
+`JdbcTemplate`. For Spring-managed test beans, use `@TestBean` or explicitly
+imported `@TestConfiguration` where appropriate; keep test-only beans out of
+normal component scanning. Use Mockito only when a concrete limitation requires
+it, and document the reason in the test. When it is needed, assign each mock to
+a variable before stubbing rather than creating one inside another
+`when()/thenReturn()` chain.
 
 ## Running bare-metal (dev)
 

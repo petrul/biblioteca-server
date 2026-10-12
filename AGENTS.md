@@ -96,3 +96,12 @@ considered a fully valid snapshot deployment. If a project manifest has a
 newer `*-SNAPSHOT` version than the registry, the matching TeamCity build has
 not yet published that snapshot (or failed); report deployment as blocked
 instead of silently using an older tag.
+
+## Groovy test mocks
+
+In Spring Boot projects with Groovy tests, prefer native Groovy mocks, stubs,
+and fakes over Mockito. Use closure/map coercion or native Groovy doubles and
+register Spring test beans with `@TestBean` or an explicitly imported
+`@TestConfiguration` where appropriate. Keep test-only beans out of component
+scanning. Use Mockito only when a concrete limitation requires it; document
+that reason in the test. See the README's Running tests section.
