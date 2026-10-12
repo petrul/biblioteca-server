@@ -33,7 +33,7 @@ class NotFoundPageTest {
 
         final String html = engine.process("error/404", new Context());
 
-        assertTrue(html.contains("/404.png"), "expected the page to reference the uploaded /404.png");
+        assertTrue(html.contains("/404.jpeg"), "expected the page to reference the uploaded /404.jpeg");
         assertTrue(html.contains("404"), "expected the page to mention the error code somewhere");
         assertTrue(html.toLowerCase().contains("library") || html.toLowerCase().contains("biblioteca"),
                 "expected a way back to the site, not a dead end");
