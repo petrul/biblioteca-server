@@ -96,6 +96,8 @@ type TeiElemDto {
     coverUrl: String
     description: String
     significantQuote: String
+    summary: String
+    workEnrichedAt: String
     imageUrls: [String!]
 }
 
@@ -123,6 +125,8 @@ type TeiDivDto {
     coverUrl: String
     description: String
     significantQuote: String
+    summary: String
+    workEnrichedAt: String
     imageUrls: [String!]
 }
 

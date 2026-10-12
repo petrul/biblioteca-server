@@ -29,6 +29,26 @@ public class TeiOpus implements Serializable {
     @Column(name = "SIGNIFICANT_QUOTE", length = 1200)
     private String significantQuote;
 
+    /**
+     * The work's encyclopedia summary (its Wikipedia article's lead), written
+     * by biblioteca-nestjs's work enrichment. Kept apart from description,
+     * which stays the work's own opening text from the TEI.
+     */
+    @Column(length = 1200)
+    private String summary;
+
+    /** The article the summary was taken from. */
+    @Column(name = "SUMMARY_SOURCE_URL", length = 500)
+    private String summarySourceUrl;
+
+    /**
+     * When work enrichment last looked this work up - set whether or not an
+     * article was found, so a work without one is not searched again on
+     * every view. Null means never enriched.
+     */
+    @Column(name = "WORK_ENRICHED_AT")
+    private java.time.Instant workEnrichedAt;
+
     /** URL-only generated cover pointer; image bytes never live in the DB. */
     @Column(length = 1000)
     private String coverUrl;

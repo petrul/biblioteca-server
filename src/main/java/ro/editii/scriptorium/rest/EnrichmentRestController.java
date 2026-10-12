@@ -67,7 +67,13 @@ public class EnrichmentRestController {
             if (opus.isEmpty()) return ResponseEntity.notFound().build();
             var o = opus.get();
             var metadata = opera.findByTeiDivId(o.getId()).orElseGet(() -> opera.save(new ro.editii.scriptorium.model.TeiOpus(o, null)));
-            if (blank(metadata.getDescription()) && !blank(update.getSummary())) metadata.setDescription(update.getSummary());
+            // The summary lives beside the description (the work's own TEI
+            // opening text), never in it.
+            if (!blank(update.getSummary()) && (update.isOverwrite() || blank(metadata.getSummary()))) {
+                metadata.setSummary(update.getSummary());
+                metadata.setSummarySourceUrl(update.getSummarySourceUrl());
+            }
+            if (update.isWorkEnriched()) metadata.setWorkEnrichedAt(java.time.Instant.now());
             if (blank(metadata.getSignificantQuote()) && !blank(update.getSignificantQuote())) metadata.setSignificantQuote(update.getSignificantQuote());
             if (!blank(update.getCoverUrl()) && (update.isReplaceCover() || blank(metadata.getCoverUrl()))) {
                 metadata.setCoverUrl(update.getCoverUrl());
