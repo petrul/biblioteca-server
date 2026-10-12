@@ -337,12 +337,13 @@ dependencies {
     testImplementation('org.springframework.boot:spring-boot-starter-kafka-test')
     testImplementation('org.springframework.boot:spring-boot-starter-restclient-test')
     testImplementation('org.springframework.boot:spring-boot-starter-webmvc-test')
-    // Embedded Derby engine, for tests only - the app itself is a pure
-    // Network Server client (see runtimeOnly derbyclient above) and never
-    // links the embedded engine, but tests use jdbc:derby:memory:... URLs
-    // (see each @TestPropertySource / GTestUtil's in-memory props), which
-    // only the embedded driver (not derbyclient, which only accepts
-    // jdbc:derby://... URLs) can open - was h2.
+    // In-memory test database for the Spring test contexts: Flyway 10+ no
+    // longer supports Derby, H2 it does.
+    testRuntimeOnly 'com.h2database:h2'
+    // Embedded Derby engine, for the Derby-specific regression tests only
+    // (DerbyLobLocatorRegressionTest, the prune lock-order tests) - the app
+    // itself is a pure Network Server client (see runtimeOnly derbyclient
+    // above), and only the embedded driver can open jdbc:derby:memory:...
     testImplementation 'org.apache.derby:derby:10.17.1.0'
     // Same mixed-version trap as the runtimeOnly derbyshared above, for the
     // test classpath - the BOM's 10.16.1.1 must not ride along here either.

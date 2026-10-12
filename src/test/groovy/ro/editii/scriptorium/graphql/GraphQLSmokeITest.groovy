@@ -38,9 +38,9 @@ import java.time.Duration
 @SpringBootTest(classes = GraphQLJpaTest.Application,
         webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT, properties = [
         'spring.config.name=graphql-test',
-        'spring.datasource.url=jdbc:derby:memory:graphql-smoke-itest;create=true',
-        'spring.datasource.driver-class-name=org.apache.derby.iapi.jdbc.AutoloadedDriver',
-        'spring.jpa.database-platform=org.hibernate.community.dialect.DerbyDialect',
+        'spring.datasource.url=jdbc:h2:mem:graphql-smoke-itest;DATABASE_TO_LOWER=TRUE;DEFAULT_NULL_ORDERING=HIGH;DB_CLOSE_DELAY=-1',
+        'spring.datasource.driver-class-name=org.h2.Driver',
+        'spring.jpa.database-platform=org.hibernate.dialect.H2Dialect',
         'spring.jpa.hibernate.ddl-auto=create-drop', 'spring.jpa.open-in-view=false',
         'spring.flyway.enabled=false', 'admin.users=admin',
         'spring.jpa.properties.hibernate.jdbc.lob.non_contextual_creation=true'])

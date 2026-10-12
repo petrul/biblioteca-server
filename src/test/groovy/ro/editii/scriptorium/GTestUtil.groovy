@@ -39,11 +39,10 @@ class GTestUtil {
         return jdbcTemplate.queryForObject("select count(*) from " + actual, Integer.class)
     }
 
-    static String[] DERBY_INMEM_TEST_DB_PROPS = [
-            "spring.datasource.url=jdbc:derby:memory:myDb;create=true",
-            "spring.flyway.enabled=false",
-            "spring.datasource.driver-class-name=org.apache.derby.iapi.jdbc.AutoloadedDriver",
-            "spring.jpa.database-platform=org.hibernate.community.dialect.DerbyDialect",
+    static String[] INMEM_TEST_DB_PROPS = [
+            "spring.datasource.url=jdbc:h2:mem:myDb;DATABASE_TO_LOWER=TRUE;DEFAULT_NULL_ORDERING=HIGH;DB_CLOSE_DELAY=-1",
+            "spring.datasource.driver-class-name=org.h2.Driver",
+            "spring.jpa.database-platform=org.hibernate.dialect.H2Dialect",
             "spring.jpa.hibernate.ddl-auto = update"]
 
     static String teiOf(String content) {
