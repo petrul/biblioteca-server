@@ -658,6 +658,17 @@ When it was cut, the next release's name was fixed at random: *Dusky Discus*.
 
 ### Dusky Discus (next — in development)
 
+Deployment requirement: this release must use PostgreSQL in both integration
+and production. Creative Cella was integration-tested with PostgreSQL, but
+production still uses Derby because the `biblioteca/prod` pass-store profile
+selects it. During the next release, prepare the production PostgreSQL database,
+migrate persistent user data (especially accounts, preferences, reading progress,
+and collections), rebuild generated catalog data, and update that profile's
+`DB_URL` before deploying with `run-prod.sh`. Verify the running production
+container actually uses PostgreSQL and check login, catalog queries, and logs.
+This is a requirement for the next release; leave the current deployment and
+database configuration unchanged for now.
+
 The next family release, named with the next alphabet letter, D. Its name
 is stamped as `releaseName` in all four next-snapshot manifests.
 

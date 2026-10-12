@@ -26,6 +26,10 @@ public class TeiDivDto extends TeiElemDto implements Comparable<TeiDivDto> {
 
     String coverUrl;
     String description;
+    /** Encyclopedia summary from work enrichment (TeiOpus.summary). */
+    String summary;
+    /** ISO instant of the last work-enrichment lookup; null if never. */
+    String workEnrichedAt;
     String significantQuote;
 
     TeiDivDto[] children;
@@ -86,6 +90,11 @@ public class TeiDivDto extends TeiElemDto implements Comparable<TeiDivDto> {
             if (teiDiv.getOpusMetadata() != null) {
                 description = teiDiv.getOpusMetadata().getDescription();
                 significantQuote = teiDiv.getOpusMetadata().getSignificantQuote();
+                summary = teiDiv.getOpusMetadata().getSummary();
+                if (teiDiv.getOpusMetadata().getSummarySourceUrl() != null)
+                    summarySourceUrl = teiDiv.getOpusMetadata().getSummarySourceUrl();
+                if (teiDiv.getOpusMetadata().getWorkEnrichedAt() != null)
+                    workEnrichedAt = teiDiv.getOpusMetadata().getWorkEnrichedAt().toString();
                 if (coverUrl == null) coverUrl = teiDiv.getOpusMetadata().getCoverUrl();
             }
             xpath = teiDiv.getXpath();

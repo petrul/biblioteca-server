@@ -150,28 +150,45 @@ class EnrichmentRestControllerTest {
     }
 
     @Test
-    void opusUpdateFillsTheSummaryOnceAndKeepsExistingText() {
+    void opusUpdateFillsTheSummaryBesideTheDescriptionOnce() {
         final opus = opusOf(authorWith("Slavici, Ioan", "enrichment-ctrl-test-slavici"),
                 "enrichment-ctrl-test-slavici.xml", "biblioteca", "Biblioteca")
 
         final response = post([
                 opusId: opus.id,
                 summary: "Biblioteca is a canonical short-story collection.",
+                summarySourceUrl: "https://en.wikipedia.org/wiki/Biblioteca",
+                workEnriched: true,
                 imageUrls: [OPUS_IMAGE],
         ])
         assert response.statusCode == HttpStatus.OK
 
         final enriched = this.teiDivRepository.findById(opus.id).get()
         final opusMetadata = this.teiOpusRepository.findByTeiDivId(opus.id).get()
-        assert opusMetadata.description == "Biblioteca is a canonical short-story collection."
+        assert opusMetadata.summary == "Biblioteca is a canonical short-story collection."
+        assert opusMetadata.summarySourceUrl == "https://en.wikipedia.org/wiki/Biblioteca"
+        assert opusMetadata.description == null: 'the description stays the TEI opening text'
+        assert opusMetadata.workEnrichedAt != null
         assert this.divMediaAssociationRepository.existsByDivPathAndMediaRefUrl(
                 enriched.getCompletePath(), OPUS_IMAGE)
         assert this.divMediaAssociationRepository.existsByDivPathAndMediaRefRole(
                 enriched.getCompletePath(), "enrichment")
 
         post([opusId: opus.id, summary: "SOMETHING ELSE ENTIRELY"])
-        final rerun = this.teiOpusRepository.findByTeiDivId(opus.id).get()
-        assert rerun.description == "Biblioteca is a canonical short-story collection."
+        assert this.teiOpusRepository.findByTeiDivId(opus.id).get().summary == "Biblioteca is a canonical short-story collection."
+
+        post([opusId: opus.id, summary: "A deliberate correction.", overwrite: true])
+        assert this.teiOpusRepository.findByTeiDivId(opus.id).get().summary == "A deliberate correction."
+    }
+
+    @Test
+    void aLookupWithoutAnArticleStillStampsTheWorkAsEnriched() {
+        final opus = opusOf(authorWith("Agârbiceanu, Ion", "enrichment-ctrl-test-agarbiceanu"),
+                "enrichment-ctrl-test-agarbiceanu.xml", "fefeleaga", "Fefeleaga")
+        assert post([opusId: opus.id, workEnriched: true]).statusCode == HttpStatus.OK
+        final metadata = this.teiOpusRepository.findByTeiDivId(opus.id).get()
+        assert metadata.workEnrichedAt != null
+        assert metadata.summary == null
     }
 
     /**

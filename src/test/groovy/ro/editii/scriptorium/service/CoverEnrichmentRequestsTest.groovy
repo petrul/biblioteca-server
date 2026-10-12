@@ -11,8 +11,9 @@ import java.time.Instant
 import java.time.ZoneOffset
 
 /**
- * A work served to the reader without a cover asks nestjs for one on
- * biblioteca_enrichWorkTopic - once per work per 30 minutes. Groovy
+ * A work served to the reader that needs enrichment - never looked up, no
+ * cover, or a cover whose object is gone - asks nestjs on
+ * biblioteca_enrichWorkTopic, once per work per 30 minutes. Groovy
  * map-coerced mocks, no Spring.
  */
 class CoverEnrichmentRequestsTest {
@@ -29,14 +30,19 @@ class CoverEnrichmentRequestsTest {
     Instant now = Instant.parse('2026-10-11T10:00:00Z')
     final Clock clock = [instant: { now }, getZone: { ZoneOffset.UTC }] as Clock
 
-    // Runnable::run publishes synchronously, so the test sees the result at once.
-    final CoverEnrichmentRequests requests = new CoverEnrichmentRequests(publisher, clock, { Runnable r -> r.run() } as java.util.concurrent.Executor)
+    final Set<String> missingObjects = []
+    final List<String> probed = []
+    final CoverEnrichmentRequests.CoverProbe probe = { String url -> probed << url; !missingObjects.contains(url) } as CoverEnrichmentRequests.CoverProbe
 
-    private static TeiDivDto work(String path, String coverUrl, boolean opus) {
+    // Runnable::run publishes synchronously, so the test sees the result at once.
+    final CoverEnrichmentRequests requests = new CoverEnrichmentRequests(publisher, clock, { Runnable r -> r.run() } as java.util.concurrent.Executor, probe)
+
+    private static TeiDivDto work(String path, String coverUrl, boolean opus, String workEnrichedAt = '2026-10-01T00:00:00Z') {
         def dto = new TeiDivDto()
         dto.path = path
         dto.coverUrl = coverUrl
         dto.opus = opus
+        dto.workEnrichedAt = workEnrichedAt
         dto
     }
 
@@ -71,5 +77,34 @@ class CoverEnrichmentRequestsTest {
         kafkaDown = false
         requests.requestMissing(uncovered)
         assert published == ['eminescu/poezii']
+    }
+
+    @Test
+    void aWorkNeverLookedUpIsRequestedEvenWithACover() {
+        requests.requestMissing(work('carlyle/past_and_present', 'https://x/biblioteca/covers/carlyle/p.png', true, null))
+        assert published == ['carlyle/past_and_present']
+        assert probed.isEmpty(): 'the request itself re-checks the cover in nestjs'
+    }
+
+    @Test
+    void aStoredCoverWhoseObjectIsGoneIsRequestedAgain() {
+        final gone = 'https://x/biblioteca/covers/abbott/greece-824fc4aaf727.png'
+        missingObjects << gone
+        requests.requestMissing([work('abbott/greece', gone, true), work('cehov/teatru', 'https://x/biblioteca/covers/cehov/t.png', true)])
+        assert published == ['abbott/greece']
+        assert probed.size() == 2
+    }
+
+    @Test
+    void aServedCoverIsProbedAtMostEverySixHours() {
+        final cover = work('cehov/teatru', 'https://x/biblioteca/covers/cehov/t.png', true)
+        requests.requestMissing(cover)
+        now = now + Duration.ofHours(5)
+        requests.requestMissing(cover)
+        assert probed.size() == 1
+        now = now + Duration.ofHours(2)
+        requests.requestMissing(cover)
+        assert probed.size() == 2
+        assert published.isEmpty()
     }
 }
