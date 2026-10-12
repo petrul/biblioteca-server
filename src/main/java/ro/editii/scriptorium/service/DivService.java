@@ -26,6 +26,7 @@ import ro.editii.scriptorium.toc.Toc;
 
 import java.util.ArrayList;
 import java.util.List;
+import editii.commons.xml.DomTool;
 import java.util.Optional;
 
 @Service @Log4j2 @RequiredArgsConstructor
@@ -124,6 +125,31 @@ public class DivService {
         // need it when the result came through the cache.
         attached.setTeiRepo(this.teiRepo);
         return attached;
+    }
+
+    /**
+     * The element at path with a copy of its node, or empty when the path
+     * no longer resolves (removed book, deleted paragraph, missing TEI file).
+     *
+     * For callers inside a wider transaction that must survive a miss - the
+     * vector search's hit resolution (PathContentResolver). getByPath's
+     * not-found exception would mark that whole transaction rollback-only
+     * once it crossed getByPath's own transactional proxy; here it is caught
+     * on this side of every proxy (getByPath/getNode are self-invoked, so
+     * their own @Cacheable/@Transactional do not apply).
+     */
+    @Transactional(readOnly = true)
+    public Optional<ElemInfo> findElemInfoByPath(String path) {
+        try {
+            final TeiElem elem = this.getByPath(path);
+            return Optional.of(ElemInfo.builder()
+                    .teiElem(elem)
+                    .nodeCopy(DomTool.deepCopy(this.getNode(elem)))
+                    .build());
+        } catch (RuntimeException e) {
+            log.debug("{} does not resolve: {}", path, e.toString());
+            return Optional.empty();
+        }
     }
 
     /**

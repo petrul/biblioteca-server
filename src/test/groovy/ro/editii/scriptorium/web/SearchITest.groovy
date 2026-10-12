@@ -44,11 +44,11 @@ import static ro.editii.scriptorium.TestUtils.TEI_ELEM
  * FakeQwen3Embedder keeps the query vectors deterministic and offline,
  * so only the STORE is a live integration dependency.
  *
- * Fixture hit urls point at this test server's own /util/echo endpoint:
- * UrlContentResolver fetches `<url>.txt` and drops hits whose content no
- * longer resolves (VectorUtils.searchHitsToHits), so the fixture must use
- * urls that answer - /util/echo replies to any query string, which is all
- * the "is this hit still alive" resolution needs.
+ * Fixture hit urls point at a real path of the reimported corpus:
+ * PathContentResolver resolves each hit's path in-process and drops hits
+ * whose content no longer resolves (VectorUtils.searchHitsToHits). Their
+ * hosts alternate between the Docker stack's and a bare-metal server's,
+ * neither reachable from here - only the path may matter.
  */
 @TestPropertySource(properties = [
         "spring.datasource.url=jdbc:h2:mem:myDb;DATABASE_TO_LOWER=TRUE;DEFAULT_NULL_ORDERING=HIGH;DB_CLOSE_DELAY=-1",
@@ -118,9 +118,9 @@ class SearchITest {
     @Autowired VectorSearchAvailability vectorSearchAvailability
     @LocalServerPort int port
 
-    /** The 12 fixture points' urls: this server's own echo endpoint. */
-    private String fixtureUrl(int i) {
-        return "http://localhost:${this.port}/util/echo?msg=qdrant-itest-hit-${i}"
+    /** The 12 fixture points' urls: a real corpus path behind unreachable hosts. */
+    private static String fixtureUrl(int i) {
+        return (i % 2 ? "http://server:8080" : "http://localhost:1") + "/alecsandri/legende/dumbrava_rosie"
     }
 
     /**
