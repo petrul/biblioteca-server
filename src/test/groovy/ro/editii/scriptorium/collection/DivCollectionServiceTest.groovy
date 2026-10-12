@@ -40,6 +40,7 @@ import static ro.editii.scriptorium.TestUtils.TEI_ELEM
  */
 @TestPropertySource(properties = [
         "spring.datasource.url=jdbc:derby:memory:divCollectionServiceTestDb;create=true",
+        "spring.flyway.enabled=false",
         "spring.datasource.driver-class-name=org.apache.derby.iapi.jdbc.AutoloadedDriver",
         "spring.jpa.database-platform=org.hibernate.community.dialect.DerbyDialect",
         "spring.main.allow-bean-definition-overriding=true",

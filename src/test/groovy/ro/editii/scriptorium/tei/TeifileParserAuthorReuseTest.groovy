@@ -24,6 +24,7 @@ import static ro.editii.scriptorium.GTestUtil.countTableRows
  */
 @TestPropertySource(properties=[
         "spring.datasource.url=jdbc:derby:memory:myDb2;create=true",
+        "spring.flyway.enabled=false",
         "spring.datasource.driver-class-name=org.apache.derby.iapi.jdbc.AutoloadedDriver",
         "spring.jpa.database-platform=org.hibernate.community.dialect.DerbyDialect",
         "spring.jpa.hibernate.ddl-auto = create",
