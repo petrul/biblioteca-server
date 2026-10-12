@@ -23,11 +23,7 @@ plugins {
     // adding native-image build time (several minutes+) to every
     // SNAPSHOT build. Spring Boot's own AOT processing kicks in
     // automatically once this plugin is present; no separate AOT plugin
-    // id is needed on Boot 3+/4.x. Milvus SDK's gRPC/Netty stack is the
-    // dependency most likely to need extra reachability-metadata hints
-    // (graalvmNative { binaries { main { ... } } }) the first time this
-    // is actually tried - not added preemptively, since guessed hints
-    // are worse than none.
+    // id is needed on Boot 3+/4.x.
     id 'org.graalvm.buildtools.native' version '1.1.11'
 }
 
@@ -83,14 +79,18 @@ tasks.named('test') {
     // The conventional test task is the complete suite: local tests plus
     // tests that exercise integration-deps. Plain `gradlew test` therefore
     // defaults to the CI profile and its integration-deps environment.
+
     useJUnitPlatform()
+
     // The store-integration tests (SearchITest et al.) create and drop their
     // own fresh collections and re-run the availability check themselves -
     // the periodic recheck must not flip `available` inside that window, or
     // the tests become a race with a moving target (observed as CI build
     // 7223: SearchITest.ann() asserting empty hits). Production keeps the
     // periodic recheck; tests get the deterministic startup-check behavior.
+
     systemProperty 'vector.search.availability-recheck.enabled', 'false'
+
     // Profile resolution itself lives in the shared tasks.withType(Test)
     // block below (applies to this task too, since it's Test-typed) -
     // nothing extra needed here.
@@ -116,6 +116,7 @@ tasks.register('integrationTest', Test) {
         includeTags 'integration-test'
     }
     shouldRunAfter tasks.named('unittest')
+
     // Profile resolution (jvmArgs too) comes from the shared
     // tasks.withType(Test) block below - this task is Test-typed too.
     // Same reasoning as the test task above: the store-integration tests
@@ -235,9 +236,11 @@ dependencies {
 	// resolves (7.4.1.Final today) because Boot does not manage this
 	// artifact itself.
 	implementation('org.hibernate.orm:hibernate-graalvm:7.4.1.Final')
+
 	// DerbyDialect isn't in hibernate-core (unlike the old MySQLDialect) -
 	// Hibernate 6+ moved less-common dialects into this separate module.
 	implementation('org.hibernate.orm:hibernate-community-dialects:7.4.1.Final')
+
 	// Same minimal role as wavelen-market-data's own Flyway adoption: ddl-auto
 	// (application.properties) keeps doing the routine day-to-day schema
 	// work, Flyway is only for the rare fix-forward migration when
@@ -282,10 +285,12 @@ dependencies {
     // declarations beat the BOM's managed version, so pin derbyshared
     // itself, on both configurations that carry the Derby jars.
     runtimeOnly 'org.apache.derby:derbyshared:10.17.1.0'
+
     // Derby Network Server client - was mysql:mysql-connector-java. Just
     // the client jar: this app is a client of a standalone Derby Network
     // Server (see docker/biblioteca's derby service), never embedded.
     runtimeOnly 'org.apache.derby:derbyclient:10.17.1.0'
+
     // PostgreSQL JDBC driver - the runtime engine per the postgres
     // migration (DB_URL's prefix decides the engine, see DbEngineDefaults).
     // Stays beside derbyclient until the Derby runtime is fully retired:
