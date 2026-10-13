@@ -109,9 +109,9 @@ public class GraphQLJpaConfig {
                             authorize(entity, admins);
                             var idType = entity.getIdType().getJavaType();
                             Object id = idType == Long.class ? Long.valueOf(env.<String>getArgument("id"))
-                                    : idType == java.util.UUID.class ? java.util.UUID.fromString(env.<String>getArgument("id"))
+                                    : idType == java.util.UUID.class ? parseUuid(env.<String>getArgument("id"))
                                     : env.getArgument("id");
-                            return project(repo.findById(id).orElse(null), env.getSelectionSet());
+                            return id == null ? null : project(repo.findById(id).orElse(null), env.getSelectionSet());
                         });
                         graphql.schema.DataFetcher<Object> many = env -> transaction.execute(status -> {
                             authorize(entity, admins);
@@ -165,6 +165,11 @@ public class GraphQLJpaConfig {
             else if (attr.isAssociation()) type = outputType(attr.getJavaType(), polymorphic);
             schema.append(attr.getName()).append(": ").append(type).append('\n');
         });
+    }
+
+    /** A malformed id simply matches nothing. */
+    private static java.util.UUID parseUuid(String id) {
+        try { return java.util.UUID.fromString(id); } catch (IllegalArgumentException e) { return null; }
     }
 
     private static String graphQlType(Attribute<?, ?> attr) {

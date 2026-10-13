@@ -103,7 +103,7 @@ class DivCollectionServiceTest {
         final collections = this.divCollectionService.listCollections(this.user)
         assert collections.size() == 1
         assert collections.first().name == DivCollection.FAVORITES_NAME
-        assert collections.first().isFavorites
+        assert collections.first().favorites
     }
 
     @Test
@@ -211,7 +211,7 @@ class DivCollectionServiceTest {
     void userCollectionCanBeRenamedAndItsItemsReordered() {
         final col = this.divCollectionService.createCollection(this.user, "sortable_" + System.nanoTime())
         final a = this.divCollectionService.addDiv(this.user, col.id, this.opus.completePath)
-        final b = this.divCollectionService.addFragment(this.user, col.id, this.opus.completePath, "1", "1")
+        final b = this.divCollectionService.addFragment(this.user, col.id, this.opus.completePath, "${this.leafStep}.0", "${this.leafStep}.5")
         assert this.divCollectionService.getCollection(this.user, col.id).items*.id == [a.id, b.id]
 
         this.divCollectionService.reorderItems(this.user, col.id, [b.id, a.id])
