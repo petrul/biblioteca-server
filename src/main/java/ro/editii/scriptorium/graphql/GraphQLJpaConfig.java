@@ -107,8 +107,10 @@ public class GraphQLJpaConfig {
                         var name = Introspector.decapitalize(entity.getName());
                         graphql.schema.DataFetcher<Object> single = env -> transaction.execute(status -> {
                             authorize(entity, admins);
-                            var id = entity.getIdType().getJavaType() == Long.class
-                                    ? Long.valueOf(env.<String>getArgument("id")) : env.getArgument("id");
+                            var idType = entity.getIdType().getJavaType();
+                            Object id = idType == Long.class ? Long.valueOf(env.<String>getArgument("id"))
+                                    : idType == java.util.UUID.class ? java.util.UUID.fromString(env.<String>getArgument("id"))
+                                    : env.getArgument("id");
                             return project(repo.findById(id).orElse(null), env.getSelectionSet());
                         });
                         graphql.schema.DataFetcher<Object> many = env -> transaction.execute(status -> {
