@@ -6,13 +6,14 @@ import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.OneToMany;
 import jakarta.persistence.OrderBy;
-import jakarta.persistence.SequenceGenerator;
 import jakarta.persistence.Table;
 import jakarta.persistence.UniqueConstraint;
 import jakarta.validation.constraints.Size;
@@ -20,12 +21,17 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
+import ro.editii.scriptorium.collection.CollectionKind;
+import ro.editii.scriptorium.collection.ItemCollection;
 
 import java.io.Serializable;
 import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
+import java.util.UUID;
 
 /**
  * A user-curated grouping of TeiDivs and/or Fragments (see DivCollectionItem) -
@@ -42,19 +48,20 @@ import java.util.List;
  * "favorites" for the same owner.
  */
 @Entity
-@Table(uniqueConstraints = @UniqueConstraint(columnNames = {"owner_id", "name"}))
+@Table(name = "book_collection", uniqueConstraints = @UniqueConstraint(columnNames = {"owner_id", "name"}))
 @Data
 @Builder @NoArgsConstructor @AllArgsConstructor
 @JsonInclude(JsonInclude.Include.NON_NULL)
-public class DivCollection implements Serializable {
+public class DivCollection implements Serializable, ItemCollection {
 
     public static final String FAVORITES_NAME = "favorites";
     public static final int NAME_MAX_LENGTH = 200;
 
     @Id
-    @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "div_collection_seq")
-    @SequenceGenerator(name = "div_collection_seq", sequenceName = "div_collection_seq", allocationSize = 50)
-    Long id;
+    @GeneratedValue(strategy = GenerationType.UUID)
+    @JdbcTypeCode(SqlTypes.VARCHAR)
+    @Column(length = 36)
+    UUID id;
 
     @ManyToOne(optional = false, fetch = FetchType.EAGER)
     @JsonIgnore
@@ -64,8 +71,18 @@ public class DivCollection implements Serializable {
     @Size(max = NAME_MAX_LENGTH)
     String name;
 
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 16)
     @Builder.Default
-    boolean isFavorites = false;
+    CollectionKind kind = CollectionKind.USER;
+
+    // SEARCH collections only: what was searched (the name defaults from it
+    // but is user-editable) and the search options as a JSON object.
+    @Column(length = 500)
+    String searchQuery;
+
+    @Column(length = 4000)
+    String searchParams;
 
     @Builder.Default
     Timestamp createdAt = new Timestamp(new Date().getTime());
@@ -76,6 +93,10 @@ public class DivCollection implements Serializable {
     // own - lazy would throw LazyInitializationException there.
     @Builder.Default
     @OneToMany(mappedBy = "collection", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.EAGER)
-    @OrderBy("addedAt asc")
+    @OrderBy("sortOrder asc, addedAt asc")
     List<DivCollectionItem> items = new ArrayList<>();
+
+    public boolean isFavorites() {
+        return kind == CollectionKind.FAVORITES;
+    }
 }

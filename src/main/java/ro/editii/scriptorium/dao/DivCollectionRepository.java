@@ -7,14 +7,16 @@ import ro.editii.scriptorium.model.AppUser;
 import ro.editii.scriptorium.model.DivCollection;
 
 import java.util.List;
+import java.util.UUID;
 import java.util.Optional;
 
 @RepositoryRestResource(exported = false)
 @Repository
-public interface DivCollectionRepository extends JpaRepository<DivCollection, Long> {
+public interface DivCollectionRepository extends JpaRepository<DivCollection, UUID> {
     List<DivCollection> findByOwner(AppUser owner);
 
     Optional<DivCollection> findByOwnerAndName(AppUser owner, String name);
 
+    Optional<DivCollection> findByOwnerAndId(AppUser owner, UUID id);
     boolean existsByOwnerAndName(AppUser owner, String name);
 }

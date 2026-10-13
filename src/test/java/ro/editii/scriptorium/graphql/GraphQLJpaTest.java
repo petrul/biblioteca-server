@@ -88,7 +88,7 @@ class GraphQLJpaTest {
             em.persist(relocation);
             var user = AppUser.builder().username(author.getStrId()).passwordHash("secret").googleSub(author.getStrId()).build();
             em.persist(user); userId = user.getId();
-            var collection = DivCollection.builder().owner(user).name("favorites").isFavorites(true).build();
+            var collection = DivCollection.builder().owner(user).name("favorites").kind(ro.editii.scriptorium.collection.CollectionKind.FAVORITES).build();
             em.persist(collection);
             var stat = ro.editii.scriptorium.embedding.EmbeddingBatchStat.builder().totalChars(3_000_000_000L).build();
             em.persist(stat);
@@ -146,9 +146,9 @@ class GraphQLJpaTest {
             assertTrue(query("{ " + name + "List { id } }", null).has("errors"));
             assertTrue(query("{ " + name + "List { id } }", "reader").has("errors"));
         }
-        var result = query("{ appUser(id: \"" + userId + "\") { username } divCollectionList { isFavorites owner { username } } }", "admin");
+        var result = query("{ appUser(id: \"" + userId + "\") { username } divCollectionList { kind owner { username } } }", "admin");
         assertFalse(result.has("errors"), result.toString());
-        assertTrue(result.at("/data/divCollectionList/0/isFavorites").asBoolean());
+        assertEquals("FAVORITES", result.at("/data/divCollectionList/0/kind").asText());
         assertTrue(query("{ appUser(id: \"" + userId + "\") { passwordHash } }", "admin").has("errors"));
         assertTrue(query("{ appUserList(filter: {googleSub: \"x\"}) { id } }", "admin").has("errors"));
     }

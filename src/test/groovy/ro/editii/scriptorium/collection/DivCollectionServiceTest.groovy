@@ -195,4 +195,47 @@ class DivCollectionServiceTest {
         }
         throw new AssertionError("expected an exception but none was thrown")
     }
+
+    @Test
+    void collectionsHaveUuidIdsAndAKind() {
+        final fav = this.divCollectionService.createFavoritesIfMissing(this.user)
+        assert fav.id instanceof UUID
+        assert fav.kind == CollectionKind.FAVORITES
+        final mine = this.divCollectionService.createCollection(this.user, "kinds_" + System.nanoTime())
+        assert mine.id instanceof UUID
+        assert mine.kind == CollectionKind.USER
+        assert this.divCollectionService.getCollection(this.user, mine.id).name == mine.name
+    }
+
+    @Test
+    void userCollectionCanBeRenamedAndItsItemsReordered() {
+        final col = this.divCollectionService.createCollection(this.user, "sortable_" + System.nanoTime())
+        final a = this.divCollectionService.addDiv(this.user, col.id, this.opus.completePath)
+        final b = this.divCollectionService.addFragment(this.user, col.id, this.opus.completePath, "1", "1")
+        assert this.divCollectionService.getCollection(this.user, col.id).items*.id == [a.id, b.id]
+
+        this.divCollectionService.reorderItems(this.user, col.id, [b.id, a.id])
+        assert this.divCollectionService.getCollection(this.user, col.id).items*.id == [b.id, a.id]
+
+        final newName = "renamed_" + System.nanoTime()
+        assert this.divCollectionService.renameCollection(this.user, col.id, newName).name == newName
+        shouldFail { this.divCollectionService.renameCollection(this.user, this.divCollectionService.createFavoritesIfMissing(this.user).id, "x") }
+    }
+
+    @Test
+    void savedSearchDefaultsItsNameFromTheQueryAndStaysEditable() {
+        final query = "to be or not " + System.nanoTime()
+        final hits = [new DivCollectionService.SearchHitToSave(this.opus.completePath, "to be", 0.9f)]
+        final saved = this.divCollectionService.saveSearch(this.user, null, query, '{"mode":"lucene"}', hits)
+        assert saved.kind == CollectionKind.SEARCH
+        assert saved.name == query
+        assert saved.searchQuery == query
+        assert saved.items.size() == 1
+        assert saved.items[0].kind == DivCollectionItem.Kind.SNIPPET
+        assert saved.items[0].snippet == "to be"
+
+        final again = this.divCollectionService.saveSearch(this.user, null, query, null, hits)
+        assert again.name == query + " (2)"
+        assert this.divCollectionService.renameCollection(this.user, saved.id, "Hamlet quotes").name == "Hamlet quotes"
+    }
 }

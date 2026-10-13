@@ -54,6 +54,7 @@ class GraphQLCatalogTest {
     @Autowired TeiDivRepository divRepository;
     @PersistenceContext EntityManager em;
     final ObjectMapper json = new ObjectMapper();
+    java.util.UUID collectionId;
     String strId, path, chapterPath, collectionName, adminOnlyName, repoName;
     Long divId;
 
@@ -74,7 +75,7 @@ class GraphQLCatalogTest {
             var chapter = new TeiDiv(); chapter.setTeiFile(file); chapter.setHead("Chapter"); chapter.setParent(root);
             chapter.setUrlFragment("chapter"); chapter.setXpath("/tei:div[1]/tei:div[1]"); em.persist(chapter);
             var reader = user("reader"); var admin = user("admin");
-            var own = DivCollection.builder().owner(reader).name(collectionName).isFavorites(true).build(); em.persist(own);
+            var own = DivCollection.builder().owner(reader).name(collectionName).kind(CollectionKind.FAVORITES).build(); em.persist(own); collectionId = own.getId();
             em.persist(DivCollectionItem.builder().collection(own).kind(DivCollectionItem.Kind.DIV).divPath(path).build());
             em.persist(DivCollection.builder().owner(admin).name(adminOnlyName).build());
             em.persist(ReadingProgress.builder().user(reader).opusPath(path).divPath(chapterPath).touchCount(3).attentionSeconds(123).build());
@@ -167,7 +168,7 @@ class GraphQLCatalogTest {
         assertTrue(query("{ myCollections { name } }", null).has("errors"));
         assertTrue(query("{ myReadingProgress { opusPath } }", null).has("errors"));
         assertTrue(query("{ myPreferences }", null).has("errors"));
-        var response = query("{ myCollection(name: \"" + collectionName + "\") { name isFavorites items { divPath divHead } } " +
+        var response = query("{ myCollection(id: \"" + collectionId + "\") { name kind isFavorites items { divPath divHead } } " +
                 "myCollections { name } myWorkReadingProgress(opusPath: \"" + path + "\") { opusPath read attentionSeconds } " +
                 "myReadingProgress { opusPath attentionSeconds } myPreferences }", "reader");
         noErrors(response);

@@ -85,7 +85,7 @@ public class GraphQLCatalogConfig {
                         .dataFetcher("repoNames", env -> collections.getObject().repoNames())
                         .dataFetcher("featuredWorks", env -> collections.getObject().featured(baseUri()))
                         .dataFetcher("myCollections", env -> collections.getObject().mine(currentUser()))
-                        .dataFetcher("myCollection", env -> collections.getObject().get(currentUser(), env.getArgument("name")))
+                        .dataFetcher("myCollection", env -> collections.getObject().get(currentUser(), java.util.UUID.fromString(env.getArgument("id"))))
                         .dataFetcher("myReadingProgress", env -> progress.getObject().mine(currentUser()))
                         .dataFetcher("myWorkReadingProgress", env -> progress.getObject().one(currentUser(), env.getArgument("opusPath")))
                         .dataFetcher("myPreferences", env -> preferences.getObject().get(currentUser()))

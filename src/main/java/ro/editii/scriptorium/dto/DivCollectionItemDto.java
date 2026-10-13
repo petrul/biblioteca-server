@@ -6,18 +6,23 @@ import lombok.Data;
 import ro.editii.scriptorium.model.DivCollectionItem;
 
 import java.sql.Timestamp;
+import java.util.UUID;
+import ro.editii.scriptorium.collection.CollectionEntry;
 import java.util.List;
 
 @Data @Builder
 @JsonInclude(JsonInclude.Include.NON_NULL)
-public class DivCollectionItemDto {
-    Long id;
+public class DivCollectionItemDto implements CollectionEntry {
+    UUID id;
     String kind; // "DIV" or "FRAGMENT"
     String divPath;
     String divHead;
     String fragmentStart;
     String fragmentEnd;
     List<String> fragmentText; // resolved quote paragraphs - FRAGMENT items only
+    String snippet; // SNIPPET items: the matched excerpt
+    Float score;
+    int sortOrder;
     Timestamp addedAt;
 
     // divHead isn't stored on the entity (divPath is - see its own doc
@@ -33,6 +38,9 @@ public class DivCollectionItemDto {
                 .fragmentStart(item.getFragmentStart())
                 .fragmentEnd(item.getFragmentEnd())
                 .fragmentText(resolvedFragmentText)
+                .snippet(item.getSnippet())
+                .score(item.getScore())
+                .sortOrder(item.getSortOrder())
                 .addedAt(item.getAddedAt())
                 .build();
     }

@@ -22,7 +22,7 @@ extend type Query {
     repoNames: [String!]!
     featuredWorks: [TeiDivDto!]!
     myCollections: [DivCollectionDto!]!
-    myCollection(name: String!): DivCollectionDto
+    myCollection(id: ID!): DivCollectionDto
     myReadingProgress: [ReadingProgressDto!]!
     myWorkReadingProgress(opusPath: String!): ReadingProgressDto
     myPreferences: JSON!
@@ -152,7 +152,10 @@ type BookMetadataDto {
 type DivCollectionDto {
     id: ID
     name: String
+    kind: String
     isFavorites: Boolean
+    searchQuery: String
+    searchParams: String
     createdAt: String
     items: [DivCollectionItemDto!]
 }
@@ -165,6 +168,9 @@ type DivCollectionItemDto {
     fragmentStart: String
     fragmentEnd: String
     fragmentText: [String!]
+    snippet: String
+    score: Float
+    sortOrder: Int
     addedAt: String
 }
 

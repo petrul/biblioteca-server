@@ -27,6 +27,7 @@ import ro.editii.scriptorium.model.DivCollection;
 import org.springframework.web.util.UriComponentsBuilder;
 
 import java.util.List;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
 /**
@@ -69,7 +70,10 @@ public class DivCollectionRestController {
         return DivCollectionDto.builder()
                 .id(collection.getId())
                 .name(collection.getName())
+                .kind(collection.getKind())
                 .isFavorites(collection.isFavorites())
+                .searchQuery(collection.getSearchQuery())
+                .searchParams(collection.getSearchParams())
                 .createdAt(collection.getCreatedAt())
                 .items(items)
                 .build();
@@ -120,6 +124,24 @@ public class DivCollectionRestController {
         String end;   // fragment only
     }
 
+    @Value
+    public static class RenameRequest {
+        String name;
+    }
+
+    @Value
+    public static class ReorderRequest {
+        List<UUID> itemIds;
+    }
+
+    @Value
+    public static class SaveSearchRequest {
+        String name; // optional - defaults to the query
+        String query;
+        String params; // JSON of the search options
+        List<DivCollectionService.SearchHitToSave> hits;
+    }
+
     @GetMapping("/mine")
     @Transactional(readOnly = true, isolation = Isolation.READ_UNCOMMITTED)
     public List<DivCollectionDto> mine(Authentication authentication) {
@@ -138,34 +160,34 @@ public class DivCollectionRestController {
         }
     }
 
-    @GetMapping("/mine/{name}")
+    @GetMapping("/mine/{id}")
     @Transactional(readOnly = true, isolation = Isolation.READ_UNCOMMITTED)
-    public DivCollectionDto get(Authentication authentication, @PathVariable String name) {
+    public DivCollectionDto get(Authentication authentication, @PathVariable UUID id) {
         try {
-            return toDto(this.divCollectionService.getCollection(currentUser(authentication), name));
+            return toDto(this.divCollectionService.getCollection(currentUser(authentication), id));
         } catch (IllegalArgumentException e) {
             RestUtil.throw404(e.getMessage());
             return null;
         }
     }
 
-    @DeleteMapping("/mine/{name}")
-    public void delete(Authentication authentication, @PathVariable String name) {
+    @DeleteMapping("/mine/{id}")
+    public void delete(Authentication authentication, @PathVariable UUID id) {
         try {
-            this.divCollectionService.deleteCollection(currentUser(authentication), name);
+            this.divCollectionService.deleteCollection(currentUser(authentication), id);
         } catch (IllegalArgumentException e) {
             RestUtil.throw400(e.getMessage());
         }
     }
 
-    @PostMapping("/mine/{name}/items")
-    public DivCollectionItemDto addItem(Authentication authentication, @PathVariable String name,
+    @PostMapping("/mine/{id}/items")
+    public DivCollectionItemDto addItem(Authentication authentication, @PathVariable UUID id,
                                       @RequestBody AddItemRequest request) {
         try {
             final AppUser owner = currentUser(authentication);
             final DivCollectionItem item = "fragment".equalsIgnoreCase(request.getType())
-                    ? this.divCollectionService.addFragment(owner, name, request.getPath(), request.getStart(), request.getEnd())
-                    : this.divCollectionService.addDiv(owner, name, request.getPath());
+                    ? this.divCollectionService.addFragment(owner, id, request.getPath(), request.getStart(), request.getEnd())
+                    : this.divCollectionService.addDiv(owner, id, request.getPath());
             return toDto(item);
         } catch (IllegalArgumentException e) {
             RestUtil.throw400(e.getMessage());
@@ -173,12 +195,43 @@ public class DivCollectionRestController {
         }
     }
 
-    @DeleteMapping("/mine/{name}/items/{itemId}")
-    public void removeItem(Authentication authentication, @PathVariable String name, @PathVariable Long itemId) {
+    @DeleteMapping("/mine/{id}/items/{itemId}")
+    public void removeItem(Authentication authentication, @PathVariable UUID id, @PathVariable UUID itemId) {
         try {
-            this.divCollectionService.removeItem(currentUser(authentication), name, itemId);
+            this.divCollectionService.removeItem(currentUser(authentication), id, itemId);
         } catch (IllegalArgumentException e) {
             RestUtil.throw400(e.getMessage());
+        }
+    }
+
+    @PatchMapping("/mine/{id}")
+    public DivCollectionDto rename(Authentication authentication, @PathVariable UUID id, @RequestBody RenameRequest request) {
+        try {
+            return toDto(this.divCollectionService.renameCollection(currentUser(authentication), id, request.getName()));
+        } catch (IllegalArgumentException e) {
+            RestUtil.throw400(e.getMessage());
+            return null;
+        }
+    }
+
+    @PutMapping("/mine/{id}/order")
+    public DivCollectionDto reorder(Authentication authentication, @PathVariable UUID id, @RequestBody ReorderRequest request) {
+        try {
+            return toDto(this.divCollectionService.reorderItems(currentUser(authentication), id, request.getItemIds()));
+        } catch (IllegalArgumentException e) {
+            RestUtil.throw400(e.getMessage());
+            return null;
+        }
+    }
+
+    @PostMapping("/mine/searches")
+    public DivCollectionDto saveSearch(Authentication authentication, @RequestBody SaveSearchRequest request) {
+        try {
+            return toDto(this.divCollectionService.saveSearch(currentUser(authentication),
+                    request.getName(), request.getQuery(), request.getParams(), request.getHits()));
+        } catch (IllegalArgumentException e) {
+            RestUtil.throw400(e.getMessage());
+            return null;
         }
     }
 
