@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <title>Server error — Biblioteca</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no" />
+    <meta name="robots" content="noindex, nofollow" />
+
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600&family=Plus+Jakarta+Sans:wght@400;600&display=swap" rel="stylesheet" />
+
+    <style>
+        :root {
+            --emerald: #059669;
+            --ink: #08231c;
+            --paper: #fcf9f2;
+        }
+        * { box-sizing: border-box; }
+        html, body {
+            margin: 0;
+            padding: 0;
+            height: 100%;
+            background: var(--paper);
+            color: var(--ink);
+            font-family: "Plus Jakarta Sans", system-ui, sans-serif;
+        }
+        .page {
+            min-height: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            padding: 2rem 1.5rem 3rem;
+        }
+        .art {
+            max-width: min(420px, 80vw);
+            width: 100%;
+            height: auto;
+            border-radius: 1rem;
+            box-shadow: 0 20px 50px -20px rgba(8, 35, 28, 0.35);
+            margin-bottom: 2rem;
+        }
+        h1 {
+            font-family: "Cinzel", serif;
+            font-size: clamp(1.5rem, 4vw, 2.25rem);
+            font-weight: 600;
+            letter-spacing: 0.02em;
+            margin: 0 0 0.5rem;
+        }
+        p {
+            max-width: 32rem;
+            line-height: 1.6;
+            opacity: 0.8;
+            margin: 0 0 2rem;
+        }
+        .actions {
+            display: flex;
+            gap: 0.75rem;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+        a.btn {
+            display: inline-flex;
+            align-items: center;
+            padding: 0.7rem 1.4rem;
+            border-radius: 0.75rem;
+            text-decoration: none;
+            font-weight: 600;
+            font-size: 0.9rem;
+        }
+        a.btn.primary {
+            background: var(--emerald);
+            color: #fff;
+        }
+        a.btn.secondary {
+            background: transparent;
+            color: var(--ink);
+            border: 1px solid rgba(8, 35, 28, 0.2);
+        }
+    </style>
+</head>
+<body>
+<div class="page">
+    <img class="art" src="/500.jpeg" alt="A server error among the library stacks" />
+
+    <h1>The stacks are temporarily unsettled</h1>
+    <p>Something went wrong while serving this page. Please try again in a moment. (5xx)</p>
+
+    <div class="actions">
+        <a class="btn primary" href="/app">Back to the library</a>
+        <a class="btn secondary" href="/">Try again</a>
+    </div>
+</div>
+</body>
+</html>
