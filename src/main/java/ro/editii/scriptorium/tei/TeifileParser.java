@@ -284,8 +284,8 @@ public class TeifileParser {
         final NodeList descendants = opusNode.getChildNodes();
         collectParagraphs(descendants, paragraphs);
         if (paragraphs.isEmpty()) {
-            final String text = opusNode.getTextContent();
-            if (text != null && !text.isBlank()) paragraphs.add(text);
+            final String text = visibleText(opusNode);
+            if (!text.isBlank()) paragraphs.add(text);
         }
         final String normalized = paragraphs.stream().limit(2)
                 .map(it -> it.replaceAll("\\s+", " ").trim())
@@ -301,12 +301,37 @@ public class TeifileParser {
             if (node.getNodeType() == Node.ELEMENT_NODE &&
                     ("p".equals(node.getLocalName()) || "p".equals(node.getNodeName()) ||
                             node.getNodeName().endsWith(":p"))) {
-                paragraphs.add(node.getTextContent());
+                final String text = visibleText(node);
+                // A paragraph holding only an image has no description text.
+                if (!text.isBlank()) paragraphs.add(text);
             } else if (node.hasChildNodes()) {
                 collectParagraphs(node.getChildNodes(), paragraphs);
             }
             if (paragraphs.size() >= 2) return;
         }
+    }
+
+    /**
+     * Text content without embedded media: a TEI figure carries its image as
+     * base64 text inside binaryObject, which is not prose.
+     */
+    private static String visibleText(Node node) {
+        final StringBuilder text = new StringBuilder();
+        appendVisibleText(node, text);
+        return text.toString();
+    }
+
+    private static void appendVisibleText(Node node, StringBuilder text) {
+        if (node.getNodeType() == Node.ELEMENT_NODE) {
+            final String name = node.getLocalName() != null ? node.getLocalName() : node.getNodeName();
+            if ("binaryObject".equals(name) || "figure".equals(name) || "graphic".equals(name)) return;
+        }
+        if (node.getNodeType() == Node.TEXT_NODE || node.getNodeType() == Node.CDATA_SECTION_NODE) {
+            text.append(node.getNodeValue());
+            return;
+        }
+        final NodeList children = node.getChildNodes();
+        for (int i = 0; i < children.getLength(); i++) appendVisibleText(children.item(i), text);
     }
 
     private static boolean isDivNode(Node node) {
