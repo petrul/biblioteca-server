@@ -365,8 +365,15 @@ public class TeifileParser {
                     .collect(java.util.stream.Collectors.toSet());
         }
 
+        // Anonymous works all live under one author (/trad/...), across
+        // languages: the opus fragment carries its language, so the
+        // Romanian, French and Spanish Bibles read as biblia_ortodoxa_ro,
+        // la_bible_..._fr - and a same-language clash still grows more
+        // title words, as for any author.
+        final String suffix = parentDiv == null ? anonymousOpusSuffix(div) : "";
         final CandidateUrlFragmGeneratorForTeiDivHead iterable = new CandidateUrlFragmGeneratorForTeiDivHead(div.getHead());
-        for (String candidate : iterable) {
+        for (String head : iterable) {
+            final String candidate = head + suffix;
             // Root candidates are checked against same-author works (another
             // edition may already use the title); nested candidates are
             // checked against this parent's children. Each source is read
@@ -375,6 +382,14 @@ public class TeifileParser {
                 return candidate;
         }
         throw new IllegalStateException("should never get here, iterator is infinite");
+    }
+
+    /** "_ro", "_fr"... for an anonymous work's opus fragment; "" otherwise or when its language is unknown. */
+    static String anonymousOpusSuffix(TeiDiv opus) {
+        final Author author = opus.getTeiFile() == null ? null : opus.getTeiFile().getAuthor();
+        if (author == null || !author.isAnonymous() || opus.getLang() == null)
+            return "";
+        return "_" + opus.getLang().name().toLowerCase(java.util.Locale.ROOT);
     }
 
     /**

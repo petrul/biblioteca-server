@@ -113,4 +113,24 @@ class CandidateStrIdGeneratorForAuthorTest {
         assert candidates.first() == 'dostoyevskii'
     }
 
+    // All anonymous works live under /trad/... - the anonymous author's only
+    // possible strId, never trad_2, whatever language spelled it.
+    @Test
+    void theAnonymousAuthorIsOnlyEverTrad() {
+        ['Anon', 'Anónimo', 'Anonyme', 'Anonymous', 'Notar Anonymus'].each { name ->
+            final anonymous = Author.newFromOriginalNameInTeiFile(name)
+            assert iterable2list(new CandidateStrIdGeneratorForAuthor(anonymous), 5) == ['trad']
+        }
+    }
+
+    // trad is reserved: a real author of that name cannot take it first.
+    @Test
+    void noRealAuthorTakesTrad() {
+        final named = iterable2list(new CandidateStrIdGeneratorForAuthor(Author.newFromOriginalNameInTeiFile('Trad,Ion')), 3)
+        assert !named.contains('trad')
+        assert named.first() == 'trad_ion'
+
+        final oneNamed = iterable2list(new CandidateStrIdGeneratorForAuthor(Author.newFromOriginalNameInTeiFile('Trad')), 3)
+        assert oneNamed == ['trad_2', 'trad_3', 'trad_4']
+    }
 }

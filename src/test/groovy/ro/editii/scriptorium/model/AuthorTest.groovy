@@ -88,4 +88,25 @@ class AuthorTest {
         // one-named authors
         assert Author.nameIdentityKey("Platón") != Author.nameIdentityKey("Aristóteles")
     }
+
+    // Every way the corpus says "anonymous", across its languages, is the one
+    // anonymous author: a single db row (same originalNameInTeiFile), so all
+    // anonymous works are served together under /trad/...
+    @Test
+    void everyAnonymousSpellingIsTheOneAnonymousAuthor() {
+        ['Anon', 'Anonim', 'Anonimo', 'Anónimo', 'Anonyme', 'Anonymous', 'Anonymus',
+         'Notar Anonymus', 'Anonymus, Notar', '[ANON]', 'NONE', ' anon ', ''].each { name ->
+            final author = Author.newFromOriginalNameInTeiFile(name)
+            assert author.anonymous, "[$name] must be anonymous"
+            assert author.originalNameInTeiFile == Author.ANONYMOUS_AUTHOR, "[$name] must share the anonymous row"
+            assert author.visualName == Author.ANONYMOUS_DISPLAY_NAME
+        }
+    }
+
+    @Test
+    void namesThatOnlyLookAnonymousAreRealAuthors() {
+        ['Anonimescu,Ion', 'Eminescu,Mihai', 'Plato'].each { name ->
+            assert !Author.newFromOriginalNameInTeiFile(name).anonymous, "[$name] is a real author"
+        }
+    }
 }

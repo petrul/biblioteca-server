@@ -53,6 +53,10 @@ class CandidateStrIdGeneratorForAuthor_Iterator implements Iterator<String> {
         this.author = author;
         final String last_name_lower = Util.urlFriendify(author.getLastName());
 
+        /* the anonymous author: all anonymous works live under /trad/... */
+        if (author.isAnonymous()) {
+            firstPropositions.add(Author.TRADITION_STR_ID);
+        } else
         /* author is specified as special author */
         if (this.isSpecialAuthor()) {
             assert author.getStrId() != null;
@@ -70,7 +74,9 @@ class CandidateStrIdGeneratorForAuthor_Iterator implements Iterator<String> {
 
         }
 
-        this.lastProposition = this.firstPropositions.get(0);
+        // A one-named author whose only proposition is forbidden (or reserved,
+        // like trad) has none at all: number from the plain name instead.
+        this.lastProposition = this.firstPropositions.isEmpty() ? last_name_lower : this.firstPropositions.get(0);
         this.iterator = firstPropositions.iterator();
     }
 
@@ -85,6 +91,11 @@ class CandidateStrIdGeneratorForAuthor_Iterator implements Iterator<String> {
         if (this.isSpecialAuthor()) { // only reaturn one value, specified in resource file special-authors.properties
             this.hasNext = false;
             return this.author.getStrId();
+        }
+
+        if (this.author.isAnonymous()) { // only trad: the /trad/... urls are a contract, never trad_2
+            this.hasNext = false;
+            return Author.TRADITION_STR_ID;
         }
 
         String maybeRecommendation = Author.RECOMMENDED_AUTHOR_MAPPINGS_REV.getProperty(this.author.getOriginalNameInTeiFile());
@@ -112,7 +123,9 @@ class CandidateStrIdGeneratorForAuthor_Iterator implements Iterator<String> {
      * some strId's (like /css, /js are protected from being author's names)
      */
     protected boolean isForbidden(String strId) {
-        return Author.FORBIDDEN_AUTHOR_NAMES.contains(strId);
+        // trad is reserved for the anonymous author, whoever is imported first
+        return Author.FORBIDDEN_AUTHOR_NAMES.contains(strId)
+                || (!this.author.isAnonymous() && Author.TRADITION_STR_ID.equals(strId));
     }
 
 
