@@ -111,6 +111,9 @@ public interface TeiDivRepository extends JpaRepository<TeiDiv, Long> {
     // through this without any filter, and rely on page boundaries staying
     // stable across separate query executions (e.g. resuming a rebuild
     // after a restart) to never skip or duplicate an opus.
+    // Transactional: TeiDiv.summary is a @Lob, which PostgreSQL only reads inside a transaction
+    // (Spring Data REST exposes this method with no surrounding one).
+    @Transactional(readOnly = true)
     @Query("select div from TeiDiv div where div.parent is null order by div.id")
     Page<TeiDiv> findOpera(Pageable pageable);
 
