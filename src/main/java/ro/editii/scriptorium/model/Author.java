@@ -20,6 +20,28 @@ import java.util.stream.Collectors;
 public class Author implements Comparable<Author>, Serializable {
 
     final public static String ANONYMOUS_AUTHOR = "[ANON]"; // the bible for ex.
+
+    /**
+     * The anonymous author's strId, so every anonymous work - the Bibles,
+     * the Quran, folk poetry, epics - is served together under /trad/...
+     * (trad as in tradition). See newFromOriginalNameInTeiFile for the TEI
+     * spellings that count as anonymous.
+     */
+    public static final String TRADITION_STR_ID = "trad";
+
+    /** How the anonymous author is shown (Author page, "Authored by"). */
+    public static final String ANONYMOUS_DISPLAY_NAME = "Anonymous";
+
+    /**
+     * TEI author names that mean "no author", per corpus language, folded
+     * like nameIdentityKey (lower case, no diacritics, spaces collapsed):
+     * Anon, Anonim, Anonimo/Anónimo, Anonyme, Anonymous, Anonymus (and the
+     * Gesta Hungarorum's "Notar Anonymus"), besides the parser's own
+     * [ANON]/NONE markers.
+     */
+    static final Set<String> ANONYMOUS_NAMES = Set.of(
+            "anon", "anonim", "anonimo", "anonyme", "anonymous", "anonymus",
+            "notar anonymus", "anonymus notar", "[anon]", "none");
     public static final int NAME_COL_MAX_LENGTH = 255;
 
     // mapping  caragiale => Caragiale,Ion-Luca
@@ -160,6 +182,11 @@ public class Author implements Comparable<Author>, Serializable {
         if (Author.SPECIAL_AUTHORS.containsKey(originalNameInTeiFile))
             return Author.SPECIAL_AUTHORS.get(originalNameInTeiFile);
 
+        // Every spelling of "anonymous" is the one anonymous author, so all
+        // anonymous works share a single row (and its strId, trad).
+        if (isAnonymousName(originalNameInTeiFile))
+            return newAnonymous();
+
         final Author author = new Author();
 
         List<String> strings;
@@ -214,6 +241,27 @@ public class Author implements Comparable<Author>, Serializable {
         return author;
     }
 
+
+    /** Whether a TEI author name is one of the corpus's ways of saying "anonymous". */
+    public static boolean isAnonymousName(String originalNameInTeiFile) {
+        if (originalNameInTeiFile == null || originalNameInTeiFile.isBlank())
+            return true;
+        final String folded = java.text.Normalizer
+                .normalize(originalNameInTeiFile.trim().toLowerCase(java.util.Locale.ROOT), java.text.Normalizer.Form.NFD)
+                .replaceAll("\\p{M}", "")
+                .replaceAll("[\\s,]+", " ")
+                .trim();
+        return ANONYMOUS_NAMES.contains(folded);
+    }
+
+    /** The anonymous author, as stored: one row for every anonymous TEI spelling. */
+    public static Author newAnonymous() {
+        final Author author = new Author();
+        author.setLastName(ANONYMOUS_AUTHOR);
+        author.setDisplayName(ANONYMOUS_DISPLAY_NAME);
+        author.setOriginalNameInTeiFile(ANONYMOUS_AUTHOR);
+        return author;
+    }
 
     protected static String recomposeOriginalFromParsedAuthor(Author author) {
         if (author.isAnonymous() || author.isOneNamed())
