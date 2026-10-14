@@ -160,27 +160,7 @@ across reboots.
 ```bash
 ./gradlew docker            # build editii/biblioteca-server:<version> locally
 ./gradlew docker-publish    # also push to the mini.local:5000 registry
-rake derby-ci               # the Derby image (docker/derby), built + published
 ```
-
-### Apache Derby Network Server image
-
-`docker/derby/` is the buildable source of truth for the standalone Derby
-Network Server this app expects (no official Derby image exists on Docker Hub):
-
-```bash
-docker build -f docker/derby/Dockerfile -t biblioteca-derby docker/derby
-docker run -d -p 1527:1527 -v <data-dir>:/var/lib/derby \
-    -e DB_USER=... -e DB_PASSWORD=... biblioteca-derby
-```
-
-Credentials are required (the entrypoint refuses to start without them and
-configures Derby's BUILTIN authentication), and `DB_URL` then points at
-`jdbc:derby://<host>:1527/<db>;create=true;user=<user>;password=<password>`.
-The image tag follows the Derby version, kept in sync with the `derbyclient`
-dependency in `build.gradle` — never pinned independently.
-
----
 
 ## Authentication (Google One Tap)
 
