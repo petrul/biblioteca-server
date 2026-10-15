@@ -685,7 +685,28 @@ public class LuceneIndexService {
     public List<LuceneHit> search(String q, int limit) {
         if (!this.isAvailable())
             return List.of();
+        // A long query (a pasted paragraph) expands into more boolean clauses
+        // than Lucene allows (maxClauseCount, 1024): rather than failing the
+        // request (it surfaced as a 500), search again with the first half of
+        // its words, until it fits.
+        String current = q;
+        while (true) {
+            try {
+                return searchOnce(current, limit);
+            } catch (IndexSearcher.TooManyClauses e) {
+                final String[] words = current.trim().split("\\s+");
+                if (words.length <= 1) {
+                    log.warn("Lucene query still has too many clauses with one word [{}]", Util.maxNCharsEllipsis(q, 40));
+                    return List.of();
+                }
+                current = String.join(" ", java.util.Arrays.copyOf(words, words.length / 2));
+                log.info("Lucene query [{}] has too many clauses; retrying with its first {} words",
+                        Util.maxNCharsEllipsis(q, 40), words.length / 2);
+            }
+        }
+    }
 
+    private List<LuceneHit> searchOnce(String q, int limit) {
         final Query query;
         try {
             final Map<String, Float> fieldsAndBoosts = searchFieldsAndBoosts();

@@ -136,6 +136,16 @@ class LuceneSearchITest {
         }
     }
 
+    // A pasted paragraph expands into more boolean clauses than Lucene
+    // allows (maxClauseCount 1024) - it used to surface as a 500. The search
+    // now retries with fewer words: still an answer, never an error.
+    @Test
+    void searchLuceneSurvivesAQueryWithTooManyClauses() {
+        final words = (1..400).collect { "garden$it" } + ['garden']
+        final resp = this.tbc.get_api_search_lucene(words.join(' '))
+        assert resp != null
+    }
+
     @Test
     void searchLuceneFindsDiacriticsFreeQueries() {
         // "romani" (plain ASCII) should still find the paragraph in the
