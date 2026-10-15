@@ -11,6 +11,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
+import org.springframework.data.rest.webmvc.ResourceNotFoundException;
+import org.springframework.web.server.ResponseStatusException;
 import org.springframework.transaction.annotation.Transactional;
 import org.w3c.dom.Node;
 import ro.editii.scriptorium.Util;
@@ -125,6 +127,26 @@ public class DivService {
         // need it when the result came through the cache.
         attached.setTeiRepo(this.teiRepo);
         return attached;
+    }
+
+    /**
+     * Optional lookup for stored collection paths, which may no longer exist.
+     * Catch expected misses inside this transactional boundary: a miss escaping
+     * getByPath's proxy would mark the collection read rollback-only even when
+     * its DTO mapper catches it. Self-invocation keeps that exception here.
+     */
+    @Transactional(readOnly = true)
+    public Optional<TeiDiv> findDivByPath(String path) {
+        try {
+            final TeiElem elem = this.getByPath(path);
+            return elem instanceof TeiDiv div ? Optional.of(div) : Optional.empty();
+        } catch (ResourceNotFoundException e) {
+            return Optional.empty();
+        } catch (ResponseStatusException e) {
+            if (e.getStatusCode().value() == 400 || e.getStatusCode().value() == 404)
+                return Optional.empty();
+            throw e;
+        }
     }
 
     /**

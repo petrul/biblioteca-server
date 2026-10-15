@@ -10,6 +10,8 @@ import org.springframework.boot.kafka.autoconfigure.KafkaAutoConfiguration
 import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.data.domain.PageRequest
 import org.springframework.jdbc.core.JdbcTemplate
+import org.springframework.security.authentication.TestingAuthenticationToken
+import ro.editii.scriptorium.rest.DivCollectionRestController
 import org.springframework.test.context.TestPropertySource
 import ro.editii.scriptorium.MultilangTeiRepoConfig
 import ro.editii.scriptorium.TestConfig
@@ -60,6 +62,7 @@ import static ro.editii.scriptorium.TestUtils.TEI_ELEM
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class DivCollectionServiceTest {
 
+    @Autowired DivCollectionRestController collectionController
     @Autowired DivCollectionService divCollectionService
     @Autowired AppUserRegistrationService registrationService
     @Autowired AdminService adminService
@@ -185,6 +188,30 @@ class DivCollectionServiceTest {
 
         // The other user's own favorites is separate too.
         assert this.divCollectionService.listCollections(otherUser).size() == 1
+    }
+
+    @Test
+    void staleSavedPathsDoNotRollBackCollectionListingOrDetail() {
+        final owner = this.registrationService.register("stale_" + System.nanoTime(), "correcthorsebattery")
+        final validPath = this.opus.completePath
+        final stalePaths = ["nobody/no_such_work", validPath + "/no_such_chapter", validPath + "/_999999"]
+        final paths = stalePaths + [validPath]
+        final saved = this.divCollectionService.saveSearch(owner, "Saved results", "reading", "{}",
+                paths.collect { new DivCollectionService.SearchHitToSave(it, "saved excerpt", 0.5f) })
+        final authentication = new TestingAuthenticationToken(owner.username, null)
+
+        // Both methods run through their real Spring transaction proxies.
+        // Before the fix each finishes with UnexpectedRollbackException,
+        // despite toDto catching the missing-work/chapter exception.
+        final listing = this.collectionController.mine(authentication).find { it.id == saved.id }
+        final detail = this.collectionController.get(authentication, saved.id)
+        [listing, detail].each { dto ->
+            assert dto.items*.divPath == paths
+            assert dto.items*.id == saved.items*.id
+            assert dto.items*.snippet == ["saved excerpt"] * paths.size()
+            assert dto.items.take(stalePaths.size()).every { it.divHead == null }
+            assert dto.items.last().divHead == this.opus.head
+        }
     }
 
     static Exception shouldFail(Closure closure) {

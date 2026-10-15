@@ -14,6 +14,7 @@ import ro.editii.scriptorium.model.DivCollection;
 import ro.editii.scriptorium.service.DivService;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 @Service
@@ -238,6 +239,11 @@ public class DivCollectionService {
     public DivCollectionItem addDivToFavorites(AppUser owner, String divPath) {
         this.createFavoritesIfMissing(owner);
         return this.addDiv(owner, DivCollection.FAVORITES_NAME, divPath);
+    }
+
+    /** Optional read of a saved path; mutations still use strict resolveDiv. */
+    public Optional<TeiDiv> findDiv(String divPath) {
+        return this.divService.findDivByPath(divPath);
     }
 
     /** Public: DivCollectionRestController's own toDto also needs to resolve items' divPath back to a live TeiDiv. */

@@ -86,7 +86,7 @@ public class DivCollectionRestController {
         // below: the item is still listed, just without a live head/text.
         TeiDiv div = null;
         try {
-            div = this.divCollectionService.resolveDiv(item.getDivPath());
+            div = this.divCollectionService.findDiv(item.getDivPath()).orElse(null);
         } catch (Exception e) {
             log.warn("Could not resolve item {}'s divPath {}: {}", item.getId(), item.getDivPath(), e.getMessage());
         }
