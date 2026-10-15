@@ -524,20 +524,17 @@ into every family manifest — `build.gradle` here, `package.json` in the
 vectorizer, reader and covers — so every repo knows which named family
 release its `-SNAPSHOT` is heading toward (the family cuts together, one
 name per family quartet; `git-do-release.sh` bumps the versions). The next
-release is *Dusky Discus*.
+release is *Ethereal Exedra*.
 
-The current release is *Creative Cella*, cut 2026-10-12 — one row per
-`biblioteca-*` project: the stable it shipped in this release, and the
-short SHA of that stable's `Release <version>` commit (each repo's
-`v<version>` branch tip — `git show <sha>` gives back the exact state
-that shipped):
+The current release is *Dusky Discus*, cut 2026-10-15 and deployed
+with PostgreSQL in production:
 
-| Project | Stable (*Creative Cella*) | Release commit |
+| Project | Stable (*Dusky Discus*) | Release commit |
 | --- | --- | --- |
-| `biblioteca-server` | 0.9.14 | `e546a6d` |
-| `biblioteca-nestjs` | 0.9.13 | `54a2566` |
-| `biblioteca-reader` | 0.1.15 | `b87e83c` |
-| `biblioteca-covers` | 0.0.4 | `4ebdfb0` |
+| `biblioteca-server` | 0.9.15 | `b482492` |
+| `biblioteca-nestjs` | 0.9.14 | `ad81ab1` |
+| `biblioteca-reader` | 0.1.16 | `e5f333a` |
+| `biblioteca-covers` | 0.0.5 | `dfe0ce7` |
 
 ### Keeping this section current
 
@@ -636,28 +633,37 @@ A fix release for Bronze Basilica:
 
 When it was cut, the next release's name was fixed at random: *Dusky Discus*.
 
-### Dusky Discus (next — in development)
+### Dusky Discus (2026-10-15)
 
-Deployment requirement: this release must use PostgreSQL in both integration
-and production. Creative Cella was integration-tested with PostgreSQL, but
-production still uses Derby because the `biblioteca/prod` pass-store profile
-selects it. During the next release, prepare the production PostgreSQL database,
-migrate persistent user data (especially accounts, preferences, reading progress,
-and collections), rebuild generated catalog data, and update that profile's
-`DB_URL` before deploying with `run-prod.sh`. Verify the running production
-container actually uses PostgreSQL and check login, catalog queries, and logs.
-This is a requirement for the next release; leave the current deployment and
-database configuration unchanged for now.
+| Project | Stable (*Dusky Discus*) | Release commit |
+| --- | --- | --- |
+| `biblioteca-server` | 0.9.15 | `b482492` |
+| `biblioteca-nestjs` | 0.9.14 | `ad81ab1` |
+| `biblioteca-reader` | 0.1.16 | `e5f333a` |
+| `biblioteca-covers` | 0.0.5 | `dfe0ce7` |
 
-The next family release, named with the next alphabet letter, D. Its name
-is stamped as `releaseName` in all four next-snapshot manifests.
+- Production now uses a fresh PostgreSQL database. At the user's explicit
+  request, Derby user-data migration and data backups were skipped.
+- Long Lucene queries retry with fewer words instead of returning a server error
+  ([1688e9b](https://github.com/petrul/biblioteca-server/commit/1688e9b)).
+- Canonical reader/text URLs and shared-selection semantic search
+  ([92ffb68](https://github.com/petrul/biblioteca-reader/commit/92ffb68),
+  [e035ed3](https://github.com/petrul/biblioteca-reader/commit/e035ed3)).
+- Work art enrichment, verified cover storage, and the restored cover renderer
+  ([0a599b2](https://github.com/petrul/biblioteca-nestjs/commit/0a599b2),
+  [df061af](https://github.com/petrul/biblioteca-nestjs/commit/df061af),
+  [672df9a](https://github.com/petrul/biblioteca-covers/commit/672df9a)).
+
+The next family release name was randomly selected: *Ethereal Exedra*.
+
+### Ethereal Exedra (next — in development)
 
 | Project | Snapshot |
 | --- | --- |
-| `biblioteca-server` | 0.9.15-SNAPSHOT |
-| `biblioteca-nestjs` | 0.9.14-SNAPSHOT |
-| `biblioteca-reader` | 0.1.16-SNAPSHOT |
-| `biblioteca-covers` | 0.0.5-SNAPSHOT |
+| `biblioteca-server` | 0.9.16-SNAPSHOT |
+| `biblioteca-nestjs` | 0.9.15-SNAPSHOT |
+| `biblioteca-reader` | 0.1.17-SNAPSHOT |
+| `biblioteca-covers` | 0.0.6-SNAPSHOT |
 
 ### Before the naming began (0.9.1 – 0.9.11)
 

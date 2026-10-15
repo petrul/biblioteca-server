@@ -53,7 +53,7 @@ version = '0.9.16-SNAPSHOT'
 // The name of the family release this snapshot is heading toward - the
 // biblioteca-* family cuts releases together (see README's Releases
 // section: the name is fixed at random when the previous release is cut).
-ext.releaseName = 'Dusky Discus'
+ext.releaseName = 'Ethereal Exedra'
 
 java {
     sourceCompatibility = '25'
