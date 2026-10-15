@@ -16,6 +16,11 @@ import ro.editii.scriptorium.TestUtils
 import ro.editii.scriptorium.Util
 import ro.editii.scriptorium.client.BibliotecaClient
 import ro.editii.scriptorium.dao.TeiDivRepository
+import ro.editii.scriptorium.dao.DivMediaAssociationRepository
+import ro.editii.scriptorium.dao.MediaRefRepository
+import ro.editii.scriptorium.media.DivMediaAssociation
+import ro.editii.scriptorium.media.MediaRef
+import groovy.json.JsonSlurper
 import ro.editii.scriptorium.service.AdminService
 
 @SpringBootTest(
@@ -38,6 +43,8 @@ class DivRestControllerTest {
     @Autowired JdbcTemplate jdbcTemplate
     @Autowired TeiDivRepository teiDivRepository
     @Autowired BibliotecaClient tbc
+    @Autowired MediaRefRepository mediaRefs
+    @Autowired DivMediaAssociationRepository divMedia
 
     @Test
     void paragraphs() {
@@ -120,6 +127,24 @@ class DivRestControllerTest {
         assert divs.path == elemsByPath.path
         assert divs.urlFragment == elemsByPath.urlFragment
         assert divs.xpath == elemsByPath.xpath
+    }
+
+    // biblioteca-nestjs reads a work by path and prefers the work's own
+    // enrichment art for its cover: the by-path read must carry it too.
+    @Test
+    void aWorkReadByPathCarriesItsStoredImageUrls() {
+        final opus = this.teiDivRepository.findAll().find { it.isOpus() }
+        final path = opus.completePath
+        final art = 'https://upload.wikimedia.org/test-work-art.jpg'
+        final ref = mediaRefs.save(MediaRef.builder().url(art).contentType('image/jpeg').role('enrichment').build())
+        divMedia.save(new DivMediaAssociation(null, path, ref))
+        try {
+            final byPath = new JsonSlurper().parseText(new URL(url('/api/divs?path=' + URLEncoder.encode(path, 'UTF-8'))).text)
+            assert byPath.imageUrls == [art]
+        } finally {
+            divMedia.deleteAll(divMedia.findAllByDivPath(path))
+            mediaRefs.deleteById(art)
+        }
     }
 
     @Test

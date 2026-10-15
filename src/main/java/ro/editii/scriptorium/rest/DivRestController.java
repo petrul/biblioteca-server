@@ -96,7 +96,13 @@ public class DivRestController {
             elem =  this.entityManager.merge(elem); // because it may come from cache
 
         final var dto = elem.toDto(uriComponentsBuilder);
-        if (dto instanceof TeiDivDto div) this.coverEnrichmentRequests.requestMissing(div);
+        if (dto instanceof TeiDivDto div) {
+            // The work's own art (work enrichment's stored image URLs), as by
+            // id - biblioteca-nestjs reads works by path and prefers this art
+            // for their covers.
+            div.setImageUrls(divImageUrls(elem.getCompletePath()));
+            this.coverEnrichmentRequests.requestMissing(div);
+        }
         return dto;
     }
 
@@ -123,10 +129,7 @@ public class DivRestController {
                         Util.cloneUriComponentBuilder(uriComponentsBuilder, httpServletRequest)))
                 .toArray(TeiDivDto[]::new);
         dto.setChildren(childrenDtos);
-        dto.setImageUrls(this.divMedia.findAllByDivPath(teiDiv.getCompletePath()).stream()
-                .map(it -> it.getMediaRef().getUrl())
-                .distinct()
-                .toList());
+        dto.setImageUrls(divImageUrls(teiDiv.getCompletePath()));
         return dto;
     }
 
@@ -311,4 +314,12 @@ public class DivRestController {
         return dtoList;
     }
 
+
+    /** The image URLs associated with a div (enrichment media), distinct, in stored order. */
+    private java.util.List<String> divImageUrls(String divPath) {
+        return this.divMedia.findAllByDivPath(divPath).stream()
+                .map(it -> it.getMediaRef().getUrl())
+                .distinct()
+                .toList();
+    }
 }
