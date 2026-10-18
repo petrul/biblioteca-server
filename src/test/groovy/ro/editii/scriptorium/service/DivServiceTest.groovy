@@ -17,7 +17,9 @@ import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Import
 import org.springframework.context.annotation.Primary
 import org.springframework.jdbc.core.JdbcTemplate
+import org.springframework.transaction.PlatformTransactionManager
 import org.springframework.transaction.annotation.Transactional
+import org.springframework.transaction.support.TransactionTemplate
 import org.springframework.web.server.ResponseStatusException
 import ro.editii.scriptorium.InMemoryTeiRepo
 import ro.editii.scriptorium.TestConfig
@@ -60,6 +62,7 @@ class DivServiceTest {
     @PersistenceContext EntityManager entityManager
 
     @Autowired CacheMan cacheMan
+    @Autowired PlatformTransactionManager transactions
     @Autowired DiskCaches diskCaches
 
     @BeforeAll
@@ -71,6 +74,38 @@ class DivServiceTest {
         this.installFakeSampleJuliusCaesarInRepo()
     }
 
+
+    /**
+     * getByPath is cached, but the cache must never hand one session's entity
+     * to another: a shared entity's lazy dbChildren would run SQL through the
+     * session and connection of whichever request loaded it, concurrently with
+     * that request (production: cancelled statements, then pooled connections
+     * stuck in an aborted transaction). Each session gets its own instance.
+     */
+    @Test
+    void cachedPathResolvesToAnInstanceOfTheCallersOwnSession() {
+        final tx = new TransactionTemplate(this.transactions)
+        final path = "shakespeare/julius_caesar/act_i"
+
+        final TeiElem first = tx.execute { this.divService.getByPath(path) }
+        final TeiElem second = tx.execute {
+            final elem = this.divService.getByPath(path) // served through the cache
+            assert this.entityManager.contains(elem): 'managed by this session, not by the earlier one'
+            assert elem.dbChildren.size() > 0: 'lazy children load through this session'
+            elem
+        }
+
+        assert !first.is(second): 'two sessions must not share the cached entity'
+        assert first.id == second.id
+    }
+
+    @Test @Transactional
+    void cachedPathIsTheSameInstanceWithinOneSession() {
+        final path = "shakespeare/julius_caesar/act_i"
+        final first = this.divService.getByPath(path)
+        assert this.divService.getByPath(path).is(first)
+        assert first.teiRepo != null && first.opus.teiRepo != null: 'content repository attached up the parent chain'
+    }
 
     @Test @Transactional
     void paragraphs() {

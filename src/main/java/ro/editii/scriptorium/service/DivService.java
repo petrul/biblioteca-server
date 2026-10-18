@@ -9,6 +9,8 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.cache.Cache;
+import org.springframework.cache.CacheManager;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import org.springframework.data.rest.webmvc.ResourceNotFoundException;
@@ -49,6 +51,12 @@ public class DivService {
 
     @Autowired @Qualifier(CacheConf.CACHE_BINARY_OBJECT)
     DiskCache cacheBinaryObject;
+
+    @Autowired
+    CacheManager cacheManager;
+
+    /** path -> id of the persisted element it resolves to (see getByPath). */
+    static final String CACHE_ELEM_ID_BY_PATH = "tei_elem_id_by_path";
 
     public List<TeiDiv> getOpera(String authorStrid) {
         return this.teiDivRepository.findOperaForAuthorStrId(authorStrid);
@@ -97,8 +105,17 @@ public class DivService {
 
     /**
      * @param path of the form /author/opus/div1/div2 ...
+     *
+     * Caches the path's element ID, never the entity: a cached entity is
+     * bound to the session of the request that loaded it (open-in-view
+     * keeps that session for the whole request), and its lazy dbChildren
+     * would then run SQL through another request's session and connection,
+     * concurrently. In production that cancelled statements mid-flight and
+     * returned connections to the pool inside an aborted transaction ("current
+     * transaction is aborted" on unrelated later requests). Each call now gets
+     * its own managed instance - by primary key, from the persistence context
+     * when the request already loaded it.
      */
-    @Cacheable("tei_elem_by_path")
     @Transactional
     public TeiElem getByPath(String path) {
         final var fragms = Util.pathFragments(path);
@@ -110,23 +127,29 @@ public class DivService {
         final var opus = fragms[1];
 
         final var rejoined = "/" + String.join("/", fragms);
-        final var elem = this.retrieveElem(author, opus, rejoined);
 
+        final Cache ids = this.cacheManager.getCache(CACHE_ELEM_ID_BY_PATH);
+        final Long cachedId = ids == null ? null : ids.get(rejoined, Long.class);
+        if (cachedId != null) {
+            final TeiElem found = this.entityManager.find(TeiElem.class, cachedId);
+            if (found != null)
+                return this.withTeiRepo(found);
+        }
+
+        final var elem = this.retrieveElem(author, opus, rejoined);
         assert elem.getTeiFile() != null;
-        // @Cacheable hands back the instance cached by some EARLIER request's
-        // transaction - detached by now. Path navigation itself has already
-        // initialized the collections it needs; do not merge the whole graph
-        // here because leaf elements can retain transient parent references.
-        // Do not merge the navigated element graph here.  Path navigation can
-        // intentionally produce an in-memory leaf whose parent is the
-        // persisted div; merging that graph makes Hibernate try to flush a
-        // transient parent reference.  The caller only needs the content
-        // repository attached for XML access.
-        final TeiElem attached = elem;
-        // Reattach the content repository; nodeAsText and nodeAsXmlString
-        // need it when the result came through the cache.
-        attached.setTeiRepo(this.teiRepo);
-        return attached;
+        // only persisted elements: path navigation can also end on an
+        // in-memory leaf (a paragraph) that has no id to look up again
+        if (ids != null && elem.getId() != null && this.entityManager.contains(elem))
+            ids.put(rejoined, elem.getId());
+        return this.withTeiRepo(elem);
+    }
+
+    /** nodeAsText/nodeAsXmlString and getOpus().getNode() need the content repository, up the parent chain. */
+    private TeiElem withTeiRepo(TeiElem elem) {
+        for (TeiElem e = elem; e != null; e = e.getParent())
+            e.setTeiRepo(this.teiRepo);
+        return elem;
     }
 
     /**
