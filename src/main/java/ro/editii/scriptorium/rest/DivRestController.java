@@ -92,8 +92,13 @@ public class DivRestController {
             UriComponentsBuilder uriComponentsBuilder) {
 
         var elem = this.divService.getByPath(path);
-        if (!this.entityManager.contains(elem))
-            elem =  this.entityManager.merge(elem); // because it may come from cache
+        // getByPath returns an element of this request's own session or - when
+        // the path ends on a paragraph - an in-memory leaf without an id.
+        // Merging that leaf would persist it: nextval() inside this read-only
+        // transaction, which PostgreSQL refuses (HTTP 500 for every paragraph
+        // path). Only a persisted element that is not managed is merged.
+        if (elem.getId() != null && !this.entityManager.contains(elem))
+            elem = this.entityManager.merge(elem);
 
         final var dto = elem.toDto(uriComponentsBuilder);
         if (dto instanceof TeiDivDto div) {
