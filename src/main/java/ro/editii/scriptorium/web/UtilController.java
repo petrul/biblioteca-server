@@ -85,21 +85,28 @@ public class UtilController {
     }
 
     private TeiDiv getAcceptableRandomDiv() {
-        final List<Long> bottomDivIds = this.bottomDivIds();
-        if (bottomDivIds.isEmpty()) {
-            throw new IllegalStateException("no bottom div found to redirect to");
-        }
+        List<Long> bottomDivIds = this.bottomDivIds();
         // A license div only wastes this pick - license divs are rare, so a
         // fresh random index is cheaper than any filtered query shape. The
         // bound only exists to guarantee a return; 20 bad picks in a row
         // means the corpus is all but entirely license divs.
         final Random rnd = new Random();
+        boolean refreshed = false;
         for (int attempt = 0; attempt < 20; attempt++) {
+            if (bottomDivIds.isEmpty()) {
+                throw new IllegalStateException("no bottom div found to redirect to");
+            }
             final TeiDiv div = this.teiDivRepository.findById(bottomDivIds.get(rnd.nextInt(bottomDivIds.size()))).orElse(null);
-            // The cached ids already exclude works whose source was missing
-            // when the cache was built; re-check for files removed since.
-            if (div != null && !div.isLicense() && this.teiRepo.has(div.getTeiFile().getFilename())) {
-                return div;
+            if (div == null || div.isLicense()) continue;
+            if (this.teiRepo.has(div.getTeiFile().getFilename())) return div;
+            // The cached ids exclude works whose source was missing when the
+            // cache was built; this one's file went away since. Others may
+            // have gone with it (a corpus rebuild), so rebuild the list once
+            // rather than keep drawing from a stale one until the TTL ends.
+            if (!refreshed) {
+                refreshed = true;
+                this.bottomDivIdsCacheAt = 0L;
+                bottomDivIds = this.bottomDivIds();
             }
         }
         throw new IllegalStateException("no non-license bottom div found to redirect to");
