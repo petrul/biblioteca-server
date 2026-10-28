@@ -80,13 +80,15 @@ public interface TeiDivRepository extends JpaRepository<TeiDiv, Long> {
     // empty` projection) lets Hibernate build a plan Derby runs in ~0.8s at
     // this table size, while this not-exists form costs ~0.5-1s ONCE -
     // the ids are then picked from in memory (cached in UtilController,
-    // since the corpus changes only on import).
+    // since the corpus changes only on import). Each row is {div id, source
+    // TEI filename}, so the caller can leave out works whose source is gone.
     @Query(value = """
-            select e.id from "_tei_elem" e
+            select e.id, f.filename from "_tei_elem" e
+            join "_tei_file" f on f.id = e."tei_file_id"
             where e.name = 'div'
             and not exists (select 1 from "_tei_elem" c where c."parent_id" = e.id)
             """, nativeQuery = true)
-    List<Long> getBottomDivIds();
+    List<Object[]> getBottomDivIdsWithFilename();
 
     @Query(""" 
              select div from TeiDiv div 

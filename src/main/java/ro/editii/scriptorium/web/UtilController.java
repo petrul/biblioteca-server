@@ -17,10 +17,13 @@ import ro.editii.scriptorium.Util;
 import ro.editii.scriptorium.dao.TeiDivRepository;
 import ro.editii.scriptorium.model.Author;
 import ro.editii.scriptorium.model.TeiDiv;
+import ro.editii.scriptorium.tei.TeiRepo;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Random;
 import java.util.stream.Collectors;
 
@@ -31,6 +34,9 @@ public class UtilController {
 
     @Autowired
     TeiDivRepository teiDivRepository;
+
+    @Autowired
+    TeiRepo teiRepo;
 
     @GetMapping("/echo")
     @ResponseBody
@@ -90,7 +96,9 @@ public class UtilController {
         final Random rnd = new Random();
         for (int attempt = 0; attempt < 20; attempt++) {
             final TeiDiv div = this.teiDivRepository.findById(bottomDivIds.get(rnd.nextInt(bottomDivIds.size()))).orElse(null);
-            if (div != null && !div.isLicense()) {
+            // The cached ids already exclude works whose source was missing
+            // when the cache was built; re-check for files removed since.
+            if (div != null && !div.isLicense() && this.teiRepo.has(div.getTeiFile().getFilename())) {
                 return div;
             }
         }
@@ -102,6 +110,9 @@ public class UtilController {
     // too much to pay per click. The corpus changes only on import, so a
     // TTL-cached in-memory list turns every pick after the first one
     // into a map lookup plus a single findById.
+    // Works whose TEI source is no longer in TEI_REPOS are left out: their
+    // rows outlive the file until a prune removes them, and discovery must
+    // never send a reader to a page that 404s.
     private volatile List<Long> bottomDivIdsCache = List.of();
     private volatile long bottomDivIdsCacheAt = 0L;
     private static final long BOTTOM_DIV_IDS_TTL_MS = 30 * 60_000L;
@@ -109,7 +120,19 @@ public class UtilController {
     private List<Long> bottomDivIds() {
         final long now = System.currentTimeMillis();
         if (this.bottomDivIdsCache.isEmpty() || now - this.bottomDivIdsCacheAt > BOTTOM_DIV_IDS_TTL_MS) {
-            this.bottomDivIdsCache = this.teiDivRepository.getBottomDivIds();
+            final Map<String, Boolean> sourcePresent = new HashMap<>();
+            final List<Long> ids = new ArrayList<>();
+            for (Object[] row : this.teiDivRepository.getBottomDivIdsWithFilename()) {
+                final String filename = (String) row[1];
+                if (sourcePresent.computeIfAbsent(filename, this.teiRepo::has)) {
+                    ids.add(((Number) row[0]).longValue());
+                }
+            }
+            final long missing = sourcePresent.values().stream().filter(present -> !present).count();
+            if (missing > 0) {
+                log.info("random discovery: leaving out {} work source(s) no longer in TEI_REPOS", missing);
+            }
+            this.bottomDivIdsCache = List.copyOf(ids);
             this.bottomDivIdsCacheAt = now;
         }
         return this.bottomDivIdsCache;
