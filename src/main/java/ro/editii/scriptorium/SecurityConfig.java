@@ -3,6 +3,7 @@ package ro.editii.scriptorium;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
+import org.springframework.http.HttpStatus;
 import org.springframework.security.authorization.AuthorizationDecision;
 import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
@@ -11,16 +12,31 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.config.annotation.web.configuration.WebSecurityCustomizer;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.AnonymousAuthenticationFilter;
+import org.springframework.security.web.authentication.HttpStatusEntryPoint;
+import org.springframework.security.web.servlet.util.matcher.PathPatternRequestMatcher;
+import org.springframework.security.web.util.matcher.OrRequestMatcher;
+import org.springframework.security.web.util.matcher.RequestMatcher;
 import org.springframework.security.web.firewall.HttpFirewall;
 import org.springframework.security.web.firewall.StrictHttpFirewall;
 import ro.editii.scriptorium.security.ApiRequestLoggingFilter;
 import ro.editii.scriptorium.security.AdminUsers;
 import ro.editii.scriptorium.security.InternalApiToken;
 
+import java.util.Arrays;
 import java.util.List;
 
 @Configuration
 public class SecurityConfig {
+
+    // Backend-to-backend endpoints, callable only with BIBLIOTECA_INTERNAL_API_TOKEN.
+    // Should one ever be proxied to the internet by mistake, outsiders must
+    // get a flat 403 - not a login redirect or a Basic-auth challenge.
+    private static final String[] INTERNAL_API_PATHS = {
+            "/api/internal/**",
+            "/api/drest/embeddingBatchStats", "/api/drest/embeddingBatchStats/**",
+            "/api/drest/opusVectorizingStats", "/api/drest/opusVectorizingStats/**",
+            "/graphql",
+    };
 
     // Real authentication is now backed by AppUserDetailsService (real,
     // persisted AppUser rows - see that class and AdminUserSeeder), which
@@ -50,6 +66,13 @@ public class SecurityConfig {
         return web -> web.httpFirewall(httpFirewall);
     }
 
+    private static RequestMatcher internalApiMatcher() {
+        final PathPatternRequestMatcher.Builder paths = PathPatternRequestMatcher.withDefaults();
+        return new OrRequestMatcher(Arrays.stream(INTERNAL_API_PATHS)
+                .map(paths::matcher)
+                .toArray(RequestMatcher[]::new));
+    }
+
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http, AdminUsers adminUsers, InternalApiToken internalApiToken) throws Exception {
         http
@@ -57,12 +80,11 @@ public class SecurityConfig {
                 .cors(it  -> Customizer.withDefaults())
                 .httpBasic(it -> Customizer.withDefaults())
                 .formLogin(it -> Customizer.withDefaults())
+                .exceptionHandling(it -> it.defaultAuthenticationEntryPointFor(
+                        new HttpStatusEntryPoint(HttpStatus.FORBIDDEN), internalApiMatcher()))
                 .authorizeHttpRequests(it -> it
                     .requestMatchers("/admin/**").authenticated()
-                    .requestMatchers("/api/internal/**",
-                            "/api/drest/embeddingBatchStats", "/api/drest/embeddingBatchStats/**",
-                            "/api/drest/opusVectorizingStats", "/api/drest/opusVectorizingStats/**",
-                            "/graphql")
+                    .requestMatchers(INTERNAL_API_PATHS)
                         .access((authentication, context) -> new AuthorizationDecision(
                                 internalApiToken.authorizes(context.getRequest().getHeader("Authorization"))
                                         // Separate header allows trusted calls to carry
