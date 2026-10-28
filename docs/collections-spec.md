@@ -38,10 +38,10 @@ Entries carry a `sortOrder`; `PUT /api/collections/mine/{id}/order` takes the en
 
 ## Reader
 
-- Same-origin proxies: `POST /graphql` and the collection routes above (`server.ts`).
+- Same-origin proxies: the explicit `/api/collections/mine` routes (`server.ts`); GraphQL is not exposed through the Reader.
 - Search page: "Save search" button saves the results shown.
 - Collections page: "Saved searches" section (open, run again, rename, delete).
-- Storage: a signed-in reader's saved searches live in the server DB (REST to write, `/graphql` to read); an anonymous reader's stay in localStorage.
+- Storage: a signed-in reader's saved searches live in the server DB through the authenticated collection REST API; an anonymous reader's stay in localStorage.
 
 ## Not yet done
 

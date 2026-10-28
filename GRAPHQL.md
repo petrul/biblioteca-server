@@ -1,7 +1,10 @@
 # GraphQL
 
 POST JSON to `/graphql`, for example `{"query":"{ authors(size: 5) { strId lastName } }"}`.
-This is a read-only endpoint; existing REST APIs and controllers are unchanged.
+This is a read-only, backend-to-backend endpoint; the public Reader and
+internet-facing Caddy route do not expose it. Requests require the configured
+`nestjs.internal-api-token` as `Authorization: Bearer <token>` or
+`X-Internal-Api-Token: Bearer <token>`. Existing REST APIs and controllers are unchanged.
 
 The schema comes from the JPA metamodel, and queries use the existing Spring Data
 JPA repositories. Every entity has a lower-camel-case ID lookup and a paged list:

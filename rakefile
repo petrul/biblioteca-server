@@ -36,6 +36,20 @@ def load_profile_env(task_profile)
   end
   $biblioteca_loaded_profiles[task_profile] = true
   puts "> Loaded biblioteca/#{task_profile} from #{loader}"
+
+  # Greg owns the SMTP/ntfy credentials and consumes the notification topics.
+  # Load its matching profile when present so local Biblioteca runs exercise
+  # the same fan-out as the deployed stack; absence is fine for unit-only
+  # profiles and leaves the normal Biblioteca environment unchanged.
+  greg_profile = "greg/#{task_profile}"
+  greg_output, greg_status = Open3.capture2('bash', '-c', "source #{Shellwords.escape(loader)} #{Shellwords.escape(greg_profile)} && env -0")
+  if greg_status.success?
+    greg_output.split("\0").each do |entry|
+      key, value = entry.split('=', 2)
+      ENV[key] = value if key && value
+    end
+    puts "> Loaded #{greg_profile} from #{loader}"
+  end
 end
 
 IMAGE_NAME    = "editii/biblioteca-server"

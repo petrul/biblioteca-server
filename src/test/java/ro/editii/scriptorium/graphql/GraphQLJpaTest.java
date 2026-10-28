@@ -45,14 +45,15 @@ import static org.junit.jupiter.api.Assertions.*;
         "spring.datasource.driver-class-name=org.h2.Driver",
         "spring.jpa.database-platform=org.hibernate.dialect.H2Dialect",
         "spring.jpa.hibernate.ddl-auto=create-drop", "spring.jpa.open-in-view=false",
-        "spring.flyway.enabled=false", "admin.users=admin",
+        "spring.flyway.enabled=false", "admin.users=admin", "nestjs.internal-api-token=graphql-test-token",
         "spring.graphql.schema.locations=classpath:graphql/**/"})
 class GraphQLJpaTest {
     @Configuration(proxyBeanMethods = false)
     @EnableAutoConfiguration
     @EntityScan(basePackages = {"ro.editii.scriptorium.model", "ro.editii.scriptorium.media", "ro.editii.scriptorium.embedding"})
     @EnableJpaRepositories(basePackages = {"ro.editii.scriptorium.dao", "ro.editii.scriptorium.embedding"})
-    @Import({GraphQLJpaConfig.class, GraphQLCatalogConfig.class, SecurityConfig.class, AdminUsers.class})
+    @Import({GraphQLJpaConfig.class, GraphQLCatalogConfig.class, SecurityConfig.class, AdminUsers.class,
+            ro.editii.scriptorium.security.InternalApiToken.class})
     static class Application {
         @Bean
         UserDetailsService users() {
@@ -153,9 +154,19 @@ class GraphQLJpaTest {
         assertTrue(query("{ appUserList(filter: {googleSub: \"x\"}) { id } }", "admin").has("errors"));
     }
 
+    @Test
+    void graphqlRequiresAnInternalServerToken() throws Exception {
+        var request = HttpRequest.newBuilder(URI.create("http://localhost:" + port + "/graphql"))
+                .header("Content-Type", "application/json")
+                .POST(HttpRequest.BodyPublishers.ofString(json.writeValueAsString(Map.of("query", "{ authors { strId } }"))));
+        var response = HttpClient.newHttpClient().send(request.build(), HttpResponse.BodyHandlers.ofString());
+        assertNotEquals(200, response.statusCode());
+    }
+
     JsonNode query(String query, String username) throws Exception {
         var request = HttpRequest.newBuilder(URI.create("http://localhost:" + port + "/graphql"))
                 .header("Content-Type", "application/json")
+                .header("X-Internal-Api-Token", "Bearer graphql-test-token")
                 .POST(HttpRequest.BodyPublishers.ofString(json.writeValueAsString(Map.of("query", query))));
         if (username != null) request.header("Authorization", "Basic " + Base64.getEncoder().encodeToString((username + ":test").getBytes()));
         var response = HttpClient.newHttpClient().send(request.build(), HttpResponse.BodyHandlers.ofString());

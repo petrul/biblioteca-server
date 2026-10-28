@@ -32,6 +32,9 @@ import java.util.Date;
 public class AppUser implements Serializable {
 
     public static final int USERNAME_MAX_LENGTH = 100;
+    // Google's photo URLs run far past the default varchar(255) - ~1,500
+    // characters observed in production. V11 widens existing databases.
+    public static final int AVATAR_URL_MAX_LENGTH = 4096;
 
     @Id
     @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "app_user_seq")
@@ -58,6 +61,7 @@ public class AppUser implements Serializable {
     // Google's "picture" claim, refreshed on every Google sign-in (see
     // GoogleAuthService) - null for accounts that never signed in with
     // Google. Just a URL; nothing here fetches or caches the image itself.
+    @Column(length = AVATAR_URL_MAX_LENGTH)
     String avatarUrl;
 
     @Enumerated(EnumType.STRING)

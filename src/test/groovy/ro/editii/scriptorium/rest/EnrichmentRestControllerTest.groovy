@@ -9,6 +9,8 @@ import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.boot.resttestclient.TestRestTemplate
 import org.springframework.boot.resttestclient.autoconfigure.AutoConfigureTestRestTemplate
 import org.springframework.http.HttpStatus
+import org.springframework.http.HttpEntity
+import org.springframework.http.HttpHeaders
 import org.springframework.test.annotation.DirtiesContext
 import org.springframework.test.context.TestPropertySource
 import ro.editii.scriptorium.TestConfig
@@ -49,6 +51,7 @@ import ro.editii.scriptorium.model.TeiFile
         "spring.jpa.hibernate.ddl-auto=create",
         "spring.main.allow-bean-definition-overriding=true",
         "lucene.autoindex.enabled=false",
+        "nestjs.internal-api-token=enrichment-test-token",
 ])
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT,
         classes = [TestConfig.class])
@@ -92,7 +95,15 @@ class EnrichmentRestControllerTest {
     }
 
     private post(Map<String, Object> update) {
-        return this.restTemplate.postForEntity("/api/internal/enrichment", update, String.class)
+        final headers = new HttpHeaders()
+        headers.setBearerAuth("enrichment-test-token")
+        return this.restTemplate.postForEntity("/api/internal/enrichment", new HttpEntity(update, headers), String.class)
+    }
+
+    @Test
+    void internalWriteRejectsRequestsWithoutServiceToken() {
+        final response = this.restTemplate.postForEntity("/api/internal/enrichment", [:], String.class)
+        assert response.statusCode == HttpStatus.FORBIDDEN
     }
 
     @Test

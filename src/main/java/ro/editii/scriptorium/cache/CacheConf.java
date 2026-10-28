@@ -25,7 +25,9 @@ public class CacheConf {
     @Bean(CACHE_TOC)
     public DiskCache cacheToc() {
         final String replacedTilde = Util.replaceTilde(this.cacheDir);
-        return new DiskCache(new File(replacedTilde), "toc");
+        // "toc-v2": TOCs cached before TeiElem.dbChildren was ordered may
+        // hold divisions in database storage order - never read those again.
+        return new DiskCache(new File(replacedTilde), "toc-v2");
     }
 
     @Bean(CACHE_NODE)

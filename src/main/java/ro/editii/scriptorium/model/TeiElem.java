@@ -134,7 +134,14 @@ public class TeiElem implements Comparable<TeiElem>, Serializable  {
      * if you rather want the exhaustive list of XML children, do a this.getNode().getChildren()
      * and you will get a Java DOM XML structure which you can iterate on.
      */
+    // Document order. Without an explicit order the database returns rows
+    // in storage order: PostgreSQL moves an updated row to the end of the
+    // table, which put Act II's scenes I-V after scenes VI-XII in the TOC.
+    // Ids are assigned in import walk order, so they ARE document order;
+    // nth is not (it counts within the XML parent, and divs without a row of
+    // their own make siblings out of several XML parents' children).
     @OneToMany(mappedBy = "parent", fetch = FetchType.LAZY)
+    @OrderBy("id asc")
     @ToString.Exclude
     @JsonIgnore // would lead to very large listings
     protected List<TeiElem> dbChildren;

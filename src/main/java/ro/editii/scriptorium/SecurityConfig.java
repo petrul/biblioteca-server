@@ -2,6 +2,7 @@ package ro.editii.scriptorium;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.authorization.AuthorizationDecision;
 import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
@@ -9,9 +10,12 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.config.annotation.web.configuration.WebSecurityCustomizer;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.AnonymousAuthenticationFilter;
 import org.springframework.security.web.firewall.HttpFirewall;
 import org.springframework.security.web.firewall.StrictHttpFirewall;
+import ro.editii.scriptorium.security.ApiRequestLoggingFilter;
 import ro.editii.scriptorium.security.AdminUsers;
+import ro.editii.scriptorium.security.InternalApiToken;
 
 import java.util.List;
 
@@ -47,7 +51,7 @@ public class SecurityConfig {
     }
 
     @Bean
-    public SecurityFilterChain filterChain(HttpSecurity http, AdminUsers adminUsers) throws Exception {
+    public SecurityFilterChain filterChain(HttpSecurity http, AdminUsers adminUsers, InternalApiToken internalApiToken) throws Exception {
         http
                 .csrf(it -> it.disable())
                 .cors(it  -> Customizer.withDefaults())
@@ -55,6 +59,27 @@ public class SecurityConfig {
                 .formLogin(it -> Customizer.withDefaults())
                 .authorizeHttpRequests(it -> it
                     .requestMatchers("/admin/**").authenticated()
+                    .requestMatchers("/api/internal/**",
+                            "/api/drest/embeddingBatchStats", "/api/drest/embeddingBatchStats/**",
+                            "/api/drest/opusVectorizingStats", "/api/drest/opusVectorizingStats/**",
+                            "/graphql")
+                        .access((authentication, context) -> new AuthorizationDecision(
+                                internalApiToken.authorizes(context.getRequest().getHeader("Authorization"))
+                                        // Separate header allows trusted calls to carry
+                                        // their own downstream credentials as well.
+                                        || internalApiToken.authorizes(context.getRequest().getHeader("X-Internal-Api-Token"))))
+                    .requestMatchers(HttpMethod.POST, "/api/drest/**")
+                        .access((authentication, context) -> new AuthorizationDecision(
+                                adminUsers.isAdmin(authentication.get().getName())))
+                    .requestMatchers(HttpMethod.PUT, "/api/drest/**")
+                        .access((authentication, context) -> new AuthorizationDecision(
+                                adminUsers.isAdmin(authentication.get().getName())))
+                    .requestMatchers(HttpMethod.PATCH, "/api/drest/**")
+                        .access((authentication, context) -> new AuthorizationDecision(
+                                adminUsers.isAdmin(authentication.get().getName())))
+                    .requestMatchers(HttpMethod.DELETE, "/api/drest/**")
+                        .access((authentication, context) -> new AuthorizationDecision(
+                                adminUsers.isAdmin(authentication.get().getName())))
                     // The one deliberate exception under /api/admin: the
                     // non-secret shared-resource naming convention (Kafka
                     // topics, Milvus collection, embedder model) that
@@ -98,7 +123,8 @@ public class SecurityConfig {
                     // caller finds out it's anonymous); it reports its own
                     // authenticated:false rather than the security layer 401ing.
                     .anyRequest().permitAll()
-                );
+                )
+                .addFilterAfter(new ApiRequestLoggingFilter(), AnonymousAuthenticationFilter.class);
 
         return http.build();
     }

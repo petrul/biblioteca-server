@@ -17,6 +17,20 @@ public class KafkaProps {
     String loginTopicName = "biblioteca_loginTopic";
     String enrichWorkTopicName = "biblioteca_enrichWorkTopic";
 
+    /** Greg's fan-out topics: mail-sender and notification-sender consume these. */
+    String notificationMailTopicName = "greg-send-mail";
+    String notificationNtfyTopicName = "greg-send-notification";
+
+    /** Destinations are supplied by the active pass-store profile, never committed. */
+    @Value("${CONTACT_MAIL_TO:}")
+    String notificationMailTo;
+    @Value("${SMTP_FROM:}")
+    String notificationMailFrom;
+    @Value("${NTFY_URL:}")
+    String notificationNtfyUrl;
+    @Value("${NTFY_TOKEN:}")
+    String notificationNtfyToken;
+
     // No inline default here on purpose, unlike before - it used to be
     // "kafka:9092", silently different from application.properties's own
     // spring.kafka.bootstrap-servers=${KAFKA_BROKERS} (which fails fast

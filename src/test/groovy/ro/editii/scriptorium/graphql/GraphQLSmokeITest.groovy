@@ -42,7 +42,7 @@ import java.time.Duration
         'spring.datasource.driver-class-name=org.h2.Driver',
         'spring.jpa.database-platform=org.hibernate.dialect.H2Dialect',
         'spring.jpa.hibernate.ddl-auto=create-drop', 'spring.jpa.open-in-view=false',
-        'spring.flyway.enabled=false', 'admin.users=admin',
+        'spring.flyway.enabled=false', 'admin.users=admin', 'nestjs.internal-api-token=graphql-test-token',
         'spring.jpa.properties.hibernate.jdbc.lob.non_contextual_creation=true'])
 @Import(GraphQLNativeMockConfig)
 class GraphQLSmokeITest {
@@ -185,6 +185,7 @@ class GraphQLSmokeITest {
     private Map send(String path, String body = null) {
         def request = HttpRequest.newBuilder(URI.create("http://localhost:$port$path"))
                 .timeout(Duration.ofSeconds(30))
+        if (path == '/graphql') request.header('X-Internal-Api-Token', 'Bearer graphql-test-token')
         if (body == null) request.GET()
         else request.header('Content-Type', 'application/json').POST(HttpRequest.BodyPublishers.ofString(body))
         def response = client.send(request.build(), HttpResponse.BodyHandlers.ofString())

@@ -44,7 +44,7 @@ import static org.junit.jupiter.api.Assertions.*;
         "spring.datasource.driver-class-name=org.h2.Driver",
         "spring.jpa.database-platform=org.hibernate.dialect.H2Dialect",
         "spring.jpa.hibernate.ddl-auto=create-drop", "spring.jpa.open-in-view=false",
-        "spring.flyway.enabled=false", "admin.users=admin"])
+        "spring.flyway.enabled=false", "admin.users=admin", "nestjs.internal-api-token=graphql-test-token"])
 @Import(GraphQLNativeMockConfig.class)
 class GraphQLCatalogTest {
     @Value('${local.server.port}') int port;
@@ -199,6 +199,7 @@ class GraphQLCatalogTest {
     JsonNode rest(String path, String username) throws Exception { return send(path, null, username); }
     JsonNode send(String path, String body, String username) throws Exception {
         var request = HttpRequest.newBuilder(URI.create("http://localhost:" + port + path));
+        if (path == '/graphql') request.header('X-Internal-Api-Token', 'Bearer graphql-test-token');
         if (body == null) request.GET(); else request.header("Content-Type", "application/json").POST(HttpRequest.BodyPublishers.ofString(body));
         if (username != null) request.header("Authorization", "Basic " + Base64.getEncoder().encodeToString((username + ":test").getBytes()));
         var response = HttpClient.newHttpClient().send(request.build(), HttpResponse.BodyHandlers.ofString());
