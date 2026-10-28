@@ -51,7 +51,7 @@ import ro.editii.scriptorium.model.TeiFile
         "spring.jpa.hibernate.ddl-auto=create",
         "spring.main.allow-bean-definition-overriding=true",
         "lucene.autoindex.enabled=false",
-        "nestjs.internal-api-token=enrichment-test-token",
+        "biblioteca.internal-api-token=enrichment-test-token",
 ])
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT,
         classes = [TestConfig.class])

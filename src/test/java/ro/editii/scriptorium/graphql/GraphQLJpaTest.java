@@ -45,7 +45,7 @@ import static org.junit.jupiter.api.Assertions.*;
         "spring.datasource.driver-class-name=org.h2.Driver",
         "spring.jpa.database-platform=org.hibernate.dialect.H2Dialect",
         "spring.jpa.hibernate.ddl-auto=create-drop", "spring.jpa.open-in-view=false",
-        "spring.flyway.enabled=false", "admin.users=admin", "nestjs.internal-api-token=graphql-test-token",
+        "spring.flyway.enabled=false", "admin.users=admin", "biblioteca.internal-api-token=graphql-test-token",
         "spring.graphql.schema.locations=classpath:graphql/**/"})
 class GraphQLJpaTest {
     @Configuration(proxyBeanMethods = false)

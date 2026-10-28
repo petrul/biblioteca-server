@@ -10,7 +10,7 @@ import java.security.MessageDigest;
 public class InternalApiToken {
     private final String token;
 
-    public InternalApiToken(@Value("${nestjs.internal-api-token:}") String token) {
+    public InternalApiToken(@Value("${biblioteca.internal-api-token:}") String token) {
         this.token = token;
     }
 
