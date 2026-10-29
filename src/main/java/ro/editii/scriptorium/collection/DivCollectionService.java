@@ -243,6 +243,12 @@ public class DivCollectionService {
 
     /** Optional read of a saved path; mutations still use strict resolveDiv. */
     public Optional<TeiDiv> findDiv(String divPath) {
+        // A saved search can contain a canonical fragment URL; attribution belongs to its source page.
+        if (divPath != null) {
+            divPath = divPath.split("\\?", 2)[0];
+            String last = divPath.substring(divPath.lastIndexOf('/') + 1);
+            if (last.matches("_[0-9]+[.:].*")) divPath = divPath.substring(0, divPath.lastIndexOf('/'));
+        }
         return this.divService.findDivByPath(divPath);
     }
 

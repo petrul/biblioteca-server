@@ -307,6 +307,10 @@ public class DivController {
                                                       Integer depth) {
         final ElemInfo elemInfo = this.getElemInfo(authorId, request, uriComponentsBuilder);
 
+        if ("1".equals(request.getParameter("fragments"))) {
+            var projection = new ro.editii.scriptorium.fragment.FragmentProjection(elemInfo.getNodeCopy());
+            ((org.w3c.dom.Element) projection.root).setAttribute("data-fragment-version", projection.version);
+        }
         Util.pruneDivsBeyondDepth(elemInfo, depth);
 
         final Node selectedDiv = elemInfo.getNodeCopy();

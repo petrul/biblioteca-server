@@ -265,4 +265,10 @@ class DivCollectionServiceTest {
         assert again.name == query + " (2)"
         assert this.divCollectionService.renameCollection(this.user, saved.id, "Hamlet quotes").name == "Hamlet quotes"
     }
+    @Test
+    void savedCanonicalFragmentUrlsUseTheSourcePageForAttribution() {
+        final path = opus.completePath + "/_${leafStep}:0..${leafStep}:1?rev=" + ('a' * 64)
+        assert divCollectionService.findDiv(path).orElseThrow().completePath == opus.completePath
+    }
+
 }

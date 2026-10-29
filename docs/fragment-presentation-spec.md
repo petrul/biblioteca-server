@@ -20,8 +20,9 @@ In an interactive browser this loads the source reading page and opens a
 quotation card over it. Dismissing the card reveals that same page, positioned
 at the passage, with the fragment selection retained. Search hits, saved
 fragments, shared links and the reader's Quote Link action enter this same
-experience. No newly generated public fragment URL uses `/quote/`, `/_N`, a
-browser-local quote ID, or a separate paragraph-number addressing scheme.
+experience. No newly generated public fragment URL uses `/quote/`, a browser-local quote
+ID, or a separate paragraph-number addressing scheme. Existing `/_N` locators
+are valid whole-node selectors, while nested legacy paths normalize to dot steps.
 
 ## What exists now: inspected behavior and code
 
@@ -304,14 +305,13 @@ that parameter to mean “card closed.” An explicit unsupported Accept type
 receives 406. Anonymous HTML with `display=context` can show the source with
 the passage marked, and a link back to its card representation.
 
-Examples below describe the proposed contract; the current unprefixed reader
-route does not yet implement fragment range negotiation:
+The feature branch implements the following unprefixed representations. Follow temporary redirects to obtain the revision-qualified canonical URL:
 
 ```sh
 fragment='https://test.scriptorium.ro/strabo/the_geography_of_strabo/book_xiv/chapter_ii/20/_2:93..2:403'
-curl -H 'Accept: text/plain' "$fragment"
-curl -H 'Accept: application/json' "$fragment"
-curl -H 'Accept: text/html' "$fragment"
+curl -L -H 'Accept: text/plain' "$fragment"
+curl -L -H 'Accept: application/json' "$fragment"
+curl -L -H 'Accept: text/html' "$fragment"
 ```
 
 The canonical link and Open Graph URL retain fragment selectors (and `rev`
@@ -383,3 +383,27 @@ The product-level decisions proposed here are: unprefixed source URLs with unifi
 one contextual fragment card with retained selection; shared content/actions
 with responsive and standalone skins; and source-version validation before
 calling a positional quotation permanent. Implementation proceeds on `feat/unified-fragments`; production remains unchanged until a separately requested release.
+
+
+## Implementation checkpoint — 2026-10-29
+
+Implemented on `feat/unified-fragments` in biblioteca-server and biblioteca-reader.
+See [reusable checks and results](unified-fragments-verification.md). No production deployment, schema migration,
+vector rewrite or re-embedding is part of this change.
+
+Search targets are typed separately from chapter identity. Legacy vector locators are resolved lazily;
+the server can correct an apparent positional fragment into a genuine reading division. Saved search
+URLs preserve the selector/revision in the existing path column, and reconstruct their typed target on
+read, keeping existing records compatible. A new saved quotation resolves to an exact pinned reference
+before its collection dialog opens. Existing browser-local snapshots remain available when an exact
+source upgrade fails; missing snapshots show an explicit unavailable message.
+
+When a selection spans child divisions, the reader expands the containing source while that fragment
+is active. The exact endpoint reading pages are checked against preview access; ancestor selectors
+cannot reveal locked descendants. Premium previews quote within their available reading chapter.
+Closing a card replaces its entry with selected context; Back/Forward do not reopen a dismissed card.
+A modern browser with JavaScript disabled receives readable quotation content in `noscript` and a
+link to the server-rendered selected context.
+
+Revision qualification detects changes and returns HTTP 409. Historical TEI snapshots are not archived
+by this implementation, so historical availability is deliberately not promised.

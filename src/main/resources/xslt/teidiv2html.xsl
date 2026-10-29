@@ -21,6 +21,26 @@
         </xsl:copy>
     </xsl:template>
 
+
+    <!-- Optional source mapping. Absent on ordinary exports and vector input. -->
+    <xsl:template name="fragment-attrs">
+        <xsl:copy-of select="@data-source-path|@data-fragment-from|@data-fragment-to|@data-fragment-version"/>
+    </xsl:template>
+    <xsl:template match="@data-projection-id|@data-fragment-text-from|@data-fragment-text-to"/>
+    <xsl:template match="text()" priority="2">
+        <xsl:variable name="i" select="count(preceding-sibling::text()) + 1"/>
+        <xsl:variable name="from" select="tokenize(../@data-fragment-text-from, ' ')[$i]"/>
+        <xsl:choose>
+            <xsl:when test="$from and $from != '-1'">
+                <span data-fragment-text="" data-fragment-from="{$from}"
+                      data-fragment-to="{tokenize(../@data-fragment-text-to, ' ')[$i]}"
+                      data-source-path="{../@data-source-path}"
+                      data-source-from="{../@data-fragment-from}"><xsl:value-of select="."/></span>
+            </xsl:when>
+            <xsl:otherwise><xsl:value-of select="."/></xsl:otherwise>
+        </xsl:choose>
+    </xsl:template>
+
     <!-- special rule for root div -->
     <xsl:template match="tei:div">
         <xsl:element name="div">
@@ -50,7 +70,7 @@
         <xsl:choose>
             <xsl:when test="../@type">
                 <xsl:if test="../@type='div1'">
-                    <h1><xsl:apply-templates/></h1>
+                    <h1><xsl:call-template name="fragment-attrs"/><xsl:apply-templates/></h1>
                     <p class="deco-title-author-separator">
                         ❖
 <!--                        <img class="deco-title-author-separator">-->
@@ -62,30 +82,30 @@
                     <h2 class="author"><xsl:value-of select="$author"/></h2>
                 </xsl:if>
                 <xsl:if test="../@type='div2'">
-                    <h2><xsl:apply-templates/></h2>
+                    <h2><xsl:call-template name="fragment-attrs"/><xsl:apply-templates/></h2>
                 </xsl:if>
                 <xsl:if test="../@type='div3'">
-                    <h3><xsl:apply-templates/></h3>
+                    <h3><xsl:call-template name="fragment-attrs"/><xsl:apply-templates/></h3>
                 </xsl:if>
                 <xsl:if test="../@type='div4'">
-                    <h4><xsl:apply-templates/></h4>
+                    <h4><xsl:call-template name="fragment-attrs"/><xsl:apply-templates/></h4>
                 </xsl:if>
                 <xsl:if test="../@type='div5'">
-                    <h5><xsl:apply-templates/></h5>
+                    <h5><xsl:call-template name="fragment-attrs"/><xsl:apply-templates/></h5>
                 </xsl:if>
                 <xsl:if test="../@type='div6'">
-                    <h6><xsl:apply-templates/></h6>
+                    <h6><xsl:call-template name="fragment-attrs"/><xsl:apply-templates/></h6>
                 </xsl:if>
                 <xsl:if test="../@type='div7'">
-                    <h7><xsl:apply-templates/></h7>
+                    <h7><xsl:call-template name="fragment-attrs"/><xsl:apply-templates/></h7>
                 </xsl:if>
                 <xsl:if test="../@type='div8'">
-                    <h8><xsl:apply-templates/></h8>
+                    <h8><xsl:call-template name="fragment-attrs"/><xsl:apply-templates/></h8>
                 </xsl:if>
             </xsl:when>
 
             <xsl:otherwise>
-                <p class="unspecified-heading">
+                <p class="unspecified-heading"><xsl:call-template name="fragment-attrs"/>
                     <xsl:apply-templates/>
                 </p>
             </xsl:otherwise>
@@ -104,12 +124,12 @@
 
     <xsl:template match="tei:hi">
         <xsl:choose>
-            <xsl:when test="@rend = 'italic'"><em><xsl:apply-templates /></em></xsl:when>
-            <xsl:otherwise><em><xsl:apply-templates /></em></xsl:otherwise>
+            <xsl:when test="@rend = 'italic'"><em><xsl:call-template name="fragment-attrs"/><xsl:apply-templates /></em></xsl:when>
+            <xsl:otherwise><em><xsl:call-template name="fragment-attrs"/><xsl:apply-templates /></em></xsl:otherwise>
         </xsl:choose>
     </xsl:template>
     <xsl:template match="tei:q">
-        <q><xsl:apply-templates /></q>
+        <q><xsl:call-template name="fragment-attrs"/><xsl:apply-templates /></q>
     </xsl:template>
 
     <xsl:template match="tei:note">
@@ -127,11 +147,11 @@
     <xsl:template match="tei:lb"><br/></xsl:template>
 
     <xsl:template match="tei:lg">
-        <div class="lg"><xsl:apply-templates /></div>
+        <div class="lg"><xsl:call-template name="fragment-attrs"/><xsl:apply-templates /></div>
     </xsl:template>
 
     <xsl:template match="tei:l">
-        <p class="l"><xsl:apply-templates /></p>
+        <p class="l"><xsl:call-template name="fragment-attrs"/><xsl:apply-templates /></p>
     </xsl:template>
 
     <!-- Drama: a speech (sp), its printed speaker line, and stage
@@ -139,7 +159,7 @@
          over the hardcoded drama work list. The who pointer rides
          along as data-who (character-level features in the reader). -->
     <xsl:template match="tei:sp">
-        <div class="sp">
+        <div class="sp"><xsl:call-template name="fragment-attrs"/>
             <xsl:if test="@who">
                 <xsl:attribute name="data-who">
                     <xsl:value-of select="translate(@who, '#', '')" />
@@ -150,30 +170,30 @@
     </xsl:template>
 
     <xsl:template match="tei:speaker">
-        <span class="speaker"><xsl:apply-templates /></span>
+        <span class="speaker"><xsl:call-template name="fragment-attrs"/><xsl:apply-templates /></span>
     </xsl:template>
 
     <xsl:template match="tei:stage">
-        <p class="stage"><xsl:apply-templates /></p>
+        <p class="stage"><xsl:call-template name="fragment-attrs"/><xsl:apply-templates /></p>
     </xsl:template>
 
     <xsl:template match="tei:epigraph">
-        <p class="epigraph"><xsl:apply-templates /></p>
+        <p class="epigraph"><xsl:call-template name="fragment-attrs"/><xsl:apply-templates /></p>
     </xsl:template>
     <xsl:template match="tei:subtitle">
-        <p class="subtitle"><xsl:apply-templates /></p>
+        <p class="subtitle"><xsl:call-template name="fragment-attrs"/><xsl:apply-templates /></p>
     </xsl:template>
     <xsl:template match="tei:trailer">
-        <p class="trailer"><xsl:apply-templates /></p>
+        <p class="trailer"><xsl:call-template name="fragment-attrs"/><xsl:apply-templates /></p>
     </xsl:template>
     <xsl:template match="tei:opener">
-        <p class="opener"><xsl:apply-templates /></p>
+        <p class="opener"><xsl:call-template name="fragment-attrs"/><xsl:apply-templates /></p>
     </xsl:template>
     <xsl:template match="tei:closer">
-        <p class="closer"><xsl:apply-templates /></p>
+        <p class="closer"><xsl:call-template name="fragment-attrs"/><xsl:apply-templates /></p>
     </xsl:template>
     <xsl:template match="tei:quote">
-        <blockquote><xsl:apply-templates /></blockquote>
+        <blockquote><xsl:call-template name="fragment-attrs"/><xsl:apply-templates /></blockquote>
     </xsl:template>
 
     <xsl:template match="tei:ptr">
@@ -188,13 +208,13 @@
     <xsl:template match="tei:sourceDesc"><xsl:apply-templates /></xsl:template>
 
     <xsl:template match="tei:table">
-        <table><xsl:apply-templates /></table>
+        <table><xsl:call-template name="fragment-attrs"/><xsl:apply-templates /></table>
     </xsl:template>
     <xsl:template match="tei:row">
-        <tr><xsl:apply-templates /></tr>
+        <tr><xsl:call-template name="fragment-attrs"/><xsl:apply-templates /></tr>
     </xsl:template>
     <xsl:template match="tei:cell">
-        <td><xsl:apply-templates /></td>
+        <td><xsl:call-template name="fragment-attrs"/><xsl:apply-templates /></td>
     </xsl:template>
     <xsl:template match="tei:figure">
         <img class="illustration">

@@ -69,6 +69,8 @@ import static ro.editii.scriptorium.TestUtils.TEI_ELEM
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class FragmentResolutionServiceTest {
 
+    @org.springframework.boot.test.web.server.LocalServerPort int port
+    @Autowired UnifiedFragmentService unifiedFragments
     @Autowired FragmentResolutionService fragmentResolutionService
     @Autowired DivService divService
     @Autowired ControllerTool controllerTool
@@ -367,6 +369,76 @@ class FragmentResolutionServiceTest {
                 firstPoem, "${firstLeafStep}.0", "${lastLeafStep}.${lastLeafText.length()}")
 
         assert resolved.paragraphs.size() == poemLeaves.size()
+    }
+
+    @Test
+    void unifiedLegacyVectorAndExplicitNodeResolveIdentically() {
+        final step = directLeafSteps.max { textAt(it).length() }
+        final legacy = unifiedFragments.resolve(leafAt(step).completePath, null, null)
+        final explicit = unifiedFragments.resolve(opus.completePath, "_${step}", null)
+        assert legacy.kind() == 'fragment'
+        assert legacy == explicit
+        assert legacy.text().startsWith(textAt(step))
+        assert legacy.sourcePath() == opus.completePath
+        assert legacy.canonicalPath().contains("/_${step}?rev=")
+        assert legacy.contextPath() == legacy.canonicalPath() + '&display=context'
+        assert !legacy.canonicalPath().startsWith('/quote/')
+    }
+
+    @Test
+    void unifiedExactOffsetsArePinnedAndRejectChangedEditions() {
+        final step = directLeafSteps.max { textAt(it).length() }
+        final fragment = unifiedFragments.resolve(opus.completePath, "_${step}:2..${step}:9", null)
+        assert fragment.text() == textAt(step).substring(2, 9)
+        assert fragment.sourceVersion().matches('[a-f0-9]{64}')
+        assert unifiedFragments.resolve(opus.completePath, fragment.selector(), fragment.sourceVersion()) == fragment
+        assert shouldFail { unifiedFragments.resolve(opus.completePath, fragment.selector(), '0' * 64) }.statusCode.value() == 409
+        assert shouldFail { unifiedFragments.resolve(opus.completePath, "_${step}:9..${step}:2", null) } instanceof IllegalArgumentException
+        assert shouldFail { unifiedFragments.resolve(opus.completePath, "_${step}:0..${step}:999999", null) } instanceof IllegalArgumentException
+    }
+
+    @Test
+    void genuineSubchaptersKeepTheirPageIdentity() {
+        final step = frenchSubDivSteps[0]
+        final page = unifiedFragments.resolve(frenchOpus.completePath, "_${step}", null)
+        assert page.kind() == 'page'
+        assert page.sourcePath() == frenchSubDivs[0].completePath
+        assert unifiedFragments.resolve(page.sourcePath(), null, null) == page
+    }
+
+    @Test
+    void publicServerUrlsServeExactFragmentsAndKeepRawExports() {
+        final step = directLeafSteps.max { textAt(it).length() }
+        final fragment = unifiedFragments.resolve(opus.completePath, "_${step}:2..${step}:9", null)
+        def client = java.net.http.HttpClient.newHttpClient()
+        def get = { String path, String accept ->
+            def request = java.net.http.HttpRequest.newBuilder(java.net.URI.create("http://localhost:${port}${path}"))
+                    .header('Accept', accept).GET().build()
+            client.send(request, java.net.http.HttpResponse.BodyHandlers.ofString())
+        }
+        final plain = get(fragment.canonicalPath(), 'text/plain')
+        assert plain.statusCode() == 200
+        assert plain.body() == fragment.text()
+        final json = get(fragment.canonicalPath(), 'application/json')
+        assert json.statusCode() == 200
+        assert new groovy.json.JsonSlurper().parseText(json.body()).selector == fragment.selector()
+        final html = get(fragment.canonicalPath(), 'text/html')
+        assert html.statusCode() == 200
+        assert html.body().contains('quote-card')
+        assert get(fragment.canonicalPath() + '&display=context', 'text/html').body().contains('<mark>')
+        assert get('/quote/' + opus.completePath + "?start=${step}.2&end=${step}.9", 'text/html').statusCode() == 302
+        assert get('/' + leafAt(step).completePath, 'text/html').statusCode() == 302
+        assert get(fragment.canonicalPath().replace(fragment.sourceVersion(), '0' * 64), 'text/plain').statusCode() == 409
+        assert get('/' + leafAt(step).completePath + '.txt', 'text/plain').body() == textAt(step)
+    }
+
+    @Test
+    void unifiedCrossChapterRangesReportTheirActualEndpointReadingPages() {
+        final firstStep = firstLeafStepWithin(frenchSubDivs[0])
+        final lastStep = firstLeafStepWithin(frenchSubDivs[1])
+        final fragment = unifiedFragments.resolve(frenchOpus.completePath,
+                "_${frenchSubDivSteps[0]}.${firstStep}:2..${frenchSubDivSteps[1]}.${lastStep}:3", null)
+        assert fragment.readingPages() == [frenchSubDivs[0].completePath, frenchSubDivs[1].completePath]
     }
 
     static Exception shouldFail(Closure closure) {
