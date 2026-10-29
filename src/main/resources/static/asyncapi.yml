@@ -86,6 +86,19 @@ channels:
     messages:
       userLoggedInEvent:
         $ref: '#/components/messages/userLoggedInEvent'
+  humanEvents:
+    address: biblioteca_events
+    description: |
+      Every interesting human event - a login, a search, a chat message, a
+      RAG search or question - as one flat JSON object, for whatever wants
+      to mail, push or count them. The topic name is a constant
+      (KafkaProps.humanEventsTopicName, served to biblioteca-nestjs through
+      /api/admin/config), never a setting or a secret. Published by
+      biblioteca-server (login, search) and biblioteca-nestjs (chat,
+      rag-search, ask).
+    messages:
+      humanEvent:
+        $ref: '#/components/messages/humanEvent'
 
 operations:
   publishNewOpusImported:
@@ -104,6 +117,10 @@ operations:
     action: send
     channel:
       $ref: '#/channels/loginTopic'
+  publishHumanEvent:
+    action: send
+    channel:
+      $ref: '#/channels/humanEvents'
   # biblioteca-nestjs's current Kafka consumption - see its own
   # src/services/kafka/listener.service.ts. Documented from the
   # consumer's side here since this is the shared cross-service
@@ -145,6 +162,12 @@ components:
       contentType: application/json
       payload:
         $ref: '#/components/schemas/UserLoggedInDto'
+    humanEvent:
+      name: HumanEvent
+      title: An interesting human event (login, search, chat...)
+      contentType: application/json
+      payload:
+        $ref: '#/components/schemas/HumanEvent'
     opusRemovedEvent:
       name: OpusRemovedEvent
       title: An opus whose source file no longer exists
@@ -239,6 +262,37 @@ components:
           type: string
       required:
         - strId
+
+    # Built by ro.editii.scriptorium.events.HumanEvents (server) and
+    # human-events.publisher.ts (nestjs): common fields, then the type's own.
+    HumanEvent:
+      type: object
+      properties:
+        type:
+          type: string
+          enum: [login, search, chat, rag-search, ask]
+        at:
+          type: string
+          format: date-time
+        service:
+          type: string
+          enum: [biblioteca-server, biblioteca-nestjs]
+        user:
+          type: string
+          description: the signed-in reader; absent for an anonymous one
+        provider: { type: string, description: 'login: password, remember-me or google' }
+        userId: { type: integer, format: int64, description: 'login' }
+        mode: { type: string, description: 'search: authors, divHeads, grep, lucene or vector' }
+        query: { type: string, description: 'search, rag-search: what was searched' }
+        limit: { type: integer, description: 'search: results asked for, after the server cap' }
+        results: { type: integer, description: 'search, rag-search: results returned' }
+        message: { type: string, description: 'chat, ask: what the reader asked' }
+        conversationId: { type: string, description: 'chat' }
+        scope: { type: object, description: 'chat, ask, rag-search: the works searched, absent for the whole library' }
+        answerChars: { type: integer, description: 'chat, ask: length of the answer' }
+        passages: { type: integer, description: 'chat, ask: passages the answer drew on' }
+        model: { type: string, description: 'chat, ask: the generating model' }
+      required: [type, at, service]
 
     # Mirrors ro.editii.scriptorium.dto.UserLoggedInDto exactly.
     UserLoggedInDto:

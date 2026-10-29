@@ -89,4 +89,9 @@ public class KafkaConfiguration {
     public NewTopic enrichWork() {
         return TopicBuilder.name(this.kafkaProps.getEnrichWorkTopicName()).build();
     }
+
+    @Bean
+    public NewTopic humanEvents() {
+        return TopicBuilder.name(this.kafkaProps.getHumanEventsTopicName()).build();
+    }
 }

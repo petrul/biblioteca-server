@@ -21,4 +21,7 @@ public interface TextbaseEventsPublisher {
 
     /** A served work lacks enrichment (a cover); see CoverEnrichmentRequests. */
     void signalEnrichWork(EnrichWorkDto event);
+
+    /** An interesting human event, built by events.HumanEvents, for the biblioteca_events topic. */
+    default void signalHumanEvent(java.util.Map<String, Object> event) {}
 }

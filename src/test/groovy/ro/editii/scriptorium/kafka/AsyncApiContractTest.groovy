@@ -136,5 +136,7 @@ class AsyncApiContractTest {
         assert channels.path('opusReimportedTopic').path('address').asText() == props.opusReimportedTopicName
         assert channels.path('opusRemovedTopic').path('address').asText() == props.opusRemovedTopicName
         assert channels.path('loginTopic').path('address').asText() == props.loginTopicName
+        assert channels.path('humanEvents').path('address').asText() == props.humanEventsTopicName
+        assert props.humanEventsTopicName == 'biblioteca_events'
     }
 }

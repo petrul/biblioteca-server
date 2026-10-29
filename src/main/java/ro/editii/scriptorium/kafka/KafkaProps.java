@@ -17,19 +17,12 @@ public class KafkaProps {
     String loginTopicName = "biblioteca_loginTopic";
     String enrichWorkTopicName = "biblioteca_enrichWorkTopic";
 
-    /** Greg's fan-out topics: mail-sender and notification-sender consume these. */
-    String notificationMailTopicName = "greg-send-mail";
-    String notificationNtfyTopicName = "greg-send-notification";
-
-    /** Destinations are supplied by the active pass-store profile, never committed. */
-    @Value("${CONTACT_MAIL_TO:}")
-    String notificationMailTo;
-    @Value("${SMTP_FROM:}")
-    String notificationMailFrom;
-    @Value("${NTFY_URL:}")
-    String notificationNtfyUrl;
-    @Value("${NTFY_TOKEN:}")
-    String notificationNtfyToken;
+    /**
+     * Interesting human events (login, search, chat) as JSON - see
+     * events.HumanEvents. A constant, never a setting or a secret; served to
+     * biblioteca-nestjs through the shared config like the topics above.
+     */
+    String humanEventsTopicName = "biblioteca_events";
 
     // No inline default here on purpose, unlike before - it used to be
     // "kafka:9092", silently different from application.properties's own

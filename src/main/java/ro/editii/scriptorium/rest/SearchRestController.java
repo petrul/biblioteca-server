@@ -1,6 +1,8 @@
 package ro.editii.scriptorium.rest;
 
 import ro.editii.scriptorium.ResourceLimits;
+import ro.editii.scriptorium.events.HumanEvents;
+import ro.editii.scriptorium.kafka.TextbaseEventsPublisher;
 
 import io.swagger.v3.oas.annotations.Operation;
 import jakarta.servlet.http.HttpServletRequest;
@@ -28,6 +30,7 @@ import ro.editii.scriptorium.service.DivService;
 import ro.editii.scriptorium.vector.*;
 
 import java.util.List;
+import java.util.Map;
 
 
 @RestController
@@ -60,6 +63,16 @@ public class SearchRestController extends CommonControllerUtil {
         this.divService = divService;
     }
 
+    // A search is an interesting human event: see events.HumanEvents.
+    @Autowired(required = false)
+    TextbaseEventsPublisher events;
+
+    private void recordSearch(String mode, String q, int limit, int results) {
+        if (this.events == null) return;
+        this.events.signalHumanEvent(HumanEvents.event("search", HumanEvents.currentUser(),
+                Map.of("mode", mode, "query", q, "limit", limit, "results", results)));
+    }
+
     @GetMapping("/authors")
     @ResponseBody
     public List<HitDto> searchAuthors(@RequestParam(name = "q") @Size(min = 3) String q,
@@ -75,6 +88,7 @@ public class SearchRestController extends CommonControllerUtil {
                     this.getAuthorThumb(auth.getStrId(),
                             uriComponentsBuilder, httpServletRequest));
         });
+        recordSearch("authors", q, ResourceLimits.searchResults(limit), resp.size());
         return resp;
     }
 
@@ -95,6 +109,7 @@ public class SearchRestController extends CommonControllerUtil {
                 q.length(),
                 watch));
 
+        recordSearch("divHeads", q, ResourceLimits.searchResults(limit), resp.size());
         return resp;
     }
 
@@ -117,6 +132,7 @@ public class SearchRestController extends CommonControllerUtil {
                 q.length(),
                 watch));
 
+        recordSearch("vector", q, ResourceLimits.searchResults(limit), resp.size());
         return resp;
 
     }
@@ -139,6 +155,7 @@ public class SearchRestController extends CommonControllerUtil {
                 q.length(),
                 watch));
 
+        recordSearch("grep", q, ResourceLimits.searchResults(limit), resp.size());
         return resp;
     }
 
@@ -161,6 +178,7 @@ public class SearchRestController extends CommonControllerUtil {
                 q.length(),
                 watch));
 
+        recordSearch("lucene", q, ResourceLimits.searchResults(limit), resp.size());
         return resp;
     }
 

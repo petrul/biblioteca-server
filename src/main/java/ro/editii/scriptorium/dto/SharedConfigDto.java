@@ -18,6 +18,8 @@ public class SharedConfigDto {
         String opusReimportedTopic;
         String opusRemovedTopic;
         String enrichWorkTopic;
+        /** biblioteca_events: interesting human events, see events.HumanEvents. */
+        String humanEventsTopic;
     }
 
     /**
