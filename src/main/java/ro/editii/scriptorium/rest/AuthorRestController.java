@@ -1,5 +1,7 @@
 package ro.editii.scriptorium.rest;
 
+import ro.editii.scriptorium.ResourceLimits;
+
 import ro.editii.scriptorium.service.CoverEnrichmentRequests;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.log4j.Log4j2;
@@ -83,8 +85,8 @@ public class AuthorRestController extends CommonControllerUtil {
             @RequestParam(required = false) String q,
             UriComponentsBuilder uriComponentsBuilder,
             HttpServletRequest httpServletRequest) {
-        final int safePage = Math.max(1, page);
-        final int safeSize = Math.min(100, Math.max(1, size));
+        final int safePage = ResourceLimits.pageNumber(page);
+        final int safeSize = ResourceLimits.pageSize(size, ResourceLimits.CATALOG_PAGE_SIZE_MAX);
         final Page<Author> result = this.authorRepository.findCatalogPage(
                 q == null ? null : q.trim(), PageRequest.of(safePage - 1, safeSize));
         final List<AuthorDto> items = result.getContent().stream().map(author -> {

@@ -1,5 +1,7 @@
 package ro.editii.scriptorium.rest;
 
+import ro.editii.scriptorium.ResourceLimits;
+
 import ro.editii.scriptorium.service.CoverEnrichmentRequests;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -35,8 +37,8 @@ public class WorkCatalogRestController {
             @RequestParam(required = false) String q,
             @RequestParam(required = false) String lang,
             UriComponentsBuilder uriComponentsBuilder) {
-        final int safePage = Math.max(1, page);
-        final int safeSize = Math.min(100, Math.max(1, size));
+        final int safePage = ResourceLimits.pageNumber(page);
+        final int safeSize = ResourceLimits.pageSize(size, ResourceLimits.CATALOG_PAGE_SIZE_MAX);
         final Page<TeiDiv> result = teiDivRepository.findOperaCatalogPage(
                 q == null ? null : q.trim(),
                 lang == null || lang.isBlank() ? null : Languages.from(lang.trim()),

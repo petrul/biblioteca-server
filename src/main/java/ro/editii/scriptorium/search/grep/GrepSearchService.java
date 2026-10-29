@@ -1,5 +1,7 @@
 package ro.editii.scriptorium.search.grep;
 
+import ro.editii.scriptorium.ResourceLimits;
+
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 import org.apache.commons.lang3.time.StopWatch;
@@ -38,7 +40,7 @@ public class GrepSearchService {
     // such request can't turn into an unbounded, ever-slower full-corpus
     // walk as the corpus grows. Results may be incomplete once this is hit
     // (logged, not silently swallowed).
-    private static final int MAX_PARAGRAPHS_SCANNED = 50_000;
+    private static final int MAX_PARAGRAPHS_SCANNED = ResourceLimits.GREP_PARAGRAPHS_SCANNED_MAX;
 
     private final TeiDivRepository teiDivRepository;
     private final DivService divService;

@@ -1,5 +1,7 @@
 package ro.editii.scriptorium.rest;
 
+import ro.editii.scriptorium.ResourceLimits;
+
 import ro.editii.scriptorium.service.CoverEnrichmentRequests;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -234,9 +236,10 @@ public class DivRestController {
         final var arr = new ArrayList<TeiDiv>();
         toc.iterator().forEachRemaining(arr::add);
 
+        final int size = ResourceLimits.pageSize(pageSize, ResourceLimits.DIV_PAGE_SIZE_MAX);
         final TeiDivDto[] teiDivDtoArr = arr.stream()
-                .skip(pageNr * pageSize)
-                .limit(pageSize)
+                .skip((long) ResourceLimits.pageIndex(pageNr) * size)
+                .limit(size)
                 .map(it -> TeiDivDto.fromTeiDiv(it, Util.cloneUriComponentBuilder(uriComponentsBuilder, httpServletRequest)))
                 .toArray(TeiDivDto[]::new);
 
@@ -270,8 +273,9 @@ public class DivRestController {
             RestUtil.throw404();
 
         final var teiDiv = teiDivOpt.get();
-        final long startIdx = (long) pageNr * pageSize;
-        final var paras = this.divService.getParagraphs(teiDiv, startIdx, pageSize);
+        final int size = ResourceLimits.pageSize(pageSize, ResourceLimits.DIV_PAGE_SIZE_MAX);
+        final long startIdx = (long) ResourceLimits.pageIndex(pageNr) * size;
+        final var paras = this.divService.getParagraphs(teiDiv, startIdx, size);
 
         final var dtos = paras.stream()
             .map(it -> {

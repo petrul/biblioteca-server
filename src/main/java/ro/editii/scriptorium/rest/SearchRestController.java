@@ -1,5 +1,7 @@
 package ro.editii.scriptorium.rest;
 
+import ro.editii.scriptorium.ResourceLimits;
+
 import io.swagger.v3.oas.annotations.Operation;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.constraints.Size;
@@ -64,7 +66,7 @@ public class SearchRestController extends CommonControllerUtil {
                                       @RequestParam(name="limit", required = false, defaultValue = "10") int limit,
                                       UriComponentsBuilder uriComponentsBuilder,
                                       HttpServletRequest httpServletRequest) {
-        final List<Author> authors = this.dbSearchService.findAuthors(q, limit);
+        final List<Author> authors = this.dbSearchService.findAuthors(q, ResourceLimits.searchResults(limit));
         final List<HitDto> resp = authors.stream().map(it -> HitDto.from(it,
                 Util.cloneUriComponentBuilder(uriComponentsBuilder, httpServletRequest))).toList();
         resp.forEach(it -> {
@@ -83,7 +85,7 @@ public class SearchRestController extends CommonControllerUtil {
                                       UriComponentsBuilder uriComponentsBuilder) {
         final StopWatch watch = new StopWatch(); watch.start();
 
-        final List<TeiDiv> divs = this.dbSearchService.findDivHeads(q, limit);
+        final List<TeiDiv> divs = this.dbSearchService.findDivHeads(q, ResourceLimits.searchResults(limit));
         final var resp = divs.stream().map(it -> HitDto.from(it, uriComponentsBuilder)).toList();
 
         watch.stop();
@@ -104,7 +106,7 @@ public class SearchRestController extends CommonControllerUtil {
             UriComponentsBuilder uriComponentsBuilder) {
         final StopWatch watch = new StopWatch(); watch.start();
 
-        final var divs = this.dbSearchService.searchMilvus(q, limit);
+        final var divs = this.dbSearchService.searchMilvus(q, ResourceLimits.searchResults(limit));
 
         watch.stop();
 
@@ -126,7 +128,7 @@ public class SearchRestController extends CommonControllerUtil {
             @RequestParam(name = "limit", required = false, defaultValue = "10") int limit) {
         final StopWatch watch = new StopWatch(); watch.start();
 
-        final var hits = this.dbSearchService.searchGrep(q, limit);
+        final var hits = this.dbSearchService.searchGrep(q, ResourceLimits.searchResults(limit));
 
         watch.stop();
 
@@ -148,7 +150,7 @@ public class SearchRestController extends CommonControllerUtil {
             UriComponentsBuilder uriComponentsBuilder) {
         final StopWatch watch = new StopWatch(); watch.start();
 
-        final var hits = this.dbSearchService.searchLucene(q, limit);
+        final var hits = this.dbSearchService.searchLucene(q, ResourceLimits.searchResults(limit));
 
         watch.stop();
 
