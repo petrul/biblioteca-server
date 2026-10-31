@@ -90,9 +90,21 @@ public interface TeiDivRepository extends JpaRepository<TeiDiv, Long> {
             """, nativeQuery = true)
     List<Object[]> getBottomDivIdsWithFilename();
 
-    @Query(""" 
-             select div from TeiDiv div 
-             join div.teiFile.authors a 
+    /**
+     * The Discover shelf's candidates: {opus id, source TEI filename} for
+     * every root div, without loading whole TeiDiv entities. The caller
+     * draws its random sample from these in memory.
+     */
+    @Query("""
+            select div.id, tf.filename from TeiDiv div
+            join div.teiFile tf
+            where div.parent is null
+            """)
+    List<Object[]> getOperaIdsWithFilename();
+
+    @Query("""
+             select div from TeiDiv div
+             join div.teiFile.authors a
              where div.parent is null 
              and a.strId = ?1 """)
     List<TeiDiv> findOperaForAuthorStrId(String authorStrId);

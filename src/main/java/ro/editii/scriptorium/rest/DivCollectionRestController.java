@@ -24,10 +24,18 @@ import ro.editii.scriptorium.model.Languages;
 import ro.editii.scriptorium.model.TeiDiv;
 import ro.editii.scriptorium.model.TeiFile;
 import ro.editii.scriptorium.model.DivCollection;
+import ro.editii.scriptorium.tei.TeiRepo;
 import org.springframework.web.util.UriComponentsBuilder;
 
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.Objects;
 import java.util.UUID;
+import java.util.concurrent.ThreadLocalRandom;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 /**
@@ -56,6 +64,7 @@ public class DivCollectionRestController {
     final TeiFileRepository teiFileRepository;
     final FragmentResolutionService fragmentResolutionService;
     final CoverEnrichmentRequests coverEnrichmentRequests;
+    final TeiRepo teiRepo;
 
     private AppUser currentUser(Authentication authentication) {
         return this.appUserRepository.findByUsername(authentication.getName())
@@ -307,6 +316,57 @@ public class DivCollectionRestController {
                 .flatMap(parts -> this.teiDivRepository.findOperaByStablePath(parts.authorId(), parts.opusId()).stream())
                 .map(it -> featuredDto(it, ucb))
                 .toList());
+    }
+
+    static final int DISCOVER_DEFAULT_SIZE = 20;
+    static final int DISCOVER_MAX_SIZE = 50;
+
+    /**
+     * Read-only system collection behind the reader's Discover shelf: a
+     * fresh random sample of works on every call. Works whose TEI source is
+     * no longer in TEI_REPOS are left out, same as random discovery
+     * (UtilController) - the shelf must never link to a page that 404s.
+     */
+    @GetMapping("/system/discover")
+    @Transactional(readOnly = true, isolation = Isolation.READ_UNCOMMITTED)
+    public List<TeiDivDto> discover(@RequestParam(defaultValue = "" + DISCOVER_DEFAULT_SIZE) int size,
+                                    UriComponentsBuilder ucb) {
+        if (size < 1 || size > DISCOVER_MAX_SIZE) {
+            RestUtil.throw400("size must be between 1 and " + DISCOVER_MAX_SIZE);
+            return null;
+        }
+        final List<Long> candidates = new ArrayList<>(discoverCandidateIds());
+        Collections.shuffle(candidates, ThreadLocalRandom.current());
+        final List<Long> picked = candidates.subList(0, Math.min(size, candidates.size()));
+        final Map<Long, TeiDiv> byId = this.teiDivRepository.findAllById(picked).stream()
+                .collect(Collectors.toMap(TeiDiv::getId, Function.identity()));
+        return requestMissingCovers(picked.stream()
+                .map(byId::get)
+                .filter(Objects::nonNull)
+                .map(it -> TeiDivDto.fromTeiDiv(it, ucb.cloneBuilder()))
+                .toList());
+    }
+
+    // Opus ids with a present TEI source, cached: the corpus changes only on
+    // import, and checking every source file per page view would be wasteful.
+    private volatile List<Long> discoverCandidatesCache = List.of();
+    private volatile long discoverCandidatesCacheAt = 0L;
+    private static final long DISCOVER_CANDIDATES_TTL_MS = 30 * 60_000L;
+
+    private List<Long> discoverCandidateIds() {
+        final long now = System.currentTimeMillis();
+        if (this.discoverCandidatesCache.isEmpty() || now - this.discoverCandidatesCacheAt > DISCOVER_CANDIDATES_TTL_MS) {
+            final Map<String, Boolean> sourcePresent = new HashMap<>();
+            final List<Long> ids = new ArrayList<>();
+            for (Object[] row : this.teiDivRepository.getOperaIdsWithFilename()) {
+                if (sourcePresent.computeIfAbsent((String) row[1], this.teiRepo::has)) {
+                    ids.add(((Number) row[0]).longValue());
+                }
+            }
+            this.discoverCandidatesCache = List.copyOf(ids);
+            this.discoverCandidatesCacheAt = now;
+        }
+        return this.discoverCandidatesCache;
     }
 
     /** Works served without a cover get one requested (CoverEnrichmentRequests). */

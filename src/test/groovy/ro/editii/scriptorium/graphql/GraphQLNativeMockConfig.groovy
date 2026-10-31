@@ -75,7 +75,7 @@ class GraphQLNativeMockConfig {
     }
     @Bean DivCollectionRestController collections(DivCollectionService service, AppUserRepository users,
                                                   TeiDivRepository divs, TeiFileRepository files, GraphQLNativeMocks mocks) {
-        new DivCollectionRestController(service, users, divs, files, null, mocks.covers)
+        new DivCollectionRestController(service, users, divs, files, null, mocks.covers, mocks.teiRepo)
     }
     @Bean ReadingProgressRestController progress(ReadingProgressService service, AppUserRepository users) {
         new ReadingProgressRestController(service, users)
