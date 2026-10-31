@@ -25,10 +25,14 @@ class DivCollectionDiscoverTest {
     private final Map<Long, TeiDiv> opera = [:]
     private final Set<String> presentSources = [] as Set
     private final List<Object> coverRequests = []
+    private int candidateQueries = 0
 
     private DivCollectionRestController controller() {
         final divs = [
-                getOperaIdsWithFilename: { -> opera.values().collect { [it.id, it.teiFile.filename] as Object[] } },
+                getOperaIdsWithFilename: { ->
+                    candidateQueries++
+                    opera.values().collect { [it.id, it.teiFile.filename] as Object[] }
+                },
                 findAllById            : { Iterable<Long> ids -> ids.collect { opera[it] }.findAll() },
         ] as TeiDivRepository
         final covers = ProxyGenerator.INSTANCE.instantiateAggregateFromBaseClass([
@@ -99,5 +103,26 @@ class DivCollectionDiscoverTest {
         assertThrows(ResponseStatusException) {
             c.discover(DivCollectionRestController.DISCOVER_MAX_SIZE + 1, UriComponentsBuilder.fromUriString('http://test'))
         }
+    }
+
+    @Test
+    void queriesTheCandidateWorksOnceAndDrawsLaterSamplesFromTheCache() {
+        (1..10).each { work("author${it}", "opus${it}") }
+        final c = controller()
+
+        (1..5).each { discoverPaths(c, 3) }
+
+        assertEquals(1, candidateQueries)
+    }
+
+    @Test
+    void skipsAWorkDeletedAfterTheCandidatesWereCached() {
+        work('eminescu', 'geniu_pustiu')
+        work('creanga', 'amintiri')
+        final c = controller()
+        discoverPaths(c, 20) // caches both candidates
+        opera.remove(opera.find { it.value.urlFragment == 'geniu_pustiu' }.key)
+
+        assertEquals(['creanga/amintiri'], discoverPaths(c, 20))
     }
 }
