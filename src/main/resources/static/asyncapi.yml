@@ -279,7 +279,7 @@ components:
           enum: [biblioteca-server, biblioteca-nestjs]
         user:
           type: string
-          description: the signed-in reader; absent for an anonymous one
+          description: the signed-in reader; absent for an anonymous one. chat, ask and rag-search always have one - the reader lets only signed-in users use them
         provider: { type: string, description: 'login: password, remember-me or google' }
         userId: { type: integer, format: int64, description: 'login' }
         mode: { type: string, description: 'search: authors, divHeads, grep, lucene or vector' }
@@ -292,6 +292,7 @@ components:
         answerChars: { type: integer, description: 'chat, ask: length of the answer' }
         passages: { type: integer, description: 'chat, ask: passages the answer drew on' }
         model: { type: string, description: 'chat, ask: the generating model' }
+        failed: { type: string, description: 'chat, ask: why answering failed - present only on a failed one, which is recorded too' }
       required: [type, at, service]
 
     # Mirrors ro.editii.scriptorium.dto.UserLoggedInDto exactly.
