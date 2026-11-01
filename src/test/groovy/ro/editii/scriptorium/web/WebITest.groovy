@@ -656,8 +656,10 @@ class WebITest {
         assert cache[idTocs.first()[0]] != null
     }
 
-    protected def elemTxt(str, i) { tbc.getTextPlain("$str/_${i}") }
-    protected def elemXml(str, i) { tbc.getTextXml("$str/_${i}")}
+    // An element's own representations are its suffixed addresses: the bare
+    // .../_3 now redirects to its canonical fragment (UnifiedFragmentWebRoutes).
+    protected def elemTxt(str, i) { tbc.getTextPlain("$str/_${i}.txt") }
+    protected def elemXml(str, i) { tbc.getTextXml("$str/_${i}.xml")}
 
     @Test
     void testBunch2() {
@@ -777,7 +779,9 @@ class WebITest {
             assert this.authorRepository.findAll().strId.contains(cantemir)
             assert this.authorRepository.findByStrId(cantemir).strId == [cantemir]
 
-            assert !this.tbc.getTextPlain("${path}/_1").empty
+            // each element's own representations are its suffixed addresses:
+            // the bare .../_1 redirects to its canonical fragment
+            assert !this.tbc.getTextPlain("${path}/_1.txt").empty
 
             _1:
             {
@@ -788,37 +792,37 @@ class WebITest {
                     assert e.statusCode.value() == 404
                 }
 
-                final resp = this.tbc.getTextPlain_Response("${path}/_1")
+                final resp = this.tbc.getTextPlain_Response("${path}/_1.txt")
                 assert resp.statusCode.value() == 200
                 assert !resp.body.empty
 
             }
 
             // paragraphs
-            assert !this.tbc.getTextXml("${path}/_1").empty // this is the <head>Partea eclesiastică și literară</head>
-            assert !this.tbc.getTextXml("${path}/_2").empty // this is the <div> <head> Despre religia Moldovenilor ....
+            assert !this.tbc.getTextXml("${path}/_1.xml").empty // this is the <head>Partea eclesiastică și literară</head>
+            assert !this.tbc.getTextXml("${path}/_2.xml").empty // this is the <div> <head> Despre religia Moldovenilor ....
 
-            assert !this.tbc.getDefault("${path}/_1").empty
-            assert !this.tbc.getDefault("${path}/_2").empty
-            assert !this.tbc.getTextHtml("${path}/_1").empty
-            assert !this.tbc.getTextHtml("${path}/_2").empty
+            assert !this.tbc.getDefault("${path}/_1.html").empty
+            assert !this.tbc.getDefault("${path}/_2.html").empty
+            assert !this.tbc.getTextHtml("${path}/_1.html").empty
+            assert !this.tbc.getTextHtml("${path}/_2.html").empty
 
             // sentences
             try {
-                this.tbc.getTextPlain("${path}/_1/_1") // there is no such subelement there should be a 404
+                this.tbc.getTextPlain("${path}/_1/_1.txt") // there is no such subelement there should be a 404
                 Assertions.fail("nope")
             } catch (HttpClientErrorException e) {
                 assert e.statusCode.value() == 404
             }
 
             // this should work since _2 is a div
-            assert this.tbc.getTextXml("${path}/_2/_1") =~ ' <lb/>Despre religia Moldovenilor</head>$'
+            assert this.tbc.getTextXml("${path}/_2/_1.xml") =~ ' <lb/>Despre religia Moldovenilor</head>$'
 
             // this is a <p>
-            assert this.tbc.getTextXml("${path}/_2/_2") =~ ' Osliado, Corza, Dașuba, Striba, Semargle și Mocoza.</p>$'
+            assert this.tbc.getTextXml("${path}/_2/_2.xml") =~ ' Osliado, Corza, Dașuba, Striba, Semargle și Mocoza.</p>$'
 
             // this is the next <p>
-            assert this.tbc.getTextXml("${path}/_2/_3") =~ 'și aducându-i la Roma au jertfit împreună și acelora.</p>$'
+            assert this.tbc.getTextXml("${path}/_2/_3.xml") =~ 'și aducându-i la Roma au jertfit împreună și acelora.</p>$'
 
         }
 
