@@ -2,6 +2,7 @@ package ro.editii.scriptorium.security;
 
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
+import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.slf4j.MDC;
@@ -11,13 +12,15 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
+import java.util.Arrays;
+import java.util.Optional;
 
 /**
  * Labels every request's log lines with its {@link Initiator}, before any
  * other filter runs: the label another service sent (see
- * {@link Initiator#received}), or the guest of the caller's address and
- * browser. {@link InitiatorAuthenticationFilter} then replaces it with the
- * signed-in user once Spring Security has loaded the session.
+ * {@link Initiator#received}), else the browser's guest name cookie, else
+ * "anonymous". {@link InitiatorAuthenticationFilter} then replaces it with
+ * the signed-in user once Spring Security has loaded the session.
  *
  * The MDC value is deliberately NOT cleared when the request ends: Tomcat
  * logs a request's uncaught exception ("Servlet.service() ... threw
@@ -46,7 +49,16 @@ public class InitiatorFilter extends OncePerRequestFilter {
         final boolean internalCaller = this.internalApiToken.authorizes(request.getHeader("Authorization"))
                 || this.internalApiToken.authorizes(request.getHeader("X-Internal-Api-Token"));
         return Initiator.received(request.getHeader(Initiator.HEADER), internalCaller)
-                .orElseGet(() -> Initiator.guestLabel(request.getRemoteAddr() + "|"
-                        + (request.getHeader("User-Agent") == null ? "" : request.getHeader("User-Agent"))));
+                .or(() -> guestCookie(request))
+                .orElse(Initiator.ANONYMOUS);
+    }
+
+    private static Optional<String> guestCookie(HttpServletRequest request) {
+        if (request.getCookies() == null) return Optional.empty();
+        return Arrays.stream(request.getCookies())
+                .filter(cookie -> Initiator.GUEST_COOKIE.equals(cookie.getName()))
+                .map(Cookie::getValue)
+                .filter(Initiator::isGuest)
+                .findFirst();
     }
 }

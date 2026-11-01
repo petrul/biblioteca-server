@@ -24,7 +24,7 @@ class LoggingConfigurationTest {
     }
 
     @Test
-    void 'every line starts with its initiator - system outside a request'() {
+    void 'every message starts with its initiator - system outside a request'() {
         def properties = new Properties()
         getClass().getResourceAsStream('/application.properties').withCloseable {
             properties.load(it)
@@ -34,16 +34,16 @@ class LoggingConfigurationTest {
         def render = { String key ->
             def layout = new PatternLayout(context: context, pattern: properties.getProperty(key).replace('${PID:}', '1'))
             layout.start()
-            def event = new LoggingEvent('test', context.getLogger('ro.editii.scriptorium.model.TeiElem'), Level.INFO, 'parsed', null, null)
+            def event = new LoggingEvent('test', context.getLogger('ro.editii.scriptorium.security.ApiRequestLoggingFilter'), Level.INFO, 'API GET /api/works', null, null)
             layout.doLayout(event)
         }
 
         MDC.remove('initiator')
-        assert render('logging.pattern.console').startsWith('(system) ')
+        assert render('logging.pattern.console').contains(' : (system) API GET /api/works')
         try {
-            MDC.put('initiator', 'petru@scriptorium.ro')
-            assert render('logging.pattern.console').startsWith('(petru@scriptorium.ro) ')
-            assert render('logging.pattern.file').startsWith('(petru@scriptorium.ro) ')
+            MDC.put('initiator', 'guest_formidable_dictator')
+            assert render('logging.pattern.console').contains(' : (guest_formidable_dictator) API GET /api/works')
+            assert render('logging.pattern.file').contains(' : (guest_formidable_dictator) API GET /api/works')
         } finally {
             MDC.remove('initiator')
         }
