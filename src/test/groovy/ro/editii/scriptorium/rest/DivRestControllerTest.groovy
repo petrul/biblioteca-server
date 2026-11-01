@@ -99,9 +99,11 @@ class DivRestControllerTest {
             assert ! it.url.empty
             assert ! it.text_sha256.empty
 
-            // reget the text using a regular GET to the path
-            final text2 = this.tbc.getTextPlain(it.path)
-            assert it.text == text2
+            // reget the text using a regular GET to the path - a paragraph's
+            // address redirects to its canonical fragment, whose text is the
+            // paragraph's own, with its whitespace normalised
+            final text2 = TestUtils.getFollowingRedirects(url(it.path), 'text/plain')
+            assert it.text.replaceAll(/\s+/, ' ').trim() == text2.replaceAll(/\s+/, ' ').trim()
 
             assert Util.sha256Hex(it.text) == it.text_sha256
         }

@@ -18,6 +18,21 @@ public class TestUtils {
         return RandomStringUtils.insecure().nextAlphabetic(length);
     }
 
+    /**
+     * GET with this Accept header, following redirects, and the body of the
+     * 200 at the end: a paragraph address (.../_3) or a legacy /quote/ URL
+     * answers 302 to its canonical fragment URL (UnifiedFragmentWebRoutes).
+     */
+    public static String getFollowingRedirects(String url, String accept) throws java.io.IOException, InterruptedException {
+        final java.net.http.HttpResponse<String> response = java.net.http.HttpClient.newBuilder()
+                .followRedirects(java.net.http.HttpClient.Redirect.NORMAL).build()
+                .send(java.net.http.HttpRequest.newBuilder(java.net.URI.create(url)).header("Accept", accept).build(),
+                        java.net.http.HttpResponse.BodyHandlers.ofString());
+        if (response.statusCode() != 200)
+            throw new AssertionError("GET " + url + " answered " + response.statusCode() + ": " + response.body());
+        return response.body();
+    }
+
     public static String getTmpDir() {
         return System.getProperty("java.io.tmpdir");
     }

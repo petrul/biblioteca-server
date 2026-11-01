@@ -8,6 +8,7 @@ import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.autoconfigure.EnableAutoConfiguration
 import org.springframework.boot.kafka.autoconfigure.KafkaAutoConfiguration
 import org.springframework.boot.test.context.SpringBootTest
+import org.springframework.boot.test.web.server.LocalServerPort
 import org.springframework.context.annotation.Lazy
 import org.springframework.data.domain.PageRequest
 import org.springframework.jdbc.core.JdbcTemplate
@@ -67,6 +68,7 @@ class FragmentControllerITest {
     @Autowired DivService divService
     @Autowired ControllerTool controllerTool
     @Autowired TeiRepo teiRepo
+    @LocalServerPort int localPort
 
     TeiDiv opus
     int leafStep
@@ -108,11 +110,12 @@ class FragmentControllerITest {
     @Test
     void rendersAQuoteCardForAValidFragment() {
         final path = "/quote/${this.opus.completePath}?start=${this.leafStep}.0&end=${this.leafStep}.${Math.min(40, this.leafText.length())}"
-        final html = this.tbc.getTextHtml(path)
+        final html = quoteCard(path)
 
         assert html.contains("quote-card")
         assert html.contains("quote-citation")
-        assert html.contains(this.leafText.substring(0, Math.min(40, this.leafText.length())))
+        // the card keeps the source's line breaks as <br/>: compare its text
+        assert words(html.replaceAll(/<[^>]+>/, ' ')).contains(words(this.leafText.substring(0, Math.min(40, this.leafText.length()))))
     }
 
     @Test
@@ -159,7 +162,7 @@ class FragmentControllerITest {
 
         final path = "/quote/${this.opus.completePath}?start=${essaySubDivStep}.${openingLineStep}.0" +
                 "&end=${essaySubDivStep}.${openingLineStep}.${sentenceEnd}"
-        final html = this.tbc.getTextHtml(path)
+        final html = quoteCard(path)
 
         assert html.contains(expectedQuote)
         assert html.contains("Francis Bacon")
@@ -173,6 +176,13 @@ class FragmentControllerITest {
 
         final ex = shouldFail(HttpClientErrorException) { this.tbc.getTextHtml(path) }
         assert ex.statusCode.value() == 400
+    }
+
+    static String words(String text) { text.replaceAll(/\s+/, ' ').trim() }
+
+    /** A legacy /quote/ URL redirects to its canonical fragment URL, which renders the card. */
+    String quoteCard(String path) {
+        return TestUtils.getFollowingRedirects("http://localhost:${this.localPort}${path}", 'text/html')
     }
 
     static Exception shouldFail(Class expectedType, Closure closure) {
