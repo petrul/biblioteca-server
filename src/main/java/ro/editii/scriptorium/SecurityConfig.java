@@ -21,6 +21,7 @@ import org.springframework.security.web.firewall.StrictHttpFirewall;
 import ro.editii.scriptorium.security.ApiRequestLoggingFilter;
 import ro.editii.scriptorium.security.AdminUsers;
 import ro.editii.scriptorium.security.InternalApiToken;
+import ro.editii.scriptorium.security.InitiatorAuthenticationFilter;
 
 import java.util.Arrays;
 import java.util.List;
@@ -146,7 +147,8 @@ public class SecurityConfig {
                     // authenticated:false rather than the security layer 401ing.
                     .anyRequest().permitAll()
                 )
-                .addFilterAfter(new ApiRequestLoggingFilter(), AnonymousAuthenticationFilter.class);
+                .addFilterAfter(new InitiatorAuthenticationFilter(), AnonymousAuthenticationFilter.class)
+                .addFilterAfter(new ApiRequestLoggingFilter(), InitiatorAuthenticationFilter.class);
 
         return http.build();
     }
