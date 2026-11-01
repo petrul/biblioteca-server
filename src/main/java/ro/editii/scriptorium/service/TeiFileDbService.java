@@ -140,6 +140,7 @@ public class TeiFileDbService {
         // invalidate caches
         this.allDiskCaches.deleteAll();
         this.evictAllCaches();
+        TeiElem.forgetParsedFile(teiFilename);
 
         final String content;
         try (InputStream streamForFile = this.teiRepo.getStreamForName(teiFilename)) {
@@ -182,6 +183,8 @@ public class TeiFileDbService {
         });
 
         this.evictAllCaches();
+        // again: a request may have cached a parse during the import
+        TeiElem.forgetParsedFile(teiFilename);
     }
 
     public void evictAllCaches() {

@@ -223,6 +223,19 @@ public class TeiElem implements Comparable<TeiElem>, Serializable  {
     // cache: parsing a tei file is expensive so cache so we don't parse a new file for every div.
     final private static LRUMap<String, XpathTool> cache_parsedFiles = new LRUMap<>(10, 10);
 
+    /**
+     * Forgets a file's parsed document, so the next node lookup parses it
+     * again. The cache is keyed by filename alone: after a reimport the new
+     * rows' domPaths would otherwise resolve against the OLD document,
+     * serving the previous text - or a wrong node - until LRU eviction or
+     * a restart.
+     */
+    public static void forgetParsedFile(String filename) {
+        synchronized (cache_parsedFiles) {
+            cache_parsedFiles.remove(filename);
+        }
+    }
+
     protected XpathTool parseTeiFile() {
         final String filename = this.teiFile.getFilename();
         synchronized (cache_parsedFiles) {
