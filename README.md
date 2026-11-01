@@ -524,17 +524,16 @@ into every family manifest — `build.gradle` here, `package.json` in the
 vectorizer, reader and covers — so every repo knows which named family
 release its `-SNAPSHOT` is heading toward (the family cuts together, one
 name per family quartet; `git-do-release.sh` bumps the versions). The next
-release is *Ethereal Exedra*.
+release is *Fathomless Fountain*.
 
-The current release is *Dusky Discus*, cut 2026-10-15 and deployed
-with PostgreSQL in production:
+The current release is *Ethereal Exedra*, cut 2026-11-01:
 
-| Project | Stable (*Dusky Discus*) | Release commit |
+| Project | Stable (*Ethereal Exedra*) | Release commit |
 | --- | --- | --- |
-| `biblioteca-server` | 0.9.15 | `b482492` |
-| `biblioteca-nestjs` | 0.9.14 | `ad81ab1` |
-| `biblioteca-reader` | 0.1.16 | `e5f333a` |
-| `biblioteca-covers` | 0.0.5 | `dfe0ce7` |
+| `biblioteca-server` | 0.9.16 | `e53c174` |
+| `biblioteca-nestjs` | 0.9.15 | `93314b3` |
+| `biblioteca-reader` | 0.1.17 | `7724efa` |
+| `biblioteca-covers` | 0.0.6 | `9d145dd` |
 
 ### Keeping this section current
 
@@ -656,14 +655,58 @@ When it was cut, the next release's name was fixed at random: *Dusky Discus*.
 
 The next family release name was randomly selected: *Ethereal Exedra*.
 
-### Ethereal Exedra (next — in development)
+### Ethereal Exedra (2026-11-01)
+
+| Project | Stable (*Ethereal Exedra*) | Release commit |
+| --- | --- | --- |
+| `biblioteca-server` | 0.9.16 | `e53c174` |
+| `biblioteca-nestjs` | 0.9.15 | `93314b3` |
+| `biblioteca-reader` | 0.1.17 | `7724efa` |
+| `biblioteca-covers` | 0.0.6 | `9d145dd` |
+
+- Chat with the library, a book or a collection: hybrid retrieval and RAG
+  over the shared Ollama
+  ([33e5118](https://github.com/petrul/biblioteca-nestjs/commit/33e5118)),
+  for signed-in users only, one message at a time, 60 an hour and 400 a day
+  ([2d2e98d](https://github.com/petrul/biblioteca-reader/commit/2d2e98d)).
+- Every chat, question and RAG search is published on `biblioteca_events`
+  with its user ([2ac1846](https://github.com/petrul/biblioteca-nestjs/commit/2ac1846),
+  [862b44d](https://github.com/petrul/biblioteca-nestjs/commit/862b44d)).
+- Every log line of every service names its initiator: the user, a
+  generated guest name, anonymous or system
+  ([1bc1fde](https://github.com/petrul/biblioteca-server/commit/1bc1fde),
+  [08e1025](https://github.com/petrul/biblioteca-server/commit/08e1025)).
+- Unified fragment addresses and quotation cards; a shared quote previews as
+  its card, a 1200x630 PNG og:image
+  ([958f12a](https://github.com/petrul/biblioteca-server/commit/958f12a),
+  [433af14](https://github.com/petrul/biblioteca-reader/commit/433af14),
+  [783be74](https://github.com/petrul/biblioteca-reader/commit/783be74)).
+- Home page shelves, a Discover collection for guests and a catalogue page
+  ([9bff77f](https://github.com/petrul/biblioteca-reader/commit/9bff77f),
+  [961063d](https://github.com/petrul/biblioteca-server/commit/961063d)).
+- Drama: speaker cues and stage directions
+  ([2e013d8](https://github.com/petrul/biblioteca-reader/commit/2e013d8)).
+- Reading limits that tell people from scrapers; per-request limits in one
+  place ([d714884](https://github.com/petrul/biblioteca-reader/commit/d714884),
+  [97f3e5d](https://github.com/petrul/biblioteca-server/commit/97f3e5d)).
+- Security: GraphQL and the vectorizer APIs only for callers holding
+  BIBLIOTECA_INTERNAL_API_TOKEN; covers proxies only allowlisted images
+  ([fd427ff](https://github.com/petrul/biblioteca-server/commit/fd427ff),
+  [1c3bd9e](https://github.com/petrul/biblioteca-nestjs/commit/1c3bd9e),
+  [5947ccc](https://github.com/petrul/biblioteca-covers/commit/5947ccc)).
+- Reimporting a TEI file serves its new text at once
+  ([2f10ec0](https://github.com/petrul/biblioteca-server/commit/2f10ec0)).
+
+The next family release name was randomly selected: *Fathomless Fountain*.
+
+### Fathomless Fountain (next — in development)
 
 | Project | Snapshot |
 | --- | --- |
-| `biblioteca-server` | 0.9.16-SNAPSHOT |
-| `biblioteca-nestjs` | 0.9.15-SNAPSHOT |
-| `biblioteca-reader` | 0.1.17-SNAPSHOT |
-| `biblioteca-covers` | 0.0.6-SNAPSHOT |
+| `biblioteca-server` | 0.9.17-SNAPSHOT |
+| `biblioteca-nestjs` | 0.9.16-SNAPSHOT |
+| `biblioteca-reader` | 0.1.18-SNAPSHOT |
+| `biblioteca-covers` | 0.0.7-SNAPSHOT |
 
 ### Before the naming began (0.9.1 – 0.9.11)
 
