@@ -726,3 +726,7 @@ sibling stables that shipped in each batch, each with its release commit:
 | 0.9.3 `0f3f814` | 2026-09-20 | 0.9.1 `ed15362` | 0.1.2 `908a1a2` | — | `git` in the runtime image + document-conversion toolbox base; non-blocking initial repo clone; Google One Tap FedCM. |
 | 0.9.2 `c5d01b3` | 2026-09-19 | 0.9.1 `ed15362` | 0.1.2 `908a1a2` | — | Git-backed TEI repositories; enrichment switched from Ollama-generated to search-based. |
 | 0.9.1 `63cac91` | 2026-09-15 | — | — | — | First stable of the 0.9 line: Google sign-in, auto-built Lucene index, Kafka login events, Ollama/SearXNG author bios and opus summaries. |
+
+## License
+
+Copyright 2026 Editii Scriptorium srl. Licensed under the [Apache License, Version 2.0](LICENSE); see also [NOTICE](NOTICE).
