@@ -35,6 +35,7 @@ import java.net.http.HttpResponse
         "spring.main.allow-bean-definition-overriding=true",
         "spring.jpa.hibernate.ddl-auto=create",
         "admin.users=admin@example.com",
+        "biblioteca.internal-api-token=admin-config-test-token",
 ])
 @SpringBootTest(
         webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT,
@@ -117,14 +118,23 @@ class AdminUsersAccessTest {
     }
 
     @Test
-    void apiAdminConfigIsTheOnePublicAdminEndpointForTheVectorizerStartupBootstrap() {
-        // The deliberate /api/admin/config exception (see SecurityConfig):
-        // biblioteca-nestjs fetches the shared naming convention at
-        // startup with no credentials, so it must be reachable anonymously.
-        // Every other /api/admin path stays gated - see the tests above.
-        final response = this.client.send(
+    void apiAdminConfigRequiresTheInternalServiceToken() {
+        final anonymous = this.client.send(
                 HttpRequest.newBuilder(URI.create(url("/api/admin/config")))
                         .header("Accept", "*/*").GET().build(),
+                HttpResponse.BodyHandlers.ofString())
+        // formLogin remains enabled for the legacy browser flow, so the
+        // security entry point redirects anonymous callers instead of
+        // returning a bare 403.
+        assert anonymous.statusCode() in [302, 403]
+
+        // biblioteca-nestjs fetches this internal naming contract with the
+        // same service token used for its other backend calls.
+        final response = this.client.send(
+                HttpRequest.newBuilder(URI.create(url("/api/admin/config")))
+                        .header("Accept", "*/*")
+                        .header("Authorization", "Bearer admin-config-test-token")
+                        .GET().build(),
                 HttpResponse.BodyHandlers.ofString())
 
         assert response.statusCode() == 200
