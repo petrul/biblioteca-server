@@ -12,8 +12,8 @@ GRADLE = "./gradlew"
 # not running the ci task, default to this machine's own short hostname
 # rather than a generic "dev" - each dev box gets its own biblioteca/<host>
 # pass-store section (e.g. biblioteca/zmeu) instead of everyone sharing one
-# "dev" bucket. Explicit `rake run[dev]` (or any [task_profile] arg) still
-# always wins - this is only the fallback.
+# "dev" bucket (there is none any more). Explicit `rake run[zmeu]` (or any
+# [task_profile] arg) still always wins - this is only the fallback.
 profile = ENV['PROFILE'] || (Rake.application.top_level_tasks.include?('ci') ? 'ci' : Socket.gethostname.split('.').first)
 
 def load_profile_env(task_profile)
@@ -101,12 +101,6 @@ task :'ci-graalvm' => [:clean] do
   Rake::Task['docker:publish'].invoke
 end
 
-desc "The Derby Network Server image's own CI pipeline (docker/derby): build it and publish it to the registry"
-task :'derby-ci' do
-  Rake::Task['docker:derby:build'].invoke
-  Rake::Task['docker:derby:publish'].invoke
-end
-
 desc "Run integration-test tagged tests against the integration dependencies"
 task :itest, [:task_profile, :test_filter] do |_task, args|
   task_profile = args[:task_profile] || profile
@@ -126,14 +120,15 @@ end
 
 desc "Verify required environment variables are available from the pass store"
 task :'check-env', [:task_profile] do |_task, args|
-  task_profile = args[:task_profile] || 'dev'
+  task_profile = args[:task_profile] || profile
   load_profile_env(task_profile)
 
   required = {
     # VECTORSTORE_URL is the canonical name of the active store's address
     # (qdrant by default); MILVUS_URL stays as an accepted alternative so
     # pass-store entries not yet renamed keep working.
-    'dev' => [
+    # a developer machine's own profile (zmeu, yoga, ...)
+    'machine' => [
       %w[VECTORSTORE_URL MILVUS_URL],
       'EMBEDDER_URL', 'TEI_REPOS', 'KAFKA_BROKERS', 'DB_URL', 'WORK_DIR',
       'BIBLIOTECA_EXTERNAL_URL', 'ADMIN_USERS', 'GOOGLE_OAUTH_CLIENT_ID',
@@ -158,11 +153,10 @@ task :'check-env', [:task_profile] do |_task, args|
   # Profile names are deliberately free-form: a developer's machine name
   # (zmeu, yoga, ...) is as valid a profile as dev/ci/prod, backed by its
   # own pass-store section (biblioteca/<name> - see load_profile_env).
-  # The three known names keep their environment-specific lists (ci
-  # accepts legacy alias names, dev adds the bare-metal WORK_DIR /
-  # BIBLIOTECA_EXTERNAL_URL); any other name is held to dev's list - the
-  # superset a bare-metal machine profile genuinely needs.
-  expected = required.fetch(task_profile, required['dev'])
+  # ci and prod keep their environment-specific lists (ci accepts legacy
+  # alias names); any other name is a machine profile, held to the
+  # 'machine' list - the superset a bare-metal machine genuinely needs.
+  expected = required.fetch(task_profile, required['machine'])
   missing = expected.reject do |entry|
     keys = entry.is_a?(Array) ? entry : [entry]
     keys.any? { |key| ENV[key] && !ENV[key].strip.empty? }
@@ -317,13 +311,6 @@ task :run, [:task_profile] do |_task, args|
     sh "#{GRADLE} -Pprofile=#{run_profile} bootRun"
 end
 
-desc "Open an interactive Derby ij shell (sql/ij), auto-connected to a profile's DB_URL"
-task :ij, [:task_profile] do |_task, args|
-    task_profile = args[:task_profile] || profile
-    load_profile_env(task_profile)
-    sh "sql/ij #{task_profile}"
-end
-
 task :build, [:task_profile] do |_task, args|
     task_profile = args[:task_profile] || profile
     puts "Building application..."
@@ -426,32 +413,4 @@ namespace :docker do
         puts "==> Successfully published #{target_tag}!"
     end
 
-    # The standalone Apache Derby Network Server image (docker/derby) - the
-    # database this app runs on, kept buildable in-repo because no official
-    # Derby image exists on Docker Hub. Versioned by the Derby version it
-    # serves, parsed from build.gradle's derbyclient dependency so the image
-    # and the client can never drift apart (docker/derby's own DERBY_VERSION
-    # ARG follows the same rule - see its header comment).
-    namespace :derby do
-        DERBY_IMAGE_NAME = "editii/biblioteca-derby"
-        derby_version = File.read('build.gradle')[/derbyclient:([^']+)'/, 1]
-        raise 'no derbyclient version found in build.gradle' unless derby_version
-
-        desc "Build the Derby Network Server image, tagged with the Derby version"
-        task :build do
-            local_tag = "#{DERBY_IMAGE_NAME}:#{derby_version}"
-            puts "==> Building Derby Network Server image (#{local_tag})..."
-            sh "docker build --build-arg DERBY_VERSION=#{derby_version} -f docker/derby/Dockerfile -t #{local_tag} docker/derby"
-        end
-
-        desc "Build and publish the Derby Network Server image to the local registry"
-        task :publish => [:build] do
-            target_tag = "#{LOCAL_REGISTRY}/#{DERBY_IMAGE_NAME}:#{derby_version}"
-            puts "==> Pushing image to #{LOCAL_REGISTRY}..."
-            sh "docker tag #{DERBY_IMAGE_NAME}:#{derby_version} #{target_tag}"
-            sh "docker push #{target_tag}"
-
-            puts "==> Successfully published #{target_tag}!"
-        end
-    end
 end

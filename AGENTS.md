@@ -31,8 +31,7 @@ profile). Stop it with Ctrl-C.
 Test tasks use the `ci` profile unless told otherwise: `rake test` and
 `./gradlew test` run against `biblioteca_ci` on srv2's PostgreSQL (the
 database TeamCity uses), and most Spring test contexts replace the datasource
-with in-memory H2 anyway (one regression test, `DerbyLobLocatorRegressionTest`,
-keeps an in-memory Derby, with Flyway off). Do not run tests with the `zmeu`
+with in-memory H2 anyway. Do not run tests with the `zmeu`
 profile: its `DB_URL` is `biblioteca_zmeu`, the dev server's own data on the
 same PostgreSQL.
 

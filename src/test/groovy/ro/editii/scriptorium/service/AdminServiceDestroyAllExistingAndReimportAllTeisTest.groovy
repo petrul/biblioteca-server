@@ -27,7 +27,7 @@ import ro.editii.scriptorium.tei.TeiRepo
 // that, until now, had zero assertions of its own - purely "doesn't
 // throw". This two-file fixture keeps the thing that actually makes this
 // test valuable - it's a real end-to-end run through AdminService, the
-// real TeiDirRepoImpl/TeifileParser, the real Derby datasource and the
+// real TeiDirRepoImpl/TeifileParser, the real (in-memory H2) datasource and the
 // real LuceneIndexService, not a mock of any of them - while making the
 // "doesn't throw" guarantee into a real one: both the first and the last
 // file in repo-iteration order must come back out correctly after a

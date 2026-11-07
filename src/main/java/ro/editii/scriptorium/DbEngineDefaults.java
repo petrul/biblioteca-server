@@ -14,19 +14,13 @@ import org.springframework.core.env.MapPropertySource;
  *
  * DB_URL (see application.properties) is engine-agnostic and simply rides
  * in from the environment, so which engine the app runs on is decided
- * there, per profile - Derby (Network Server or the tests' embedded
- * memory URLs) or PostgreSQL. Neither can be hardcoded anymore:
+ * there, per profile. The server runs on PostgreSQL only: Apache Derby,
+ * the engine before Dusky Discus (2026-10-15), is retired - its driver is
+ * no longer on the classpath and Flyway 10+ cannot migrate it - so a
+ * jdbc:derby: URL stops the server at startup with that reason, instead of
+ * a missing-driver error further on.
  *
- * - The driver: Spring Boot's URL-prefix detection maps ANY jdbc:derby:
- *   URL (network or embedded) to org.apache.derby.iapi.jdbc.Autoloaded
- *   Driver, which is neither on this app's classpath (only derbyclient
- *   is) nor the right driver for a Network Server connection anyway.
- *
- * - The dialect: Hibernate 6+ moved DerbyDialect into the separate
- *   hibernate-community-dialects module (which is why auto-detection
- *   resolves PostgreSQL fine but Derby needs the explicit pointer).
- *
- * This processor maps the URL prefix to both values and installs them as
+ * This processor maps the URL prefix to the driver and dialect and installs them as
  * the lowest-precedence property source: any explicit value in a profile
  * file, system property or environment variable still wins. A URL with
  * an unrecognized prefix gets no defaults at all - Boot and Hibernate
@@ -36,8 +30,6 @@ public class DbEngineDefaults implements EnvironmentPostProcessor {
 
     private static final String PROPERTY_SOURCE = "dbEngineDefaults";
 
-    private static final String DERBY_DRIVER = "org.apache.derby.client.ClientAutoloadedDriver";
-    private static final String DERBY_DIALECT = "org.hibernate.community.dialect.DerbyDialect";
     private static final String POSTGRESQL_DRIVER = "org.postgresql.Driver";
     private static final String POSTGRESQL_DIALECT = "org.hibernate.dialect.PostgreSQLDialect";
 
@@ -48,9 +40,10 @@ public class DbEngineDefaults implements EnvironmentPostProcessor {
 
         final Map<String, Object> defaults = new HashMap<>();
         if (url.startsWith("jdbc:derby:")) {
-            defaults.put("spring.datasource.driver-class-name", DERBY_DRIVER);
-            defaults.put("spring.jpa.database-platform", DERBY_DIALECT);
-        } else if (url.startsWith("jdbc:postgresql:")) {
+            throw new IllegalStateException("DB_URL is an Apache Derby URL, but Derby is no longer supported - "
+                    + "Biblioteca runs on PostgreSQL only (jdbc:postgresql://...)");
+        }
+        if (url.startsWith("jdbc:postgresql:")) {
             defaults.put("spring.datasource.driver-class-name", POSTGRESQL_DRIVER);
             defaults.put("spring.jpa.database-platform", POSTGRESQL_DIALECT);
         } else {

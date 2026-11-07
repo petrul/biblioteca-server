@@ -4,13 +4,13 @@
 
 Spring Data JPA over **PostgreSQL** (production and integration since Dusky
 Discus, 2026-10-15; the `zmeu` and `ci` profiles too). **Apache Derby**, the
-former engine (Network Server mode, image built from `docker/derby`), can no
-longer run the server: Flyway 10+ dropped it and the migrations run on every
-start. Only one regression test still uses an in-memory Derby, with Flyway
-off; the pass store's legacy `biblioteca/dev` profile still points at Derby.
+former engine (0.9.9-0.9.14, in Network Server mode), is retired: Flyway 10+
+dropped it, the migrations run on every start, and `DbEngineDefaults` stops
+the server with that reason when `DB_URL` is a Derby URL. The tests run on
+in-memory H2.
 The engine is chosen by the `DB_URL` prefix alone: `DbEngineDefaults` maps it to
-the driver class and Hibernate dialect. Credentials ride in the URL (Derby
-`;user=...;password=...`, PostgreSQL `?user=...&password=...`), and
+the driver class and Hibernate dialect. Credentials ride in the URL
+(`?user=...&password=...`), and
 `RunStuffOnStartup` redacts them before logging the URL.
 
 Schema evolution is Hibernate `ddl-auto=update` for routine changes, plus
@@ -27,9 +27,9 @@ Notable migrations: `V2` switched IDENTITY to pooled SEQUENCE ids, so JDBC
 insert batching actually batches. `V3` reseeds every sequence still inside
 its table's used id range, which V2's create-only seeding could not repair.
 That failure showed up as `23505` duplicate-key spam in production. Derby
-has no `ALTER SEQUENCE ... RESTART WITH`, hence V3's drop-and-recreate.
-`sql/check_sequences.groovy` re-checks the sequences on demand (see
-`sql/README.md`), and `rake ij[profile]` opens a Derby `ij` shell.
+had no `ALTER SEQUENCE ... RESTART WITH`, hence V3's drop-and-recreate.
+`sql/run.sh` runs ad-hoc Groovy JDBC scripts against a profile's database
+(see `sql/README.md`).
 `docs/prod-schema.sql` is a `dblook` snapshot of the former Derby production
 schema (reference only).
 

@@ -237,10 +237,6 @@ dependencies {
 	// artifact itself.
 	implementation('org.hibernate.orm:hibernate-graalvm:7.4.1.Final')
 
-	// DerbyDialect isn't in hibernate-core (unlike the old MySQLDialect) -
-	// Hibernate 6+ moved less-common dialects into this separate module.
-	implementation('org.hibernate.orm:hibernate-community-dialects:7.4.1.Final')
-
 	// Same minimal role as wavelen-market-data's own Flyway adoption: ddl-auto
 	// (application.properties) keeps doing the routine day-to-day schema
 	// work, Flyway is only for the rare fix-forward migration when
@@ -273,29 +269,9 @@ dependencies {
     implementation('com.github.ben-manes.caffeine:caffeine')
 
     implementation group: 'commons-cli', name: 'commons-cli', version: '1.4'
-    // Spring Boot's dependency management (its imported BOM) pins EVERY
-    // Derby artifact at its own older Derby - 10.16.1.1 at Boot 4.1.0.
-    // The explicit versions on derbyclient/derby below win for those two,
-    // but their transitive derbyshared still gets the BOM's 10.16.1.1 - a
-    // mixed version set Derby refuses (observed in CI: the tests' embedded
-    // driver, org.apache.derby.jdbc.EmbeddedDriver, failed to load because
-    // derby 10.17 cannot link against derbyshared 10.16; overriding Boot's
-    // derby.version property did NOT cover derbyshared). Explicit
-    // declarations beat the BOM's managed version, so pin derbyshared
-    // itself, on both configurations that carry the Derby jars.
-    runtimeOnly 'org.apache.derby:derbyshared:10.17.1.0'
-
-    // Derby Network Server client - was mysql:mysql-connector-java. Just
-    // the client jar: this app is a client of a standalone Derby Network
-    // Server (see docker/biblioteca's derby service), never embedded.
-    runtimeOnly 'org.apache.derby:derbyclient:10.17.1.0'
-
-    // PostgreSQL JDBC driver - the runtime engine per the postgres
-    // migration (DB_URL's prefix decides the engine, see DbEngineDefaults).
-    // Stays beside derbyclient until the Derby runtime is fully retired:
-    // the tests still use Derby, and profiles that have not switched their
-    // pass-store DB_URL yet keep booting on Derby too. Version is the Boot
-    // BOM's own.
+    // PostgreSQL JDBC driver - the only runtime engine (Apache Derby, the
+    // engine before Dusky Discus, is retired; see DbEngineDefaults).
+    // Version is the Boot BOM's own.
     runtimeOnly 'org.postgresql:postgresql'
 
 	implementation group: 'commons-io', name: 'commons-io', version: '2.6'
@@ -340,14 +316,6 @@ dependencies {
     // In-memory test database for the Spring test contexts: Flyway 10+ no
     // longer supports Derby, H2 it does.
     testRuntimeOnly 'com.h2database:h2'
-    // Embedded Derby engine, for the Derby-specific regression tests only
-    // (DerbyLobLocatorRegressionTest, the prune lock-order tests) - the app
-    // itself is a pure Network Server client (see runtimeOnly derbyclient
-    // above), and only the embedded driver can open jdbc:derby:memory:...
-    testImplementation 'org.apache.derby:derby:10.17.1.0'
-    // Same mixed-version trap as the runtimeOnly derbyshared above, for the
-    // test classpath - the BOM's 10.16.1.1 must not ride along here either.
-    testImplementation 'org.apache.derby:derbyshared:10.17.1.0'
     // Validates real serialized Kafka event DTOs against asyncapi.yml's
     // own schemas (AsyncApiContractTest) - the same "does the checked-in
     // spec actually match what we produce" check
@@ -684,24 +652,16 @@ tasks.withType(ProcessForkOptions).configureEach { task ->
 
             // DB_URL carries the credentials in the URL itself (see
             // application.properties) - one value, nothing else to
-            // synthesize for the database. The engine of the synthesized
-            // fallback URL is DB_ENGINE's choice: "postgres" builds a
-            // PostgreSQL URL (jdbc:postgresql://, ?user=..&password=..),
-            // anything else keeps the historic Derby fallback
-            // (jdbc:derby://, ;user=..;password=..).
+            // synthesize for the database: a PostgreSQL URL
+            // (jdbc:postgresql://, ?user=..&password=..).
             final dbHost = addressFrom('DB_HOST', 'DB_PORT')
             final dbName = props.getProperty('DB_NAME')
             if (dbHost != null && dbName != null) {
                 final dbUser = props.getProperty('DB_USER')
                 final dbPassword = props.getProperty('DB_PASSWORD')
                 final hasCreds = (dbUser != null && dbPassword != null)
-                if ('postgres' == props.getProperty('DB_ENGINE')) {
-                    final creds = hasCreds ? "?user=${dbUser}&password=${dbPassword}" : ''
-                    addFallback('DB_URL', "jdbc:postgresql://${dbHost}/${dbName}${creds}")
-                } else {
-                    final creds = hasCreds ? ";user=${dbUser};password=${dbPassword}" : ''
-                    addFallback('DB_URL', "jdbc:derby://${dbHost}/${dbName};create=true${creds}")
-                }
+                final creds = hasCreds ? "?user=${dbUser}&password=${dbPassword}" : ''
+                addFallback('DB_URL', "jdbc:postgresql://${dbHost}/${dbName}${creds}")
             }
             println "> Applied ${fallbackCount} local fallback value(s) from ${envFile.name} to task '${task.name}'"
         }

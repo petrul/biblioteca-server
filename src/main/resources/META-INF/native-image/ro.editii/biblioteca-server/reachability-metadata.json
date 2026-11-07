@@ -19808,17 +19808,6 @@
      ]
     }
    ],
-   "type": "org.hibernate.community.dialect.DerbyDialect"
-  },
-  {
-   "methods": [
-    {
-     "name": "<init>",
-     "parameterTypes": [
-      "org.hibernate.engine.jdbc.dialect.spi.DialectResolutionInfo"
-     ]
-    }
-   ],
    "type": "org.hibernate.dialect.H2Dialect"
   },
   {
@@ -24426,31 +24415,6 @@
      "parameterTypes": []
     },
     {
-     "name": "e10",
-     "parameterTypes": []
-    },
-    {
-     "name": "e12",
-     "parameterTypes": []
-    },
-    {
-     "name": "e13",
-     "parameterTypes": []
-    },
-    {
-     "name": "e15",
-     "parameterTypes": []
-    }
-   ],
-   "type": "org.apache.derby.exe.accfc50418x01a1xb736x4081x000013247b20c"
-  },
-  {
-   "methods": [
-    {
-     "name": "<init>",
-     "parameterTypes": []
-    },
-    {
      "name": "eagerJpaMetamodelCacheCleanup",
      "parameterTypes": []
     }
@@ -24510,32 +24474,6 @@
     }
    ],
    "type": "org.springframework.boot.webmvc.autoconfigure.WebMvcAutoConfiguration"
-  },
-  {
-   "methods": [
-    {
-     "name": "<init>",
-     "parameterTypes": []
-    },
-    {
-     "name": "g0",
-     "parameterTypes": []
-    }
-   ],
-   "type": "org.apache.derby.exe.ac3ea3c0fbx01a1xb736x4081x000013247b202"
-  },
-  {
-   "methods": [
-    {
-     "name": "<init>",
-     "parameterTypes": []
-    },
-    {
-     "name": "g0",
-     "parameterTypes": []
-    }
-   ],
-   "type": "org.apache.derby.exe.ac3ea3c0fbx01a1xb736x4081x000013247b203"
   },
   {
    "methods": [
@@ -25230,19 +25168,6 @@
     }
    ],
    "type": "org.flywaydb.database.postgresql.PostgreSQLConfigurationExtension"
-  },
-  {
-   "methods": [
-    {
-     "name": "<init>",
-     "parameterTypes": []
-    },
-    {
-     "name": "getWarnings",
-     "parameterTypes": []
-    }
-   ],
-   "type": "org.apache.derby.impl.services.timer.SingletonTimerFactory"
   },
   {
    "methods": [
@@ -28062,762 +27987,6 @@
     }
    ],
    "type": "org.apache.commons.logging.impl.WeakHashtable"
-  },
-  {
-   "methods": [
-    {
-     "name": "<init>",
-     "parameterTypes": []
-    }
-   ],
-   "type": "org.apache.derby.catalog.types.DefaultInfoImpl"
-  },
-  {
-   "methods": [
-    {
-     "name": "<init>",
-     "parameterTypes": []
-    }
-   ],
-   "type": "org.apache.derby.catalog.types.IndexDescriptorImpl"
-  },
-  {
-   "methods": [
-    {
-     "name": "<init>",
-     "parameterTypes": []
-    }
-   ],
-   "type": "org.apache.derby.catalog.types.ReferencedColumnsDescriptorImpl"
-  },
-  {
-   "methods": [
-    {
-     "name": "<init>",
-     "parameterTypes": []
-    }
-   ],
-   "type": "org.apache.derby.catalog.types.RoutineAliasInfo"
-  },
-  {
-   "methods": [
-    {
-     "name": "<init>",
-     "parameterTypes": []
-    }
-   ],
-   "type": "org.apache.derby.catalog.types.TypeDescriptorImpl"
-  },
-  {
-   "methods": [
-    {
-     "name": "<init>",
-     "parameterTypes": []
-    }
-   ],
-   "type": "org.apache.derby.catalog.types.TypesImplInstanceGetter"
-  },
-  {
-   "methods": [
-    {
-     "name": "<init>",
-     "parameterTypes": []
-    }
-   ],
-   "type": "org.apache.derby.catalog.types.UserDefinedTypeIdImpl"
-  },
-  {
-   "methods": [
-    {
-     "name": "<init>",
-     "parameterTypes": []
-    }
-   ],
-   "type": "org.apache.derby.exe.ac1dd0820cx01a1xb736x4081x000013247b200"
-  },
-  {
-   "methods": [
-    {
-     "name": "<init>",
-     "parameterTypes": []
-    }
-   ],
-   "type": "org.apache.derby.exe.ac2c864112x01a1xb736x4081x000013247b200"
-  },
-  {
-   "methods": [
-    {
-     "name": "<init>",
-     "parameterTypes": []
-    }
-   ],
-   "type": "org.apache.derby.exe.ac2c864112x01a1xb736x4081x000013247b201"
-  },
-  {
-   "methods": [
-    {
-     "name": "<init>",
-     "parameterTypes": []
-    }
-   ],
-   "type": "org.apache.derby.exe.ac3ea3c0fbx01a1xb736x4081x000013247b200"
-  },
-  {
-   "methods": [
-    {
-     "name": "<init>",
-     "parameterTypes": []
-    }
-   ],
-   "type": "org.apache.derby.exe.ac3ea3c0fbx01a1xb736x4081x000013247b201"
-  },
-  {
-   "methods": [
-    {
-     "name": "<init>",
-     "parameterTypes": []
-    }
-   ],
-   "type": "org.apache.derby.exe.ac3ea3c0fbx01a1xb736x4081x000013247b204"
-  },
-  {
-   "methods": [
-    {
-     "name": "<init>",
-     "parameterTypes": []
-    }
-   ],
-   "type": "org.apache.derby.exe.ac65548115x01a1xb736x4081x000013247b200"
-  },
-  {
-   "methods": [
-    {
-     "name": "<init>",
-     "parameterTypes": []
-    }
-   ],
-   "type": "org.apache.derby.exe.ac65548115x01a1xb736x4081x000013247b201"
-  },
-  {
-   "methods": [
-    {
-     "name": "<init>",
-     "parameterTypes": []
-    }
-   ],
-   "type": "org.apache.derby.exe.ac65548115x01a1xb736x4081x000013247b202"
-  },
-  {
-   "methods": [
-    {
-     "name": "<init>",
-     "parameterTypes": []
-    }
-   ],
-   "type": "org.apache.derby.exe.accfc50418x01a1xb736x4081x000013247b200"
-  },
-  {
-   "methods": [
-    {
-     "name": "<init>",
-     "parameterTypes": []
-    }
-   ],
-   "type": "org.apache.derby.exe.accfc50418x01a1xb736x4081x000013247b201"
-  },
-  {
-   "methods": [
-    {
-     "name": "<init>",
-     "parameterTypes": []
-    }
-   ],
-   "type": "org.apache.derby.exe.accfc50418x01a1xb736x4081x000013247b2010"
-  },
-  {
-   "methods": [
-    {
-     "name": "<init>",
-     "parameterTypes": []
-    }
-   ],
-   "type": "org.apache.derby.exe.accfc50418x01a1xb736x4081x000013247b202"
-  },
-  {
-   "methods": [
-    {
-     "name": "<init>",
-     "parameterTypes": []
-    }
-   ],
-   "type": "org.apache.derby.exe.accfc50418x01a1xb736x4081x000013247b203"
-  },
-  {
-   "methods": [
-    {
-     "name": "<init>",
-     "parameterTypes": []
-    }
-   ],
-   "type": "org.apache.derby.exe.accfc50418x01a1xb736x4081x000013247b204"
-  },
-  {
-   "methods": [
-    {
-     "name": "<init>",
-     "parameterTypes": []
-    }
-   ],
-   "type": "org.apache.derby.exe.accfc50418x01a1xb736x4081x000013247b205"
-  },
-  {
-   "methods": [
-    {
-     "name": "<init>",
-     "parameterTypes": []
-    }
-   ],
-   "type": "org.apache.derby.exe.accfc50418x01a1xb736x4081x000013247b206"
-  },
-  {
-   "methods": [
-    {
-     "name": "<init>",
-     "parameterTypes": []
-    }
-   ],
-   "type": "org.apache.derby.exe.accfc50418x01a1xb736x4081x000013247b207"
-  },
-  {
-   "methods": [
-    {
-     "name": "<init>",
-     "parameterTypes": []
-    }
-   ],
-   "type": "org.apache.derby.exe.accfc50418x01a1xb736x4081x000013247b208"
-  },
-  {
-   "methods": [
-    {
-     "name": "<init>",
-     "parameterTypes": []
-    }
-   ],
-   "type": "org.apache.derby.exe.accfc50418x01a1xb736x4081x000013247b209"
-  },
-  {
-   "methods": [
-    {
-     "name": "<init>",
-     "parameterTypes": []
-    }
-   ],
-   "type": "org.apache.derby.exe.accfc50418x01a1xb736x4081x000013247b20a"
-  },
-  {
-   "methods": [
-    {
-     "name": "<init>",
-     "parameterTypes": []
-    }
-   ],
-   "type": "org.apache.derby.exe.accfc50418x01a1xb736x4081x000013247b20b"
-  },
-  {
-   "methods": [
-    {
-     "name": "<init>",
-     "parameterTypes": []
-    }
-   ],
-   "type": "org.apache.derby.exe.accfc50418x01a1xb736x4081x000013247b20d"
-  },
-  {
-   "methods": [
-    {
-     "name": "<init>",
-     "parameterTypes": []
-    }
-   ],
-   "type": "org.apache.derby.exe.accfc50418x01a1xb736x4081x000013247b20e"
-  },
-  {
-   "methods": [
-    {
-     "name": "<init>",
-     "parameterTypes": []
-    }
-   ],
-   "type": "org.apache.derby.exe.accfc50418x01a1xb736x4081x000013247b20f"
-  },
-  {
-   "methods": [
-    {
-     "name": "<init>",
-     "parameterTypes": []
-    }
-   ],
-   "type": "org.apache.derby.iapi.jdbc.AutoloadedDriver"
-  },
-  {
-   "methods": [
-    {
-     "name": "<init>",
-     "parameterTypes": []
-    }
-   ],
-   "type": "org.apache.derby.iapi.jdbc.Driver42"
-  },
-  {
-   "methods": [
-    {
-     "name": "<init>",
-     "parameterTypes": []
-    }
-   ],
-   "type": "org.apache.derby.iapi.services.cache.ClassSizeCatalogImpl"
-  },
-  {
-   "methods": [
-    {
-     "name": "<init>",
-     "parameterTypes": []
-    }
-   ],
-   "type": "org.apache.derby.iapi.services.io.FormatableHashtable"
-  },
-  {
-   "methods": [
-    {
-     "name": "<init>",
-     "parameterTypes": []
-    }
-   ],
-   "type": "org.apache.derby.iapi.services.io.FormatableIntHolder"
-  },
-  {
-   "methods": [
-    {
-     "name": "<init>",
-     "parameterTypes": []
-    }
-   ],
-   "type": "org.apache.derby.iapi.services.property.PropertyValidation"
-  },
-  {
-   "methods": [
-    {
-     "name": "<init>",
-     "parameterTypes": []
-    }
-   ],
-   "type": "org.apache.derby.iapi.types.DataValueFactoryImpl"
-  },
-  {
-   "methods": [
-    {
-     "name": "<init>",
-     "parameterTypes": []
-    }
-   ],
-   "type": "org.apache.derby.impl.db.BasicDatabase"
-  },
-  {
-   "methods": [
-    {
-     "name": "<init>",
-     "parameterTypes": []
-    }
-   ],
-   "type": "org.apache.derby.impl.io.VFMemoryStorageFactory"
-  },
-  {
-   "methods": [
-    {
-     "name": "<init>",
-     "parameterTypes": []
-    }
-   ],
-   "type": "org.apache.derby.impl.jdbc.ResourceAdapterImpl"
-  },
-  {
-   "methods": [
-    {
-     "name": "<init>",
-     "parameterTypes": []
-    }
-   ],
-   "type": "org.apache.derby.impl.jdbc.SQLExceptionFactory"
-  },
-  {
-   "methods": [
-    {
-     "name": "<init>",
-     "parameterTypes": []
-    }
-   ],
-   "type": "org.apache.derby.impl.jdbc.authentication.NoneAuthenticationServiceImpl"
-  },
-  {
-   "methods": [
-    {
-     "name": "<init>",
-     "parameterTypes": []
-    }
-   ],
-   "type": "org.apache.derby.impl.services.bytecode.BCJava"
-  },
-  {
-   "methods": [
-    {
-     "name": "<init>",
-     "parameterTypes": []
-    }
-   ],
-   "type": "org.apache.derby.impl.services.cache.ConcurrentCacheFactory"
-  },
-  {
-   "methods": [
-    {
-     "name": "<init>",
-     "parameterTypes": []
-    }
-   ],
-   "type": "org.apache.derby.impl.services.daemon.SingleThreadDaemonFactory"
-  },
-  {
-   "methods": [
-    {
-     "name": "<init>",
-     "parameterTypes": []
-    }
-   ],
-   "type": "org.apache.derby.impl.services.jmx.JMXManagementService"
-  },
-  {
-   "methods": [
-    {
-     "name": "<init>",
-     "parameterTypes": []
-    }
-   ],
-   "type": "org.apache.derby.impl.services.locks.ConcurrentPool"
-  },
-  {
-   "methods": [
-    {
-     "name": "<init>",
-     "parameterTypes": []
-    }
-   ],
-   "type": "org.apache.derby.impl.services.reflect.ReflectClassesJava2"
-  },
-  {
-   "methods": [
-    {
-     "name": "<init>",
-     "parameterTypes": []
-    }
-   ],
-   "type": "org.apache.derby.impl.services.stream.SingleStream"
-  },
-  {
-   "methods": [
-    {
-     "name": "<init>",
-     "parameterTypes": []
-    }
-   ],
-   "type": "org.apache.derby.impl.services.uuid.BasicUUIDFactory"
-  },
-  {
-   "methods": [
-    {
-     "name": "<init>",
-     "parameterTypes": []
-    }
-   ],
-   "type": "org.apache.derby.impl.services.uuid.BasicUUIDGetter"
-  },
-  {
-   "methods": [
-    {
-     "name": "<init>",
-     "parameterTypes": []
-    }
-   ],
-   "type": "org.apache.derby.impl.sql.GenericLanguageFactory"
-  },
-  {
-   "methods": [
-    {
-     "name": "<init>",
-     "parameterTypes": []
-    }
-   ],
-   "type": "org.apache.derby.impl.sql.catalog.DD_Version"
-  },
-  {
-   "methods": [
-    {
-     "name": "<init>",
-     "parameterTypes": []
-    }
-   ],
-   "type": "org.apache.derby.impl.sql.catalog.DataDictionaryImpl"
-  },
-  {
-   "methods": [
-    {
-     "name": "<init>",
-     "parameterTypes": []
-    }
-   ],
-   "type": "org.apache.derby.impl.sql.compile.BitTypeCompiler"
-  },
-  {
-   "methods": [
-    {
-     "name": "<init>",
-     "parameterTypes": []
-    }
-   ],
-   "type": "org.apache.derby.impl.sql.compile.BooleanTypeCompiler"
-  },
-  {
-   "methods": [
-    {
-     "name": "<init>",
-     "parameterTypes": []
-    }
-   ],
-   "type": "org.apache.derby.impl.sql.compile.CLOBTypeCompiler"
-  },
-  {
-   "methods": [
-    {
-     "name": "<init>",
-     "parameterTypes": []
-    }
-   ],
-   "type": "org.apache.derby.impl.sql.compile.CharTypeCompiler"
-  },
-  {
-   "methods": [
-    {
-     "name": "<init>",
-     "parameterTypes": []
-    }
-   ],
-   "type": "org.apache.derby.impl.sql.compile.CountAggregateDefinition"
-  },
-  {
-   "methods": [
-    {
-     "name": "<init>",
-     "parameterTypes": []
-    }
-   ],
-   "type": "org.apache.derby.impl.sql.compile.LOBTypeCompiler"
-  },
-  {
-   "methods": [
-    {
-     "name": "<init>",
-     "parameterTypes": []
-    }
-   ],
-   "type": "org.apache.derby.impl.sql.compile.NumericTypeCompiler"
-  },
-  {
-   "methods": [
-    {
-     "name": "<init>",
-     "parameterTypes": []
-    }
-   ],
-   "type": "org.apache.derby.impl.sql.compile.OptimizerFactoryImpl"
-  },
-  {
-   "methods": [
-    {
-     "name": "<init>",
-     "parameterTypes": []
-    }
-   ],
-   "type": "org.apache.derby.impl.sql.compile.RefTypeCompiler"
-  },
-  {
-   "methods": [
-    {
-     "name": "<init>",
-     "parameterTypes": []
-    }
-   ],
-   "type": "org.apache.derby.impl.sql.compile.TimestampTypeCompiler"
-  },
-  {
-   "methods": [
-    {
-     "name": "<init>",
-     "parameterTypes": []
-    }
-   ],
-   "type": "org.apache.derby.impl.sql.compile.TypeCompilerFactoryImpl"
-  },
-  {
-   "methods": [
-    {
-     "name": "<init>",
-     "parameterTypes": []
-    }
-   ],
-   "type": "org.apache.derby.impl.sql.conn.GenericLanguageConnectionFactory"
-  },
-  {
-   "methods": [
-    {
-     "name": "<init>",
-     "parameterTypes": []
-    }
-   ],
-   "type": "org.apache.derby.impl.sql.execute.ConstantActionActivation"
-  },
-  {
-   "methods": [
-    {
-     "name": "<init>",
-     "parameterTypes": []
-    }
-   ],
-   "type": "org.apache.derby.impl.sql.execute.CountAggregator"
-  },
-  {
-   "methods": [
-    {
-     "name": "<init>",
-     "parameterTypes": []
-    }
-   ],
-   "type": "org.apache.derby.impl.sql.execute.GenericExecutionFactory"
-  },
-  {
-   "methods": [
-    {
-     "name": "<init>",
-     "parameterTypes": []
-    }
-   ],
-   "type": "org.apache.derby.impl.store.access.PC_XenaVersion"
-  },
-  {
-   "methods": [
-    {
-     "name": "<init>",
-     "parameterTypes": []
-    }
-   ],
-   "type": "org.apache.derby.impl.store.access.RllRAMAccessManager"
-  },
-  {
-   "methods": [
-    {
-     "name": "<init>",
-     "parameterTypes": []
-    }
-   ],
-   "type": "org.apache.derby.impl.store.access.btree.index.B2I"
-  },
-  {
-   "methods": [
-    {
-     "name": "<init>",
-     "parameterTypes": []
-    }
-   ],
-   "type": "org.apache.derby.impl.store.access.btree.index.B2IFactory"
-  },
-  {
-   "methods": [
-    {
-     "name": "<init>",
-     "parameterTypes": []
-    }
-   ],
-   "type": "org.apache.derby.impl.store.access.heap.HeapConglomerateFactory"
-  },
-  {
-   "methods": [
-    {
-     "name": "<init>",
-     "parameterTypes": []
-    }
-   ],
-   "type": "org.apache.derby.impl.store.access.sort.ExternalSortFactory"
-  },
-  {
-   "methods": [
-    {
-     "name": "<init>",
-     "parameterTypes": []
-    }
-   ],
-   "type": "org.apache.derby.impl.store.access.sort.UniqueWithDuplicateNullsExternalSortFactory"
-  },
-  {
-   "methods": [
-    {
-     "name": "<init>",
-     "parameterTypes": []
-    }
-   ],
-   "type": "org.apache.derby.impl.store.raw.RawStore"
-  },
-  {
-   "methods": [
-    {
-     "name": "<init>",
-     "parameterTypes": []
-    }
-   ],
-   "type": "org.apache.derby.impl.store.raw.data.AllocPage"
-  },
-  {
-   "methods": [
-    {
-     "name": "<init>",
-     "parameterTypes": []
-    }
-   ],
-   "type": "org.apache.derby.impl.store.raw.data.BaseDataFileFactoryJ4"
-  },
-  {
-   "methods": [
-    {
-     "name": "<init>",
-     "parameterTypes": []
-    }
-   ],
-   "type": "org.apache.derby.impl.store.raw.log.LogToFile"
-  },
-  {
-   "methods": [
-    {
-     "name": "<init>",
-     "parameterTypes": []
-    }
-   ],
-   "type": "org.apache.derby.impl.store.raw.log.ReadOnly"
-  },
-  {
-   "methods": [
-    {
-     "name": "<init>",
-     "parameterTypes": []
-    }
-   ],
-   "type": "org.apache.derby.impl.store.raw.xact.XactFactory"
   },
   {
    "methods": [
@@ -38810,18 +37979,6 @@
    "type": "com.zaxxer.hikari.util.ConcurrentBag$IConcurrentBagEntry[]"
   },
   {
-   "type": "db.migration.MigrationsListedTestBeanInfo"
-  },
-  {
-   "type": "db.migration.MigrationsListedTestCustomizer"
-  },
-  {
-   "type": "db.migration.V10CollectionsMigrationTestBeanInfo"
-  },
-  {
-   "type": "db.migration.V10CollectionsMigrationTestCustomizer"
-  },
-  {
    "type": "db.migration.V10__Collections_with_uuid_ids"
   },
   {
@@ -38844,12 +38001,6 @@
   },
   {
    "type": "db.migration.V10__Collections_with_uuid_idsCustomizer"
-  },
-  {
-   "type": "db.migration.V11AvatarUrlMigrationTestBeanInfo"
-  },
-  {
-   "type": "db.migration.V11AvatarUrlMigrationTestCustomizer"
   },
   {
    "type": "db.migration.V11__Widen_app_user_avatar_url"
@@ -38975,46 +38126,16 @@
    "type": "editii.commons.xml.DomToolCustomizer"
   },
   {
-   "type": "editii.commons.xml.DomToolNamespaceRegressionTestBeanInfo"
-  },
-  {
-   "type": "editii.commons.xml.DomToolNamespaceRegressionTestCustomizer"
-  },
-  {
-   "type": "editii.commons.xml.GXPathToolTestBeanInfo"
-  },
-  {
-   "type": "editii.commons.xml.GXPathToolTestCustomizer"
-  },
-  {
    "type": "editii.commons.xml.MapNamespaceResolverBeanInfo"
   },
   {
    "type": "editii.commons.xml.MapNamespaceResolverCustomizer"
   },
   {
-   "type": "editii.commons.xml.PlayWithXmlNamespacesTestBeanInfo"
-  },
-  {
-   "type": "editii.commons.xml.PlayWithXmlNamespacesTestCustomizer"
-  },
-  {
-   "type": "editii.commons.xml.SaxonIsTheXpathEngineTestBeanInfo"
-  },
-  {
-   "type": "editii.commons.xml.SaxonIsTheXpathEngineTestCustomizer"
-  },
-  {
    "type": "editii.commons.xml.TeiDocumentBeanInfo"
   },
   {
    "type": "editii.commons.xml.TeiDocumentCustomizer"
-  },
-  {
-   "type": "editii.commons.xml.TeiDocumentTestBeanInfo"
-  },
-  {
-   "type": "editii.commons.xml.TeiDocumentTestCustomizer"
   },
   {
    "type": "editii.commons.xml.XpathTool"
@@ -44102,255 +43223,6 @@
    "type": "org.apache.coyote.http11.Http11Processor"
   },
   {
-   "type": "org.apache.derby.catalog.SystemProcedures"
-  },
-  {
-   "type": "org.apache.derby.client.ClientAutoloadedDriver"
-  },
-  {
-   "type": "org.apache.derby.database.Database"
-  },
-  {
-   "type": "org.apache.derby.iapi.jdbc.AuthenticationService"
-  },
-  {
-   "type": "org.apache.derby.iapi.jdbc.DRDAServerStarter"
-  },
-  {
-   "type": "org.apache.derby.iapi.jdbc.InternalDriver"
-  },
-  {
-   "type": "org.apache.derby.iapi.jdbc.JDBC"
-  },
-  {
-   "type": "org.apache.derby.iapi.jdbc.ResourceAdapter"
-  },
-  {
-   "type": "org.apache.derby.iapi.services.cache.CacheFactory"
-  },
-  {
-   "type": "org.apache.derby.iapi.services.compiler.JavaFactory"
-  },
-  {
-   "type": "org.apache.derby.iapi.services.daemon.DaemonFactory"
-  },
-  {
-   "type": "org.apache.derby.iapi.services.jmx.ManagementService"
-  },
-  {
-   "type": "org.apache.derby.iapi.services.loader.ClassFactory"
-  },
-  {
-   "type": "org.apache.derby.iapi.services.locks.LockFactory"
-  },
-  {
-   "type": "org.apache.derby.iapi.services.property.PropertyFactory"
-  },
-  {
-   "type": "org.apache.derby.iapi.services.timer.TimerFactory"
-  },
-  {
-   "type": "org.apache.derby.iapi.services.uuid.UUIDFactory"
-  },
-  {
-   "type": "org.apache.derby.iapi.sql.LanguageFactory"
-  },
-  {
-   "type": "org.apache.derby.iapi.sql.compile.OptimizerFactory"
-  },
-  {
-   "type": "org.apache.derby.iapi.sql.compile.TypeCompilerFactory"
-  },
-  {
-   "type": "org.apache.derby.iapi.sql.conn.LanguageConnectionFactory"
-  },
-  {
-   "type": "org.apache.derby.iapi.sql.dictionary.DataDictionary"
-  },
-  {
-   "type": "org.apache.derby.iapi.sql.execute.ExecAggregator"
-  },
-  {
-   "type": "org.apache.derby.iapi.sql.execute.ExecutionFactory"
-  },
-  {
-   "type": "org.apache.derby.iapi.store.access.AccessFactory"
-  },
-  {
-   "type": "org.apache.derby.iapi.store.access.conglomerate.MethodFactory"
-  },
-  {
-   "type": "org.apache.derby.iapi.store.raw.RawStoreFactory"
-  },
-  {
-   "type": "org.apache.derby.iapi.store.raw.data.DataFactory"
-  },
-  {
-   "type": "org.apache.derby.iapi.store.raw.log.LogFactory"
-  },
-  {
-   "type": "org.apache.derby.iapi.store.raw.xact.TransactionFactory"
-  },
-  {
-   "type": "org.apache.derby.iapi.types.DataType"
-  },
-  {
-   "type": "org.apache.derby.iapi.types.DataValueFactory"
-  },
-  {
-   "type": "org.apache.derby.iapi.types.NumberDataType"
-  },
-  {
-   "type": "org.apache.derby.iapi.types.SQLBinary"
-  },
-  {
-   "type": "org.apache.derby.iapi.types.SQLBoolean"
-  },
-  {
-   "type": "org.apache.derby.iapi.types.SQLChar"
-  },
-  {
-   "type": "org.apache.derby.iapi.types.SQLDate"
-  },
-  {
-   "type": "org.apache.derby.iapi.types.SQLDouble"
-  },
-  {
-   "type": "org.apache.derby.iapi.types.SQLInteger"
-  },
-  {
-   "type": "org.apache.derby.iapi.types.SQLLongint"
-  },
-  {
-   "type": "org.apache.derby.iapi.types.SQLReal"
-  },
-  {
-   "type": "org.apache.derby.iapi.types.SQLRef"
-  },
-  {
-   "type": "org.apache.derby.iapi.types.SQLTime"
-  },
-  {
-   "type": "org.apache.derby.iapi.types.SQLTimestamp"
-  },
-  {
-   "type": "org.apache.derby.iapi.types.UserType"
-  },
-  {
-   "type": "org.apache.derby.impl.db.SlaveDatabase"
-  },
-  {
-   "type": "org.apache.derby.impl.jdbc.ConnectionChild"
-  },
-  {
-   "type": "org.apache.derby.impl.jdbc.EmbedConnection"
-  },
-  {
-   "type": "org.apache.derby.impl.jdbc.EmbedStatement"
-  },
-  {
-   "type": "org.apache.derby.impl.jdbc.TransactionResourceImpl"
-  },
-  {
-   "type": "org.apache.derby.impl.jdbc.Util"
-  },
-  {
-   "type": "org.apache.derby.impl.jdbc.authentication.BasicAuthenticationServiceImpl"
-  },
-  {
-   "type": "org.apache.derby.impl.jdbc.authentication.JNDIAuthenticationService"
-  },
-  {
-   "type": "org.apache.derby.impl.jdbc.authentication.NativeAuthenticationServiceImpl"
-  },
-  {
-   "type": "org.apache.derby.impl.jdbc.authentication.SpecificAuthenticationServiceImpl"
-  },
-  {
-   "type": "org.apache.derby.impl.services.cache.ConcurrentCacheMBeanImpl"
-  },
-  {
-   "type": "org.apache.derby.impl.services.jce.JCECipherFactoryBuilder"
-  },
-  {
-   "type": "org.apache.derby.impl.services.jmx.JMXManagementService$1"
-  },
-  {
-   "type": "org.apache.derby.impl.services.jmxnone.NoManagementService"
-  },
-  {
-   "type": "org.apache.derby.impl.sql.GenericStatement"
-  },
-  {
-   "type": "org.apache.derby.impl.sql.compile.AlterTableNode"
-  },
-  {
-   "type": "org.apache.derby.impl.sql.compile.DDLStatementNode"
-  },
-  {
-   "type": "org.apache.derby.impl.sql.compile.DropSequenceNode"
-  },
-  {
-   "type": "org.apache.derby.impl.sql.compile.DropTableNode"
-  },
-  {
-   "type": "org.apache.derby.impl.sql.conn.GenericLanguageConnectionContext"
-  },
-  {
-   "type": "org.apache.derby.impl.sql.execute.RealResultSetStatisticsFactory"
-  },
-  {
-   "type": "org.apache.derby.impl.sql.execute.xplain.XPLAINFactory"
-  },
-  {
-   "type": "org.apache.derby.impl.store.access.StorableFormatId"
-  },
-  {
-   "type": "org.apache.derby.impl.store.access.btree.BTree"
-  },
-  {
-   "type": "org.apache.derby.impl.store.access.conglomerate.GenericConglomerate"
-  },
-  {
-   "type": "org.apache.derby.impl.store.access.heap.Heap"
-  },
-  {
-   "type": "org.apache.derby.impl.store.access.heap.HeapRowLocation"
-  },
-  {
-   "type": "org.apache.derby.impl.store.raw.data.BaseDataFileFactory"
-  },
-  {
-   "type": "org.apache.derby.impl.store.replication.master.MasterController"
-  },
-  {
-   "type": "org.apache.derby.impl.store.replication.slave.SlaveController"
-  },
-  {
-   "type": "org.apache.derby.jdbc.EmbeddedDriver"
-  },
-  {
-   "type": "org.apache.derby.mbeans.CacheManagerMBean"
-  },
-  {
-   "type": "org.apache.derby.mbeans.JDBCMBean"
-  },
-  {
-   "type": "org.apache.derby.mbeans.ManagementMBean"
-  },
-  {
-   "type": "org.apache.derby.mbeans.Version"
-  },
-  {
-   "type": "org.apache.derby.mbeans.VersionMBean"
-  },
-  {
-   "type": "org.apache.derby.shared.common.error.StandardException"
-  },
-  {
-   "type": "org.apache.derby.shared.common.stream.InfoStreams"
-  },
-  {
    "type": "org.apache.groovy.datetime.extensions.DateTimeExtensions"
   },
   {
@@ -46443,12 +45315,6 @@
   },
   {
    "type": "org.hibernate.collection.spi.PersistentCollection"
-  },
-  {
-   "type": "org.hibernate.community.dialect.CommunityDialectResolver"
-  },
-  {
-   "type": "org.hibernate.community.dialect.CommunityDialectSelector"
   },
   {
    "type": "org.hibernate.engine.config.internal.ConfigurationServiceImpl"
@@ -51845,12 +50711,6 @@
    "type": "ro.editii.scriptorium.AppConfigCustomizer"
   },
   {
-   "type": "ro.editii.scriptorium.AppConfigTestBeanInfo"
-  },
-  {
-   "type": "ro.editii.scriptorium.AppConfigTestCustomizer"
-  },
-  {
    "type": "ro.editii.scriptorium.Couple"
   },
   {
@@ -51866,76 +50726,16 @@
    "type": "ro.editii.scriptorium.FlywayConfigCustomizer"
   },
   {
-   "type": "ro.editii.scriptorium.GTestUtilBeanInfo"
-  },
-  {
-   "type": "ro.editii.scriptorium.GTestUtilCustomizer"
-  },
-  {
-   "type": "ro.editii.scriptorium.HttpCompressionTestBeanInfo"
-  },
-  {
-   "type": "ro.editii.scriptorium.HttpCompressionTestCustomizer"
-  },
-  {
-   "type": "ro.editii.scriptorium.InMemoryTeiRepoBeanInfo"
-  },
-  {
-   "type": "ro.editii.scriptorium.InMemoryTeiRepoCustomizer"
-  },
-  {
-   "type": "ro.editii.scriptorium.LoggingConfigurationTestBeanInfo"
-  },
-  {
-   "type": "ro.editii.scriptorium.LoggingConfigurationTestCustomizer"
-  },
-  {
-   "type": "ro.editii.scriptorium.MultilangTeiRepoConfigBeanInfo"
-  },
-  {
-   "type": "ro.editii.scriptorium.MultilangTeiRepoConfigCustomizer"
-  },
-  {
    "type": "ro.editii.scriptorium.ResourceLimitsBeanInfo"
   },
   {
    "type": "ro.editii.scriptorium.ResourceLimitsCustomizer"
   },
   {
-   "type": "ro.editii.scriptorium.ResourceLimitsTestBeanInfo"
-  },
-  {
-   "type": "ro.editii.scriptorium.ResourceLimitsTestCustomizer"
-  },
-  {
    "type": "ro.editii.scriptorium.SessionConfigBeanInfo"
   },
   {
    "type": "ro.editii.scriptorium.SessionConfigCustomizer"
-  },
-  {
-   "type": "ro.editii.scriptorium.SessionConfigTestBeanInfo"
-  },
-  {
-   "type": "ro.editii.scriptorium.SessionConfigTestCustomizer"
-  },
-  {
-   "type": "ro.editii.scriptorium.SwaggerUiConfigurationTestBeanInfo"
-  },
-  {
-   "type": "ro.editii.scriptorium.SwaggerUiConfigurationTestCustomizer"
-  },
-  {
-   "type": "ro.editii.scriptorium.Teidiv2HtmlDramaTestBeanInfo"
-  },
-  {
-   "type": "ro.editii.scriptorium.Teidiv2HtmlDramaTestCustomizer"
-  },
-  {
-   "type": "ro.editii.scriptorium.TestUtilsBeanInfo"
-  },
-  {
-   "type": "ro.editii.scriptorium.TestUtilsCustomizer"
   },
   {
    "type": "ro.editii.scriptorium.TextbaseConfigBeanInfo"
@@ -51950,22 +50750,10 @@
    "type": "ro.editii.scriptorium.UtilCustomizer"
   },
   {
-   "type": "ro.editii.scriptorium.UtilTestBeanInfo"
-  },
-  {
-   "type": "ro.editii.scriptorium.UtilTestCustomizer"
-  },
-  {
    "type": "ro.editii.scriptorium.WorkDirTildeBeanInfo"
   },
   {
    "type": "ro.editii.scriptorium.WorkDirTildeCustomizer"
-  },
-  {
-   "type": "ro.editii.scriptorium.WorkDirTildeTestBeanInfo"
-  },
-  {
-   "type": "ro.editii.scriptorium.WorkDirTildeTestCustomizer"
   },
   {
    "type": "ro.editii.scriptorium.cache.CacheConfBeanInfo"
@@ -51987,12 +50775,6 @@
   },
   {
    "type": "ro.editii.scriptorium.cache.DiskCacheCustomizer"
-  },
-  {
-   "type": "ro.editii.scriptorium.cache.DiskCacheTestBeanInfo"
-  },
-  {
-   "type": "ro.editii.scriptorium.cache.DiskCacheTestCustomizer"
   },
   {
    "type": "ro.editii.scriptorium.cache.DiskCachesBeanInfo"
@@ -52046,12 +50828,6 @@
    "type": "ro.editii.scriptorium.collection.DivCollectionServiceCustomizer"
   },
   {
-   "type": "ro.editii.scriptorium.collection.DivCollectionServiceTestBeanInfo"
-  },
-  {
-   "type": "ro.editii.scriptorium.collection.DivCollectionServiceTestCustomizer"
-  },
-  {
    "type": "ro.editii.scriptorium.collection.ItemCollection"
   },
   {
@@ -52067,12 +50843,6 @@
    "type": "ro.editii.scriptorium.collection.ReadingProgressServiceCustomizer"
   },
   {
-   "type": "ro.editii.scriptorium.collection.ReadingProgressServiceTestBeanInfo"
-  },
-  {
-   "type": "ro.editii.scriptorium.collection.ReadingProgressServiceTestCustomizer"
-  },
-  {
    "type": "ro.editii.scriptorium.config.RuntimeConfigEntry"
   },
   {
@@ -52086,12 +50856,6 @@
   },
   {
    "type": "ro.editii.scriptorium.config.RuntimeConfigServiceCustomizer"
-  },
-  {
-   "type": "ro.editii.scriptorium.config.RuntimeConfigServiceTestBeanInfo"
-  },
-  {
-   "type": "ro.editii.scriptorium.config.RuntimeConfigServiceTestCustomizer"
   },
   {
    "type": "ro.editii.scriptorium.config.RuntimeConfigUpdate"
@@ -52203,12 +50967,6 @@
   },
   {
    "type": "ro.editii.scriptorium.dto.AuthorMediaDto$AuthorMediaDtoBuilder"
-  },
-  {
-   "type": "ro.editii.scriptorium.dto.BookMetadataContractTestBeanInfo"
-  },
-  {
-   "type": "ro.editii.scriptorium.dto.BookMetadataContractTestCustomizer"
   },
   {
    "type": "ro.editii.scriptorium.dto.BookMetadataDto$BookMetadataDtoBuilder"
@@ -52430,12 +51188,6 @@
    "type": "ro.editii.scriptorium.events.HumanEventsCustomizer"
   },
   {
-   "type": "ro.editii.scriptorium.events.HumanEventsTestBeanInfo"
-  },
-  {
-   "type": "ro.editii.scriptorium.events.HumanEventsTestCustomizer"
-  },
-  {
    "type": "ro.editii.scriptorium.fragment.DotPath"
   },
   {
@@ -52457,12 +51209,6 @@
    "type": "ro.editii.scriptorium.fragment.FragmentResolutionServiceCustomizer"
   },
   {
-   "type": "ro.editii.scriptorium.fragment.FragmentResolutionServiceTestBeanInfo"
-  },
-  {
-   "type": "ro.editii.scriptorium.fragment.FragmentResolutionServiceTestCustomizer"
-  },
-  {
    "type": "ro.editii.scriptorium.fragment.FragmentSelector"
   },
   {
@@ -52476,12 +51222,6 @@
   },
   {
    "type": "ro.editii.scriptorium.fragment.FragmentTextCustomizer"
-  },
-  {
-   "type": "ro.editii.scriptorium.fragment.UnifiedFragmentNotationTestBeanInfo"
-  },
-  {
-   "type": "ro.editii.scriptorium.fragment.UnifiedFragmentNotationTestCustomizer"
   },
   {
    "type": "ro.editii.scriptorium.fragment.UnifiedFragmentService$$SpringCGLIB$$0BeanInfo"
@@ -52502,30 +51242,6 @@
    "type": "ro.editii.scriptorium.fragment.UnifiedFragmentServiceCustomizer"
   },
   {
-   "type": "ro.editii.scriptorium.graphql.GraphQLCatalogTestBeanInfo"
-  },
-  {
-   "type": "ro.editii.scriptorium.graphql.GraphQLCatalogTestCustomizer"
-  },
-  {
-   "type": "ro.editii.scriptorium.graphql.GraphQLNativeMockConfigBeanInfo"
-  },
-  {
-   "type": "ro.editii.scriptorium.graphql.GraphQLNativeMockConfigCustomizer"
-  },
-  {
-   "type": "ro.editii.scriptorium.graphql.GraphQLNativeMocksBeanInfo"
-  },
-  {
-   "type": "ro.editii.scriptorium.graphql.GraphQLNativeMocksCustomizer"
-  },
-  {
-   "type": "ro.editii.scriptorium.graphql.GraphQLSmokeITestBeanInfo"
-  },
-  {
-   "type": "ro.editii.scriptorium.graphql.GraphQLSmokeITestCustomizer"
-  },
-  {
    "type": "ro.editii.scriptorium.health.OllamaHealthTrackerBeanInfo"
   },
   {
@@ -52538,18 +51254,6 @@
    "type": "ro.editii.scriptorium.health.ServiceHealthTrackerCustomizer"
   },
   {
-   "type": "ro.editii.scriptorium.health.ServiceHealthTrackerTestBeanInfo"
-  },
-  {
-   "type": "ro.editii.scriptorium.health.ServiceHealthTrackerTestCustomizer"
-  },
-  {
-   "type": "ro.editii.scriptorium.kafka.AsyncApiContractTestBeanInfo"
-  },
-  {
-   "type": "ro.editii.scriptorium.kafka.AsyncApiContractTestCustomizer"
-  },
-  {
    "type": "ro.editii.scriptorium.kafka.KafkaConfigurationBeanInfo"
   },
   {
@@ -52560,12 +51264,6 @@
   },
   {
    "type": "ro.editii.scriptorium.kafka.KafkaProducerCustomizer"
-  },
-  {
-   "type": "ro.editii.scriptorium.kafka.KafkaProducerTestBeanInfo"
-  },
-  {
-   "type": "ro.editii.scriptorium.kafka.KafkaProducerTestCustomizer"
   },
   {
    "type": "ro.editii.scriptorium.kafka.KafkaPropsBeanInfo"
@@ -52695,12 +51393,6 @@
   },
   {
    "type": "ro.editii.scriptorium.model.AuthorCustomizer"
-  },
-  {
-   "type": "ro.editii.scriptorium.model.AuthorTestBeanInfo"
-  },
-  {
-   "type": "ro.editii.scriptorium.model.AuthorTestCustomizer"
   },
   {
    "type": "ro.editii.scriptorium.model.Author_"
@@ -52865,37 +51557,7 @@
    "type": "ro.editii.scriptorium.model.TeiElemBeanInfo"
   },
   {
-   "type": "ro.editii.scriptorium.model.TeiElemChildrenOrderSqlTestBeanInfo"
-  },
-  {
-   "type": "ro.editii.scriptorium.model.TeiElemChildrenOrderSqlTestCustomizer"
-  },
-  {
    "type": "ro.editii.scriptorium.model.TeiElemCustomizer"
-  },
-  {
-   "type": "ro.editii.scriptorium.model.TeiElemDomPathResolutionTestBeanInfo"
-  },
-  {
-   "type": "ro.editii.scriptorium.model.TeiElemDomPathResolutionTestCustomizer"
-  },
-  {
-   "type": "ro.editii.scriptorium.model.TeiElemParsedFileCacheTestBeanInfo"
-  },
-  {
-   "type": "ro.editii.scriptorium.model.TeiElemParsedFileCacheTestCustomizer"
-  },
-  {
-   "type": "ro.editii.scriptorium.model.TeiElemTeiHeaderMetadataTestBeanInfo"
-  },
-  {
-   "type": "ro.editii.scriptorium.model.TeiElemTeiHeaderMetadataTestCustomizer"
-  },
-  {
-   "type": "ro.editii.scriptorium.model.TeiElemTestBeanInfo"
-  },
-  {
-   "type": "ro.editii.scriptorium.model.TeiElemTestCustomizer"
   },
   {
    "type": "ro.editii.scriptorium.model.TeiElem_"
@@ -52979,18 +51641,6 @@
    "type": "ro.editii.scriptorium.rest.CommonControllerUtilCustomizer"
   },
   {
-   "type": "ro.editii.scriptorium.rest.DerbyLobLocatorRegressionTestBeanInfo"
-  },
-  {
-   "type": "ro.editii.scriptorium.rest.DerbyLobLocatorRegressionTestCustomizer"
-  },
-  {
-   "type": "ro.editii.scriptorium.rest.DivCollectionDiscoverTestBeanInfo"
-  },
-  {
-   "type": "ro.editii.scriptorium.rest.DivCollectionDiscoverTestCustomizer"
-  },
-  {
    "type": "ro.editii.scriptorium.rest.DivCollectionRestController$$SpringCGLIB$$0BeanInfo"
   },
   {
@@ -53021,43 +51671,13 @@
    "type": "ro.editii.scriptorium.rest.DivRestControllerBeanInfo"
   },
   {
-   "type": "ro.editii.scriptorium.rest.DivRestControllerByPathTestBeanInfo"
-  },
-  {
-   "type": "ro.editii.scriptorium.rest.DivRestControllerByPathTestCustomizer"
-  },
-  {
    "type": "ro.editii.scriptorium.rest.DivRestControllerCustomizer"
-  },
-  {
-   "type": "ro.editii.scriptorium.rest.DivRestControllerStatusTestBeanInfo"
-  },
-  {
-   "type": "ro.editii.scriptorium.rest.DivRestControllerStatusTestCustomizer"
-  },
-  {
-   "type": "ro.editii.scriptorium.rest.DivRestControllerTestBeanInfo"
-  },
-  {
-   "type": "ro.editii.scriptorium.rest.DivRestControllerTestCustomizer"
-  },
-  {
-   "type": "ro.editii.scriptorium.rest.EnrichmentCoverReplaceTestBeanInfo"
-  },
-  {
-   "type": "ro.editii.scriptorium.rest.EnrichmentCoverReplaceTestCustomizer"
   },
   {
    "type": "ro.editii.scriptorium.rest.EnrichmentRestControllerBeanInfo"
   },
   {
    "type": "ro.editii.scriptorium.rest.EnrichmentRestControllerCustomizer"
-  },
-  {
-   "type": "ro.editii.scriptorium.rest.EnrichmentRestControllerTestBeanInfo"
-  },
-  {
-   "type": "ro.editii.scriptorium.rest.EnrichmentRestControllerTestCustomizer"
   },
   {
    "type": "ro.editii.scriptorium.rest.FragmentRestController$Selection"
@@ -53093,18 +51713,6 @@
    "type": "ro.editii.scriptorium.rest.ReadingProgressRestControllerCustomizer"
   },
   {
-   "type": "ro.editii.scriptorium.rest.RepoRestControllerITestBeanInfo"
-  },
-  {
-   "type": "ro.editii.scriptorium.rest.RepoRestControllerITestCustomizer"
-  },
-  {
-   "type": "ro.editii.scriptorium.rest.RestApiClientBeanInfo"
-  },
-  {
-   "type": "ro.editii.scriptorium.rest.RestApiClientCustomizer"
-  },
-  {
    "type": "ro.editii.scriptorium.rest.SearchRestControllerBeanInfo"
   },
   {
@@ -53115,12 +51723,6 @@
   },
   {
    "type": "ro.editii.scriptorium.rest.UserPreferencesRestControllerCustomizer"
-  },
-  {
-   "type": "ro.editii.scriptorium.rest.UserPreferencesRestControllerTestBeanInfo"
-  },
-  {
-   "type": "ro.editii.scriptorium.rest.UserPreferencesRestControllerTestCustomizer"
   },
   {
    "type": "ro.editii.scriptorium.rest.UserRestController$RegisterRequest"
@@ -53177,12 +51779,6 @@
    "type": "ro.editii.scriptorium.search.content.PathContentResolverCustomizer"
   },
   {
-   "type": "ro.editii.scriptorium.search.content.PathContentResolverTestBeanInfo"
-  },
-  {
-   "type": "ro.editii.scriptorium.search.content.PathContentResolverTestCustomizer"
-  },
-  {
    "type": "ro.editii.scriptorium.search.lucene.LuceneIndexService$RebuildStatus"
   },
   {
@@ -53192,43 +51788,13 @@
    "type": "ro.editii.scriptorium.search.lucene.LuceneIndexServiceCustomizer"
   },
   {
-   "type": "ro.editii.scriptorium.search.lucene.LuceneIndexServiceResumeTestBeanInfo"
-  },
-  {
-   "type": "ro.editii.scriptorium.search.lucene.LuceneIndexServiceResumeTestCustomizer"
-  },
-  {
-   "type": "ro.editii.scriptorium.search.lucene.LuceneReindexRetentionPolicyTestBeanInfo"
-  },
-  {
-   "type": "ro.editii.scriptorium.search.lucene.LuceneReindexRetentionPolicyTestCustomizer"
-  },
-  {
-   "type": "ro.editii.scriptorium.security.AdminUsersAccessTestBeanInfo"
-  },
-  {
-   "type": "ro.editii.scriptorium.security.AdminUsersAccessTestCustomizer"
-  },
-  {
    "type": "ro.editii.scriptorium.security.AdminUsersBeanInfo"
   },
   {
    "type": "ro.editii.scriptorium.security.AdminUsersCustomizer"
   },
   {
-   "type": "ro.editii.scriptorium.security.AdminUsersTestBeanInfo"
-  },
-  {
-   "type": "ro.editii.scriptorium.security.AdminUsersTestCustomizer"
-  },
-  {
    "type": "ro.editii.scriptorium.security.ApiRequestLoggingFilter"
-  },
-  {
-   "type": "ro.editii.scriptorium.security.AppUserAuthTestBeanInfo"
-  },
-  {
-   "type": "ro.editii.scriptorium.security.AppUserAuthTestCustomizer"
   },
   {
    "type": "ro.editii.scriptorium.security.AppUserDetailsServiceBeanInfo"
@@ -53247,12 +51813,6 @@
   },
   {
    "type": "ro.editii.scriptorium.security.AppUserRegistrationServiceCustomizer"
-  },
-  {
-   "type": "ro.editii.scriptorium.security.AppUserRegistrationServiceTestBeanInfo"
-  },
-  {
-   "type": "ro.editii.scriptorium.security.AppUserRegistrationServiceTestCustomizer"
   },
   {
    "type": "ro.editii.scriptorium.security.GuestNamesBeanInfo"
@@ -53279,40 +51839,16 @@
    "type": "ro.editii.scriptorium.security.InitiatorFilterCustomizer"
   },
   {
-   "type": "ro.editii.scriptorium.security.InitiatorTestBeanInfo"
-  },
-  {
-   "type": "ro.editii.scriptorium.security.InitiatorTestCustomizer"
-  },
-  {
    "type": "ro.editii.scriptorium.security.InternalApiTokenBeanInfo"
   },
   {
    "type": "ro.editii.scriptorium.security.InternalApiTokenCustomizer"
   },
   {
-   "type": "ro.editii.scriptorium.security.google.FakeGoogleAuthTestConfigBeanInfo"
-  },
-  {
-   "type": "ro.editii.scriptorium.security.google.FakeGoogleAuthTestConfigCustomizer"
-  },
-  {
-   "type": "ro.editii.scriptorium.security.google.FakeGoogleIdTokenVerifierBeanInfo"
-  },
-  {
-   "type": "ro.editii.scriptorium.security.google.FakeGoogleIdTokenVerifierCustomizer"
-  },
-  {
    "type": "ro.editii.scriptorium.security.google.GoogleAuthServiceBeanInfo"
   },
   {
    "type": "ro.editii.scriptorium.security.google.GoogleAuthServiceCustomizer"
-  },
-  {
-   "type": "ro.editii.scriptorium.security.google.GoogleAuthServiceTestBeanInfo"
-  },
-  {
-   "type": "ro.editii.scriptorium.security.google.GoogleAuthServiceTestCustomizer"
   },
   {
    "type": "ro.editii.scriptorium.security.google.GoogleClaimsBeanInfo"
@@ -53351,52 +51887,10 @@
    "type": "ro.editii.scriptorium.service.AdminServiceCustomizer"
   },
   {
-   "type": "ro.editii.scriptorium.service.AdminServiceDestroyAllExistingAndReimportAllTeisTestBeanInfo"
-  },
-  {
-   "type": "ro.editii.scriptorium.service.AdminServiceDestroyAllExistingAndReimportAllTeisTestCustomizer"
-  },
-  {
-   "type": "ro.editii.scriptorium.service.AdminServiceOrphanSweepSqlTestBeanInfo"
-  },
-  {
-   "type": "ro.editii.scriptorium.service.AdminServiceOrphanSweepSqlTestCustomizer"
-  },
-  {
-   "type": "ro.editii.scriptorium.service.AdminServicePostImportHooksTestBeanInfo"
-  },
-  {
-   "type": "ro.editii.scriptorium.service.AdminServicePostImportHooksTestCustomizer"
-  },
-  {
-   "type": "ro.editii.scriptorium.service.AdminServicePruneOrphanedElemsTestBeanInfo"
-  },
-  {
-   "type": "ro.editii.scriptorium.service.AdminServicePruneOrphanedElemsTestCustomizer"
-  },
-  {
-   "type": "ro.editii.scriptorium.service.AdminServicePruneRemovedTeisTestBeanInfo"
-  },
-  {
-   "type": "ro.editii.scriptorium.service.AdminServicePruneRemovedTeisTestCustomizer"
-  },
-  {
-   "type": "ro.editii.scriptorium.service.AdminServiceRetentionPolicyTestBeanInfo"
-  },
-  {
-   "type": "ro.editii.scriptorium.service.AdminServiceRetentionPolicyTestCustomizer"
-  },
-  {
    "type": "ro.editii.scriptorium.service.AuthorMergeServiceBeanInfo"
   },
   {
    "type": "ro.editii.scriptorium.service.AuthorMergeServiceCustomizer"
-  },
-  {
-   "type": "ro.editii.scriptorium.service.AuthorMergeServiceTestBeanInfo"
-  },
-  {
-   "type": "ro.editii.scriptorium.service.AuthorMergeServiceTestCustomizer"
   },
   {
    "type": "ro.editii.scriptorium.service.ControllerToolBeanInfo"
@@ -53412,12 +51906,6 @@
   },
   {
    "type": "ro.editii.scriptorium.service.CoverEnrichmentRequestsCustomizer"
-  },
-  {
-   "type": "ro.editii.scriptorium.service.CoverEnrichmentRequestsTestBeanInfo"
-  },
-  {
-   "type": "ro.editii.scriptorium.service.CoverEnrichmentRequestsTestCustomizer"
   },
   {
    "type": "ro.editii.scriptorium.service.DbSearchServiceBeanInfo"
@@ -53436,12 +51924,6 @@
   },
   {
    "type": "ro.editii.scriptorium.service.DivServiceCustomizer"
-  },
-  {
-   "type": "ro.editii.scriptorium.service.DivServiceTestBeanInfo"
-  },
-  {
-   "type": "ro.editii.scriptorium.service.DivServiceTestCustomizer"
   },
   {
    "type": "ro.editii.scriptorium.service.ElemInfo"
@@ -53480,12 +51962,6 @@
    "type": "ro.editii.scriptorium.service.TeiFileDbServiceCustomizer"
   },
   {
-   "type": "ro.editii.scriptorium.tei.AnonymousOpusFragmentTestBeanInfo"
-  },
-  {
-   "type": "ro.editii.scriptorium.tei.AnonymousOpusFragmentTestCustomizer"
-  },
-  {
    "type": "ro.editii.scriptorium.tei.AuthorStrIdComputerBeanInfo"
   },
   {
@@ -53498,22 +51974,10 @@
    "type": "ro.editii.scriptorium.tei.CandidateStrIdGeneratorForAuthorCustomizer"
   },
   {
-   "type": "ro.editii.scriptorium.tei.CandidateStrIdGeneratorForAuthorTestBeanInfo"
-  },
-  {
-   "type": "ro.editii.scriptorium.tei.CandidateStrIdGeneratorForAuthorTestCustomizer"
-  },
-  {
    "type": "ro.editii.scriptorium.tei.CandidateUrlFragmGeneratorForTeiDivHeadBeanInfo"
   },
   {
    "type": "ro.editii.scriptorium.tei.CandidateUrlFragmGeneratorForTeiDivHeadCustomizer"
-  },
-  {
-   "type": "ro.editii.scriptorium.tei.CandidateUrlFragmGeneratorForTeiDivHeadTestBeanInfo"
-  },
-  {
-   "type": "ro.editii.scriptorium.tei.CandidateUrlFragmGeneratorForTeiDivHeadTestCustomizer"
   },
   {
    "type": "ro.editii.scriptorium.tei.CandidateUrlFragmGeneratorForTeiDivHead_Iterator"
@@ -53540,46 +52004,16 @@
    "type": "ro.editii.scriptorium.tei.CombinedTeiRepoCustomizer"
   },
   {
-   "type": "ro.editii.scriptorium.tei.CombinedTeiRepoTestBeanInfo"
-  },
-  {
-   "type": "ro.editii.scriptorium.tei.CombinedTeiRepoTestCustomizer"
-  },
-  {
    "type": "ro.editii.scriptorium.tei.GitTeiRepoImplBeanInfo"
   },
   {
    "type": "ro.editii.scriptorium.tei.GitTeiRepoImplCustomizer"
   },
   {
-   "type": "ro.editii.scriptorium.tei.GitTeiRepoImplTestBeanInfo"
-  },
-  {
-   "type": "ro.editii.scriptorium.tei.GitTeiRepoImplTestCustomizer"
-  },
-  {
-   "type": "ro.editii.scriptorium.tei.OpeningDescriptionTestBeanInfo"
-  },
-  {
-   "type": "ro.editii.scriptorium.tei.OpeningDescriptionTestCustomizer"
-  },
-  {
-   "type": "ro.editii.scriptorium.tei.ParseTeiFileIntoMemDbTestBeanInfo"
-  },
-  {
-   "type": "ro.editii.scriptorium.tei.ParseTeiFileIntoMemDbTestCustomizer"
-  },
-  {
    "type": "ro.editii.scriptorium.tei.TeiDirRepoImplBeanInfo"
   },
   {
    "type": "ro.editii.scriptorium.tei.TeiDirRepoImplCustomizer"
-  },
-  {
-   "type": "ro.editii.scriptorium.tei.TeiDirRepoImplTestBeanInfo"
-  },
-  {
-   "type": "ro.editii.scriptorium.tei.TeiDirRepoImplTestCustomizer"
   },
   {
    "type": "ro.editii.scriptorium.tei.TeiFileAlreadyImportedException"
@@ -53594,12 +52028,6 @@
    "type": "ro.editii.scriptorium.tei.TeiRepo$MockitoMock$lV9WNNeCCustomizer"
   },
   {
-   "type": "ro.editii.scriptorium.tei.TeiRepoTestBeanInfo"
-  },
-  {
-   "type": "ro.editii.scriptorium.tei.TeiRepoTestCustomizer"
-  },
-  {
    "type": "ro.editii.scriptorium.tei.TeiResourceNotFoundExceptionBeanInfo"
   },
   {
@@ -53612,34 +52040,10 @@
    "type": "ro.editii.scriptorium.tei.TeifileParser$$SpringCGLIB$$0Customizer"
   },
   {
-   "type": "ro.editii.scriptorium.tei.TeifileParserAuthorReuseTestBeanInfo"
-  },
-  {
-   "type": "ro.editii.scriptorium.tei.TeifileParserAuthorReuseTestCustomizer"
-  },
-  {
    "type": "ro.editii.scriptorium.tei.TeifileParserBeanInfo"
   },
   {
    "type": "ro.editii.scriptorium.tei.TeifileParserCustomizer"
-  },
-  {
-   "type": "ro.editii.scriptorium.tei.TeifileParserITestBeanInfo"
-  },
-  {
-   "type": "ro.editii.scriptorium.tei.TeifileParserITestCustomizer"
-  },
-  {
-   "type": "ro.editii.scriptorium.tei.TeifileParserMockdepsTestBeanInfo"
-  },
-  {
-   "type": "ro.editii.scriptorium.tei.TeifileParserMockdepsTestCustomizer"
-  },
-  {
-   "type": "ro.editii.scriptorium.tei.TeifileParserTestBeanInfo"
-  },
-  {
-   "type": "ro.editii.scriptorium.tei.TeifileParserTestCustomizer"
   },
   {
    "type": "ro.editii.scriptorium.toc.TocBeanInfo"
@@ -53652,18 +52056,6 @@
   },
   {
    "type": "ro.editii.scriptorium.toc.TocIteratorCustomizer"
-  },
-  {
-   "type": "ro.editii.scriptorium.toc.TocIteratorTestBeanInfo"
-  },
-  {
-   "type": "ro.editii.scriptorium.toc.TocIteratorTestCustomizer"
-  },
-  {
-   "type": "ro.editii.scriptorium.toc.TocTestBeanInfo"
-  },
-  {
-   "type": "ro.editii.scriptorium.toc.TocTestCustomizer"
   },
   {
    "type": "ro.editii.scriptorium.vector.Content"
@@ -53687,34 +52079,16 @@
    "type": "ro.editii.scriptorium.vector.Embedder"
   },
   {
-   "type": "ro.editii.scriptorium.vector.FakeQwen3EmbedderBeanInfo"
-  },
-  {
-   "type": "ro.editii.scriptorium.vector.FakeQwen3EmbedderCustomizer"
-  },
-  {
    "type": "ro.editii.scriptorium.vector.MilvusCollectionBeanInfo"
   },
   {
    "type": "ro.editii.scriptorium.vector.MilvusCollectionCustomizer"
   },
   {
-   "type": "ro.editii.scriptorium.vector.MilvusCollectionTestBeanInfo"
-  },
-  {
-   "type": "ro.editii.scriptorium.vector.MilvusCollectionTestCustomizer"
-  },
-  {
    "type": "ro.editii.scriptorium.vector.MilvusServiceBeanInfo"
   },
   {
    "type": "ro.editii.scriptorium.vector.MilvusServiceCustomizer"
-  },
-  {
-   "type": "ro.editii.scriptorium.vector.NetworkFreeVectorTestConfigBeanInfo"
-  },
-  {
-   "type": "ro.editii.scriptorium.vector.NetworkFreeVectorTestConfigCustomizer"
   },
   {
    "type": "ro.editii.scriptorium.vector.OllamaEmbedder"
@@ -53726,12 +52100,6 @@
    "type": "ro.editii.scriptorium.vector.OllamaEmbedderCustomizer"
   },
   {
-   "type": "ro.editii.scriptorium.vector.OllamaEmbeddersTestBeanInfo"
-  },
-  {
-   "type": "ro.editii.scriptorium.vector.OllamaEmbeddersTestCustomizer"
-  },
-  {
    "type": "ro.editii.scriptorium.vector.QdrantCollection"
   },
   {
@@ -53741,18 +52109,6 @@
    "type": "ro.editii.scriptorium.vector.QdrantCollectionCustomizer"
   },
   {
-   "type": "ro.editii.scriptorium.vector.QdrantCollectionITestBeanInfo"
-  },
-  {
-   "type": "ro.editii.scriptorium.vector.QdrantCollectionITestCustomizer"
-  },
-  {
-   "type": "ro.editii.scriptorium.vector.QdrantCollectionTestBeanInfo"
-  },
-  {
-   "type": "ro.editii.scriptorium.vector.QdrantCollectionTestCustomizer"
-  },
-  {
    "type": "ro.editii.scriptorium.vector.StsEmbedder"
   },
   {
@@ -53760,12 +52116,6 @@
   },
   {
    "type": "ro.editii.scriptorium.vector.StsEmbedderCustomizer"
-  },
-  {
-   "type": "ro.editii.scriptorium.vector.StsEmbedderTestBeanInfo"
-  },
-  {
-   "type": "ro.editii.scriptorium.vector.StsEmbedderTestCustomizer"
   },
   {
    "type": "ro.editii.scriptorium.vector.VectorCollection"
@@ -53786,22 +52136,10 @@
    "type": "ro.editii.scriptorium.vector.VectorConfigCustomizer"
   },
   {
-   "type": "ro.editii.scriptorium.vector.VectorConfigWiringTestBeanInfo"
-  },
-  {
-   "type": "ro.editii.scriptorium.vector.VectorConfigWiringTestCustomizer"
-  },
-  {
    "type": "ro.editii.scriptorium.vector.VectorSearchAvailabilityBeanInfo"
   },
   {
    "type": "ro.editii.scriptorium.vector.VectorSearchAvailabilityCustomizer"
-  },
-  {
-   "type": "ro.editii.scriptorium.vector.VectorSearchAvailabilityTestBeanInfo"
-  },
-  {
-   "type": "ro.editii.scriptorium.vector.VectorSearchAvailabilityTestCustomizer"
   },
   {
    "type": "ro.editii.scriptorium.vector.VectorSearchHitBeanInfo"
@@ -53816,12 +52154,6 @@
    "type": "ro.editii.scriptorium.vector.VectorTextSearchServiceCustomizer"
   },
   {
-   "type": "ro.editii.scriptorium.vector.VectorTextSearchServiceTestBeanInfo"
-  },
-  {
-   "type": "ro.editii.scriptorium.vector.VectorTextSearchServiceTestCustomizer"
-  },
-  {
    "type": "ro.editii.scriptorium.vector.VectorUtils"
   },
   {
@@ -53829,54 +52161,6 @@
   },
   {
    "type": "ro.editii.scriptorium.vector.VectorUtilsCustomizer"
-  },
-  {
-   "type": "ro.editii.scriptorium.web.DavItestBeanInfo"
-  },
-  {
-   "type": "ro.editii.scriptorium.web.DavItestCustomizer"
-  },
-  {
-   "type": "ro.editii.scriptorium.web.FragmentControllerITestBeanInfo"
-  },
-  {
-   "type": "ro.editii.scriptorium.web.FragmentControllerITestCustomizer"
-  },
-  {
-   "type": "ro.editii.scriptorium.web.GoogleSignInWhoAmIITestBeanInfo"
-  },
-  {
-   "type": "ro.editii.scriptorium.web.GoogleSignInWhoAmIITestCustomizer"
-  },
-  {
-   "type": "ro.editii.scriptorium.web.LuceneSearchITestBeanInfo"
-  },
-  {
-   "type": "ro.editii.scriptorium.web.LuceneSearchITestCustomizer"
-  },
-  {
-   "type": "ro.editii.scriptorium.web.MappingTestBeanInfo"
-  },
-  {
-   "type": "ro.editii.scriptorium.web.MappingTestConfigBeanInfo"
-  },
-  {
-   "type": "ro.editii.scriptorium.web.MappingTestConfigCustomizer"
-  },
-  {
-   "type": "ro.editii.scriptorium.web.MappingTestCustomizer"
-  },
-  {
-   "type": "ro.editii.scriptorium.web.RelocationTestBeanInfo"
-  },
-  {
-   "type": "ro.editii.scriptorium.web.RelocationTestCustomizer"
-  },
-  {
-   "type": "ro.editii.scriptorium.web.SearchITestBeanInfo"
-  },
-  {
-   "type": "ro.editii.scriptorium.web.SearchITestCustomizer"
   },
   {
    "type": "ro.editii.scriptorium.web.UnifiedFragmentWebRoutes"
@@ -53888,19 +52172,7 @@
    "type": "ro.editii.scriptorium.web.UtilControllerCustomizer"
   },
   {
-   "type": "ro.editii.scriptorium.web.UtilControllerRandomTestBeanInfo"
-  },
-  {
-   "type": "ro.editii.scriptorium.web.UtilControllerRandomTestCustomizer"
-  },
-  {
    "type": "ro.editii.scriptorium.web.WebConfig"
-  },
-  {
-   "type": "ro.editii.scriptorium.web.WebITestBeanInfo"
-  },
-  {
-   "type": "ro.editii.scriptorium.web.WebITestCustomizer"
   },
   {
    "type": "ro.editii.scriptorium.xslt.XsltTool"
@@ -55183,48 +53455,6 @@
    "bundle": "org.apache.coyote.http11.filters.LocalStrings"
   },
   {
-   "bundle": "org.apache.derby.loc.m13"
-  },
-  {
-   "bundle": "org.apache.derby.loc.m14"
-  },
-  {
-   "bundle": "org.apache.derby.loc.m16"
-  },
-  {
-   "bundle": "org.apache.derby.loc.m18"
-  },
-  {
-   "bundle": "org.apache.derby.loc.m2"
-  },
-  {
-   "bundle": "org.apache.derby.loc.m22"
-  },
-  {
-   "bundle": "org.apache.derby.loc.m25"
-  },
-  {
-   "bundle": "org.apache.derby.loc.m26"
-  },
-  {
-   "bundle": "org.apache.derby.loc.m27"
-  },
-  {
-   "bundle": "org.apache.derby.loc.m28"
-  },
-  {
-   "bundle": "org.apache.derby.loc.m34"
-  },
-  {
-   "bundle": "org.apache.derby.loc.m4"
-  },
-  {
-   "bundle": "org.apache.derby.loc.m47"
-  },
-  {
-   "bundle": "org.apache.derby.loc.m7"
-  },
-  {
    "bundle": "org.apache.naming.LocalStrings"
   },
   {
@@ -56364,147 +54594,6 @@
    "glob": "org/apache/coyote/http11/filters/LocalStrings.properties"
   },
   {
-   "glob": "org/apache/derby/impl/jdbc/metadata.properties"
-  },
-  {
-   "glob": "org/apache/derby/impl/sql/catalog/metadata_net.properties"
-  },
-  {
-   "glob": "org/apache/derby/info/client/info.properties"
-  },
-  {
-   "glob": "org/apache/derby/info/engine/info.properties"
-  },
-  {
-   "glob": "org/apache/derby/loc/m13.properties"
-  },
-  {
-   "glob": "org/apache/derby/loc/m13_en.properties"
-  },
-  {
-   "glob": "org/apache/derby/loc/m13_en_US.properties"
-  },
-  {
-   "glob": "org/apache/derby/loc/m14.properties"
-  },
-  {
-   "glob": "org/apache/derby/loc/m14_en.properties"
-  },
-  {
-   "glob": "org/apache/derby/loc/m14_en_US.properties"
-  },
-  {
-   "glob": "org/apache/derby/loc/m16.properties"
-  },
-  {
-   "glob": "org/apache/derby/loc/m16_en.properties"
-  },
-  {
-   "glob": "org/apache/derby/loc/m16_en_US.properties"
-  },
-  {
-   "glob": "org/apache/derby/loc/m18.properties"
-  },
-  {
-   "glob": "org/apache/derby/loc/m18_en.properties"
-  },
-  {
-   "glob": "org/apache/derby/loc/m18_en_US.properties"
-  },
-  {
-   "glob": "org/apache/derby/loc/m2.properties"
-  },
-  {
-   "glob": "org/apache/derby/loc/m22.properties"
-  },
-  {
-   "glob": "org/apache/derby/loc/m22_en.properties"
-  },
-  {
-   "glob": "org/apache/derby/loc/m22_en_US.properties"
-  },
-  {
-   "glob": "org/apache/derby/loc/m25.properties"
-  },
-  {
-   "glob": "org/apache/derby/loc/m25_en.properties"
-  },
-  {
-   "glob": "org/apache/derby/loc/m25_en_US.properties"
-  },
-  {
-   "glob": "org/apache/derby/loc/m26.properties"
-  },
-  {
-   "glob": "org/apache/derby/loc/m26_en.properties"
-  },
-  {
-   "glob": "org/apache/derby/loc/m26_en_US.properties"
-  },
-  {
-   "glob": "org/apache/derby/loc/m27.properties"
-  },
-  {
-   "glob": "org/apache/derby/loc/m27_en.properties"
-  },
-  {
-   "glob": "org/apache/derby/loc/m27_en_US.properties"
-  },
-  {
-   "glob": "org/apache/derby/loc/m28.properties"
-  },
-  {
-   "glob": "org/apache/derby/loc/m28_en.properties"
-  },
-  {
-   "glob": "org/apache/derby/loc/m28_en_US.properties"
-  },
-  {
-   "glob": "org/apache/derby/loc/m2_en.properties"
-  },
-  {
-   "glob": "org/apache/derby/loc/m2_en_US.properties"
-  },
-  {
-   "glob": "org/apache/derby/loc/m34.properties"
-  },
-  {
-   "glob": "org/apache/derby/loc/m34_en.properties"
-  },
-  {
-   "glob": "org/apache/derby/loc/m34_en_US.properties"
-  },
-  {
-   "glob": "org/apache/derby/loc/m4.properties"
-  },
-  {
-   "glob": "org/apache/derby/loc/m47.properties"
-  },
-  {
-   "glob": "org/apache/derby/loc/m47_en.properties"
-  },
-  {
-   "glob": "org/apache/derby/loc/m47_en_US.properties"
-  },
-  {
-   "glob": "org/apache/derby/loc/m4_en.properties"
-  },
-  {
-   "glob": "org/apache/derby/loc/m4_en_US.properties"
-  },
-  {
-   "glob": "org/apache/derby/loc/m7.properties"
-  },
-  {
-   "glob": "org/apache/derby/loc/m7_en.properties"
-  },
-  {
-   "glob": "org/apache/derby/loc/m7_en_US.properties"
-  },
-  {
-   "glob": "org/apache/derby/modules.properties"
-  },
-  {
    "glob": "org/apache/lucene/analysis/bg/stopwords.txt"
   },
   {
@@ -56952,49 +55041,13 @@
    "glob": "ro/editii/scriptorium"
   },
   {
-   "glob": "ro/editii/scriptorium/collection/DivCollectionServiceTest-context.xml"
-  },
-  {
-   "glob": "ro/editii/scriptorium/collection/DivCollectionServiceTestContext.groovy"
-  },
-  {
-   "glob": "ro/editii/scriptorium/collection/ReadingProgressServiceTest-context.xml"
-  },
-  {
-   "glob": "ro/editii/scriptorium/collection/ReadingProgressServiceTestContext.groovy"
-  },
-  {
    "glob": "ro/editii/scriptorium/dao"
   },
   {
    "glob": "ro/editii/scriptorium/embedding"
   },
   {
-   "glob": "ro/editii/scriptorium/fragment/FragmentResolutionServiceTest-context.xml"
-  },
-  {
-   "glob": "ro/editii/scriptorium/fragment/FragmentResolutionServiceTestContext.groovy"
-  },
-  {
    "glob": "ro/editii/scriptorium/graphql"
-  },
-  {
-   "glob": "ro/editii/scriptorium/graphql/GraphQLCatalogTest-context.xml"
-  },
-  {
-   "glob": "ro/editii/scriptorium/graphql/GraphQLCatalogTestContext.groovy"
-  },
-  {
-   "glob": "ro/editii/scriptorium/graphql/GraphQLJpaTest-context.xml"
-  },
-  {
-   "glob": "ro/editii/scriptorium/graphql/GraphQLJpaTestContext.groovy"
-  },
-  {
-   "glob": "ro/editii/scriptorium/graphql/GraphQLSmokeITest-context.xml"
-  },
-  {
-   "glob": "ro/editii/scriptorium/graphql/GraphQLSmokeITestContext.groovy"
   },
   {
    "glob": "ro/editii/scriptorium/media"
@@ -57003,37 +55056,7 @@
    "glob": "ro/editii/scriptorium/model"
   },
   {
-   "glob": "ro/editii/scriptorium/model/TeiElemChildrenOrderSqlTest-context.xml"
-  },
-  {
-   "glob": "ro/editii/scriptorium/model/TeiElemChildrenOrderSqlTestContext.groovy"
-  },
-  {
    "glob": "ro/editii/scriptorium/rest"
-  },
-  {
-   "glob": "ro/editii/scriptorium/rest/DerbyLobLocatorRegressionTest-context.xml"
-  },
-  {
-   "glob": "ro/editii/scriptorium/rest/DerbyLobLocatorRegressionTestContext.groovy"
-  },
-  {
-   "glob": "ro/editii/scriptorium/rest/DivRestControllerTest-context.xml"
-  },
-  {
-   "glob": "ro/editii/scriptorium/rest/DivRestControllerTestContext.groovy"
-  },
-  {
-   "glob": "ro/editii/scriptorium/rest/EnrichmentRestControllerTest-context.xml"
-  },
-  {
-   "glob": "ro/editii/scriptorium/rest/EnrichmentRestControllerTestContext.groovy"
-  },
-  {
-   "glob": "ro/editii/scriptorium/rest/RepoRestControllerITest-context.xml"
-  },
-  {
-   "glob": "ro/editii/scriptorium/rest/RepoRestControllerITestContext.groovy"
   },
   {
    "glob": "ro/editii/scriptorium/search"
@@ -57042,139 +55065,19 @@
    "glob": "ro/editii/scriptorium/search/content"
   },
   {
-   "glob": "ro/editii/scriptorium/search/content/PathContentResolverTest-context.xml"
-  },
-  {
-   "glob": "ro/editii/scriptorium/search/content/PathContentResolverTestContext.groovy"
-  },
-  {
    "glob": "ro/editii/scriptorium/security"
-  },
-  {
-   "glob": "ro/editii/scriptorium/security/AdminUsersAccessTest-context.xml"
-  },
-  {
-   "glob": "ro/editii/scriptorium/security/AdminUsersAccessTestContext.groovy"
-  },
-  {
-   "glob": "ro/editii/scriptorium/security/AppUserAuthTest-context.xml"
-  },
-  {
-   "glob": "ro/editii/scriptorium/security/AppUserAuthTestContext.groovy"
   },
   {
    "glob": "ro/editii/scriptorium/service"
   },
   {
-   "glob": "ro/editii/scriptorium/service/AdminServiceDestroyAllExistingAndReimportAllTeisTest-context.xml"
-  },
-  {
-   "glob": "ro/editii/scriptorium/service/AdminServiceDestroyAllExistingAndReimportAllTeisTestContext.groovy"
-  },
-  {
-   "glob": "ro/editii/scriptorium/service/AdminServiceOrphanSweepSqlTest-context.xml"
-  },
-  {
-   "glob": "ro/editii/scriptorium/service/AdminServiceOrphanSweepSqlTestContext.groovy"
-  },
-  {
-   "glob": "ro/editii/scriptorium/service/DivServiceTest-context.xml"
-  },
-  {
-   "glob": "ro/editii/scriptorium/service/DivServiceTestContext.groovy"
-  },
-  {
    "glob": "ro/editii/scriptorium/tei"
-  },
-  {
-   "glob": "ro/editii/scriptorium/tei/ParseTeiFileIntoMemDbTest-context.xml"
-  },
-  {
-   "glob": "ro/editii/scriptorium/tei/ParseTeiFileIntoMemDbTestContext.groovy"
-  },
-  {
-   "glob": "ro/editii/scriptorium/tei/TeiRepoTest-context.xml"
-  },
-  {
-   "glob": "ro/editii/scriptorium/tei/TeiRepoTestContext.groovy"
-  },
-  {
-   "glob": "ro/editii/scriptorium/tei/TeifileParserAuthorReuseTest-context.xml"
-  },
-  {
-   "glob": "ro/editii/scriptorium/tei/TeifileParserAuthorReuseTestContext.groovy"
-  },
-  {
-   "glob": "ro/editii/scriptorium/tei/TeifileParserITest-context.xml"
-  },
-  {
-   "glob": "ro/editii/scriptorium/tei/TeifileParserITestContext.groovy"
-  },
-  {
-   "glob": "ro/editii/scriptorium/tei/TeifileParserTest-context.xml"
-  },
-  {
-   "glob": "ro/editii/scriptorium/tei/TeifileParserTestContext.groovy"
   },
   {
    "glob": "ro/editii/scriptorium/tei/teirepo"
   },
   {
-   "glob": "ro/editii/scriptorium/vector/StsEmbedderTest-context.xml"
-  },
-  {
-   "glob": "ro/editii/scriptorium/vector/StsEmbedderTestContext.groovy"
-  },
-  {
    "glob": "ro/editii/scriptorium/web"
-  },
-  {
-   "glob": "ro/editii/scriptorium/web/DavItest-context.xml"
-  },
-  {
-   "glob": "ro/editii/scriptorium/web/DavItestContext.groovy"
-  },
-  {
-   "glob": "ro/editii/scriptorium/web/FragmentControllerITest-context.xml"
-  },
-  {
-   "glob": "ro/editii/scriptorium/web/FragmentControllerITestContext.groovy"
-  },
-  {
-   "glob": "ro/editii/scriptorium/web/GoogleSignInWhoAmIITest-context.xml"
-  },
-  {
-   "glob": "ro/editii/scriptorium/web/GoogleSignInWhoAmIITestContext.groovy"
-  },
-  {
-   "glob": "ro/editii/scriptorium/web/LuceneSearchITest-context.xml"
-  },
-  {
-   "glob": "ro/editii/scriptorium/web/LuceneSearchITestContext.groovy"
-  },
-  {
-   "glob": "ro/editii/scriptorium/web/MappingTest-context.xml"
-  },
-  {
-   "glob": "ro/editii/scriptorium/web/MappingTestContext.groovy"
-  },
-  {
-   "glob": "ro/editii/scriptorium/web/RelocationTest-context.xml"
-  },
-  {
-   "glob": "ro/editii/scriptorium/web/RelocationTestContext.groovy"
-  },
-  {
-   "glob": "ro/editii/scriptorium/web/SearchITest-context.xml"
-  },
-  {
-   "glob": "ro/editii/scriptorium/web/SearchITestContext.groovy"
-  },
-  {
-   "glob": "ro/editii/scriptorium/web/WebITest-context.xml"
-  },
-  {
-   "glob": "ro/editii/scriptorium/web/WebITestContext.groovy"
   },
   {
    "glob": "schema-all.sql"

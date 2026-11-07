@@ -8,8 +8,6 @@ import ro.editii.scriptorium.Globals;
 import ro.editii.scriptorium.tei.TeiResourceNotFoundException;
 import ro.editii.scriptorium.web.TeiSourceMissingAdvice;
 
-import java.sql.DriverManager;
-import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
@@ -19,11 +17,11 @@ import java.util.concurrent.TimeUnit;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-/** Real pooled connections, exclusively against a private Derby database. */
+/** Real pooled connections, exclusively against a private in-memory H2 database. */
 class PruneConnectionPoolTest {
     @Test
     void tenMissingSourceRequestsReleaseConnectionsWhileTheSchedulerOwnsTheImportLock() throws Exception {
-        String url = "jdbc:derby:memory:pool_prune_" + UUID.randomUUID().toString().replace("-", "") + ";create=true";
+        String url = "jdbc:h2:mem:pool_prune_" + UUID.randomUUID().toString().replace("-", "");
         HikariConfig config = new HikariConfig();
         config.setJdbcUrl(url);
         config.setMaximumPoolSize(10);
@@ -63,7 +61,7 @@ class PruneConnectionPoolTest {
                     // its import lock. Previously both sides waited for each other.
                     try (var schedulerConnection = pool.getConnection();
                          var sql = schedulerConnection.createStatement();
-                         var result = sql.executeQuery("values 1")) {
+                         var result = sql.executeQuery("select 1")) {
                         assertTrue(result.next());
                         assertEquals(1, result.getInt(1));
                     }
@@ -71,13 +69,8 @@ class PruneConnectionPoolTest {
                     startCleanup.countDown();
                 }
             }
-        } finally {
-            try {
-                DriverManager.getConnection(url.replace(";create=true", ";drop=true"));
-            } catch (SQLException dropped) {
-                if (!"08006".equals(dropped.getSQLState())) throw dropped;
-            }
         }
+        // H2 drops an in-memory database when its last connection closes.
     }
 
     @Test

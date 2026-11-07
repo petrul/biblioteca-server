@@ -71,7 +71,7 @@ Run isolated HTTP/repository coverage using:
 ./gradlew unittest --tests '*GraphQLJpaTest'
 ```
 
-The test uses an embedded Derby database and does not access the shared datasource
+The test uses an in-memory H2 database and does not access the shared datasource
 or production TEI repositories.
 
 ## Entity queries matching REST
@@ -164,12 +164,12 @@ for author hits or `data { ... on TeiDivDto { path head } }` for division hits.
 
 Run both GraphQL test classes with
 `./gradlew unittest --tests '*GraphQL*Test'`. Tests compare GraphQL with real REST
-handlers backed by embedded Derby, with fixture-only TEI and no external services.
+handlers backed by in-memory H2, with fixture-only TEI and no external services.
 
 ## Separate smoke integration test
 
 `GraphQLSmokeITest` is a Groovy test tagged `integration-test`. It starts its own
-HTTP server on a random port, uses a fresh embedded Derby database, and mocks
+HTTP server on a random port, uses a fresh in-memory H2 database, and mocks
 external services with native Groovy closure/proxy mocks. GraphQL wiring, JPA repositories, security
 and REST read handlers remain real. No running server or shared corpus is needed.
 

@@ -10,7 +10,7 @@ class RuntimeConfigServiceTest {
     void testValuesAreSeededFromEnvironmentAndWritesAreVisibleThroughSpringEnvironment() {
         def environment = new StandardEnvironment()
         environment.propertySources.addFirst(new MapPropertySource('test', [
-                DB_URL       : 'jdbc:derby://test/db;user=u;password=p',
+                DB_URL       : 'jdbc:postgresql://test/db?user=u&password=p',
                 OLLAMA_HOST  : 'ollama.test',
                 TEI_REPOS    : '/corpus/tei|**/*.xml',
                 WORK_DIR     : '/tmp/biblioteca'
@@ -19,7 +19,7 @@ class RuntimeConfigServiceTest {
         def service = new RuntimeConfigService(environment)
 
         assert service.get('DB_URL', false).value() == '********'
-        assert service.get('DB_URL', true).value() == 'jdbc:derby://test/db;user=u;password=p'
+        assert service.get('DB_URL', true).value() == 'jdbc:postgresql://test/db?user=u&password=p'
         assert service.get('OLLAMA_HOST', false).value() == 'ollama.test'
         assert environment.getProperty('ollama.host') == 'ollama.test'
         assert service.get('TEI_REPOS', false).value() == '/corpus/tei|**/*.xml'

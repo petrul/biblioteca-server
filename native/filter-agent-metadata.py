@@ -29,8 +29,12 @@ TEST_TYPE_PREFIXES = (
 # cannot - announced through its service file, Hibernate picks it and fails
 # ("BytecodeProviderImpl could not be instantiated"). Natively Hibernate
 # runs without one (hibernate-graalvm).
-JVM_ONLY_TYPE_PREFIXES = ('org.hibernate.bytecode.internal.bytebuddy.',)
+JVM_ONLY_TYPE_PREFIXES = ('org.hibernate.bytecode.internal.bytebuddy.',
+                          # Apache Derby is retired (PostgreSQL only); captures
+                          # older than its removal still name its classes
+                          'org.apache.derby.', 'org.hibernate.community.dialect.')
 JVM_ONLY_RESOURCES = ('META-INF/services/org.hibernate.bytecode.spi.BytecodeProvider',)
+JVM_ONLY_RESOURCE_PREFIXES = ('org/apache/derby/', 'org.apache.derby.')  # Derby is retired; bundles use dots
 TEST_RESOURCE_PREFIXES = ('org/junit', 'junit', 'org/mockito', 'mockito-extensions', 'org/gradle',
                           'META-INF/services/org.junit', 'org/spockframework', 'META-INF/services/org.spockframework')
 
@@ -57,6 +61,10 @@ def type_name(entry):
         # groovy.runtime.metaclass.<type>MetaClass - judge them by that type
         if t.startswith('groovy.runtime.metaclass.') and t.endswith('MetaClass'):
             return t[len('groovy.runtime.metaclass.'):-len('MetaClass')]
+        # java.beans.Introspector probes for <Type>BeanInfo and <Type>Customizer
+        for probe in ('BeanInfo', 'Customizer'):
+            if t.endswith(probe):
+                return t[:-len(probe)]
         return t
     if isinstance(t, dict):
         if 'lambda' in t:  # {"lambda": {"declaringClass": ..., "interfaces": [...]}}
@@ -81,8 +89,15 @@ def keep_type_entry(entry, test_types):
 
 def keep_resource_entry(entry, test_resources, test_types):
     pattern = entry.get('glob') or entry.get('bundle') or ''
-    if pattern in test_resources or pattern.startswith(TEST_RESOURCE_PREFIXES) or pattern in JVM_ONLY_RESOURCES:
+    if (pattern in test_resources or pattern.startswith(TEST_RESOURCE_PREFIXES) or pattern in JVM_ONLY_RESOURCES
+            or pattern.startswith(JVM_ONLY_RESOURCE_PREFIXES)):
         return False
+    # Spring's test framework looks for <TestClass>Context.groovy and
+    # <TestClass>-context.xml next to every test class
+    for suffix in ('Context.groovy', '-context.xml'):
+        if pattern.endswith(suffix):
+            if is_test_type(pattern[:-len(suffix)].replace('/', '.'), test_types):
+                return False
     # .class files read as resources (the JVM's classpath scanning): the
     # image has no class files - listing their names only makes runtime
     # scans look for them ("Failed to search in directory ... NoSuchFile").

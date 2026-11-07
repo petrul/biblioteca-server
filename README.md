@@ -32,10 +32,8 @@ has its own stable URL.
 ## Quick start
 
 Prerequisites: Java 25, a PostgreSQL database (`DB_URL`), and at least one
-TEI repository (`TEI_REPOS`). Derby is no longer a runtime option: Flyway
-10+ dropped it, and the schema migrations run on every start. (The
-pass store's legacy `biblioteca/dev` profile still points at Derby and
-needs moving to PostgreSQL; `zmeu`, `ci` and `prod` use PostgreSQL.) The vector store, Ollama and Kafka
+TEI repository (`TEI_REPOS`). Apache Derby, the engine before Dusky Discus,
+is retired: a Derby `DB_URL` stops the server at startup. The vector store, Ollama and Kafka
 enable semantic search and vectorization, but the server boots and serves
 texts without them.
 
@@ -62,7 +60,8 @@ own Thymeleaf pages.
 
 Other tasks: `rake tests` lists the test classes, `rake check-env` checks
 the profile's variables, `rake sync-openapi` refreshes the checked-in
-OpenAPI YAML, `rake ij` opens a Derby shell, and
+OpenAPI YAML, `sql/run.sh` runs ad-hoc Groovy JDBC scripts against a
+profile's database, and
 `rake minio-mount` / `rake minio-unmount` mount the profile's MinIO bucket
 read-write at `~/s3-mount/biblioteca-<profile>` (needs `s3fs`).
 

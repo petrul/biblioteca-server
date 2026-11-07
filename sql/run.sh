@@ -1,21 +1,18 @@
 #!/usr/bin/env bash
-# Ad-hoc JDBC/Derby query runner for any biblioteca profile - fed by the
+# Ad-hoc JDBC (PostgreSQL) query runner for any biblioteca profile - fed by the
 # same pass-store env loader AGENTS.md documents for DB_URL. Lets a human
 # or agent poke the live DB directly (schema checks, sequence health,
 # one-off diagnostics) as a Groovy script instead of hand-compiling a
-# throwaway Java class each time - see check_sequences.groovy for a
-# worked example (the one that found and fixed the 2026-09-29
-# sequence-seeding race - see README.md's "Persistence, caching,
-# messaging" section).
+# throwaway Java class each time - see README.md here for an example.
 #
 # Usage: sql/run.sh <profile> <script.groovy> [args...]
-#   sql/run.sh prod check_sequences.groovy
-#   sql/run.sh zmeu check_sequences.groovy
+#   sql/run.sh prod my_check.groovy
+#   sql/run.sh zmeu my_check.groovy
 #
-# <profile> is the pass-store stage under biblioteca/ (prod, zmeu, dev, ...).
+# <profile> is the pass-store stage under biblioteca/ (prod, zmeu, ci, ...).
 # The script sees DB_URL (and every other biblioteca/<profile> pass-store
 # value) as an environment variable - NEVER print it or any value derived
-# from it, it carries the DB password as a connection attribute.
+# from it, it carries the DB password (?user=...&password=...).
 set -euo pipefail
 
 D=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
@@ -25,10 +22,9 @@ shift 2
 
 source "${LOAD_ENV_SH:-$HOME/.password-store/load-env.sh}" "biblioteca/${PROFILE}"
 
-# Derby client + Groovy jars: reuse what Gradle already resolved on this
-# machine if present (same derbyclient/derbyshared version build.gradle
-# pins), else fetch straight from Maven Central into a small local cache
-# so repeat runs don't re-download.
+# PostgreSQL driver + Groovy jars: reuse what Gradle already resolved on
+# this machine if present, else fetch straight from Maven Central into a
+# small local cache so repeat runs don't re-download.
 CACHE_DIR="${SQL_CLIENT_CACHE_DIR:-$HOME/.cache/biblioteca-sql-client}"
 mkdir -p "$CACHE_DIR"
 
@@ -48,9 +44,7 @@ resolve_jar() {
     echo "$dest"
 }
 
-CP="$(resolve_jar org.apache.derby derby 10.17.1.0)"
-CP="$CP:$(resolve_jar org.apache.derby derbyclient 10.17.1.0)"
-CP="$CP:$(resolve_jar org.apache.derby derbyshared 10.17.1.0)"
+CP="$(resolve_jar org.postgresql postgresql 42.7.11)"
 CP="$CP:$(resolve_jar org.apache.groovy groovy 5.0.6)"
 CP="$CP:$(resolve_jar org.apache.groovy groovy-sql 5.0.2)"
 

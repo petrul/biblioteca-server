@@ -37,7 +37,7 @@ import static ro.editii.scriptorium.TestUtils.TEI_ELEM
 /**
  * The web-layer vector-search itest, migrated from the retired milvus to
  * qdrant - the default store (see VectorConfig's conditional beans): the
- * full app boots (in-memory Derby, the fixture corpus reimported), a
+ * full app boots (in-memory H2, the fixture corpus reimported), a
  * random-named collection is created on the shared qdrant instance behind
  * the app's own VectorCollection bean, and /api/search/ann plus
  * /api/search/vector go through the real search path end to end - the
