@@ -339,6 +339,19 @@ task :graalvm, [:task_profile] do |_task, args|
     sh "#{GRADLE} -P#{task_profile} -Pgraalvm nativeCompile"
 end
 
+desc "Regenerate the native image's reachability metadata: the whole test suite under GraalVM's tracing agent (needs a GraalVM JDK as JAVA_HOME; EXTRA_CAPTURES=a.json,b.json merges more captures, e.g. a server serving the release checks - native/README.md)"
+task :'graalvm-metadata', [:task_profile] do |_task, args|
+    task_profile = args[:task_profile] || 'ci'
+    load_profile_env(task_profile)
+    agent_dir = File.expand_path('build/native-agent/test')
+    rm_rf agent_dir
+    mkdir_p agent_dir
+    sh "#{GRADLE} -Pprofile=#{task_profile} -PnativeAgentDir=#{agent_dir} test --rerun"
+    captures = ["#{agent_dir}/reachability-metadata.json"] + ENV.fetch('EXTRA_CAPTURES', '').split(',').reject(&:empty?)
+    target = 'src/main/resources/META-INF/native-image/ro.editii/biblioteca-server/reachability-metadata.json'
+    sh "python3 native/filter-agent-metadata.py build #{captures.join(' ')} > #{target}"
+end
+
 task :clean do
     puts "Cleaning build artifacts..."
     sh "#{GRADLE} -P#{profile} clean"

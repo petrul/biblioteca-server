@@ -423,6 +423,14 @@ tasks.withType(Test).configureEach {
     if (jfrTarget) {
         jvmArgs "-XX:StartFlightRecording=filename=${jfrTarget},settings=profile,dumponexit=true"
     }
+    // Opt-in GraalVM tracing agent on every test fork, to record what the
+    // native image must know (reflection, resources, serialization...):
+    // the forks merge into one directory - see native/README.md.
+    // $ JAVA_HOME=<GraalVM JDK> ./gradlew -Pprofile=ci -PnativeAgentDir=/tmp/agent test
+    final nativeAgentDir = project.findProperty('nativeAgentDir')
+    if (nativeAgentDir) {
+        jvmArgs "-agentlib:native-image-agent=config-merge-dir=${nativeAgentDir}"
+    }
     // $ ./gradlew -Pprofile=ci test   (resolveProfile() below; the rakefile
     // always passes -Pprofile=<profile> this same way). Plain `test`/
     // `unittest`/`integrationTest` with nothing set default to 'ci' - the

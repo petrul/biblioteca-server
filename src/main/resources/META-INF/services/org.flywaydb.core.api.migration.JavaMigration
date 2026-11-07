@@ -1,0 +1,11 @@
+db.migration.V1__Align_media_reference_columns
+db.migration.V2__Switch_identity_columns_to_pooled_sequences
+db.migration.V3__Reseed_id_sequences_above_existing_rows
+db.migration.V4__Add_opus_cover_url
+db.migration.V5__Add_tei_opus_metadata
+db.migration.V6__Rename_compiled_tei_tables
+db.migration.V7__Repair_tei_opus_foreign_key
+db.migration.V8__Add_work_enrichment_columns
+db.migration.V9__Clear_image_data_opus_descriptions
+db.migration.V10__Collections_with_uuid_ids
+db.migration.V11__Widen_app_user_avatar_url

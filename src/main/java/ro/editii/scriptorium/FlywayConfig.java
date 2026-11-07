@@ -2,7 +2,10 @@ package ro.editii.scriptorium;
 
 import javax.sql.DataSource;
 
+import java.util.ServiceLoader;
+
 import org.flywaydb.core.Flyway;
+import org.flywaydb.core.api.migration.JavaMigration;
 import org.springframework.beans.factory.config.BeanDefinition;
 import org.springframework.beans.factory.config.BeanFactoryPostProcessor;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
@@ -29,6 +32,15 @@ import org.springframework.context.annotation.Configuration;
  * (and so ddl-auto) is not created until the flyway bean (and its
  * initMethod=migrate) has completed.
  *
+ * The migrations are listed, not scanned for: every db.migration class
+ * (Java V1-V7, Groovy V8 on) is named in
+ * META-INF/services/org.flywaydb.core.api.migration.JavaMigration and
+ * loaded with ServiceLoader. Classpath scanning does not work inside the
+ * GraalVM native image ("unsupported protocol: resource" - Flyway then
+ * finds no migration at all and refuses a schema that has them); a service
+ * file does, and the JVM build uses the same list.
+ * MigrationsListedTest fails when a db.migration class is missing from it.
+ *
  * spring.flyway.enabled=false (on by default, see application.properties)
  * leaves the runner out entirely - the remaining Derby test context
  * (DerbyLobLocatorRegressionTest) needs that, since Flyway 10+ no longer
@@ -42,10 +54,18 @@ public class FlywayConfig {
     Flyway flyway(DataSource dataSource) {
         return Flyway.configure()
                 .dataSource(dataSource)
-                .locations("classpath:db/migration")
+                .locations(new String[0]) // nothing to scan: the migrations are listed (above)
+                .javaMigrations(listedMigrations())
                 .baselineOnMigrate(true)
                 .baselineVersion("0")
                 .load();
+    }
+
+    /** Every migration named in the service file, in version order (Flyway sorts them too). */
+    static JavaMigration[] listedMigrations() {
+        return ServiceLoader.load(JavaMigration.class, FlywayConfig.class.getClassLoader()).stream()
+                .map(ServiceLoader.Provider::get)
+                .toArray(JavaMigration[]::new);
     }
 
     @Bean
