@@ -361,6 +361,14 @@ The next family release name was randomly selected: *Ethereal Exedra*.
 - Reimporting a TEI file serves its new text at once
   ([2f10ec0](https://github.com/petrul/biblioteca-server/commit/2f10ec0)).
 
+A fix release followed on 2026-11-07, `biblioteca-nestjs` 0.9.16
+(`a44eb3d`): v0.9.15 plus only the vectorizer's Kafka fix - it commits after
+every message and fetches small batches, so a group eviction no longer
+replays a whole ~25-minute batch (production had been re-vectorizing the
+same ~485 opera all day). Cut by hand from v0.9.15, not from main: main's
+nestjs already required the internal token on the chat routes, which
+production's reader 0.1.17 does not send.
+
 The next family release name was randomly selected: *Fathomless Fountain*.
 
 ### Fathomless Fountain (next — in development)
@@ -368,7 +376,7 @@ The next family release name was randomly selected: *Fathomless Fountain*.
 | Project | Snapshot |
 | --- | --- |
 | `biblioteca-server` | 0.9.17-SNAPSHOT |
-| `biblioteca-nestjs` | 0.9.16-SNAPSHOT |
+| `biblioteca-nestjs` | 0.9.17-SNAPSHOT |
 | `biblioteca-reader` | 0.1.18-SNAPSHOT |
 | `biblioteca-covers` | 0.0.7-SNAPSHOT |
 
