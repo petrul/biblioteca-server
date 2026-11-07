@@ -3,9 +3,12 @@
 ## Database
 
 Spring Data JPA over **PostgreSQL** (production and integration since Dusky
-Discus, 2026-10-15) or **Apache Derby** in Network Server mode (still used
-by some development profiles; the image is built from `docker/derby`). The
-engine is chosen by the `DB_URL` prefix alone: `DbEngineDefaults` maps it to
+Discus, 2026-10-15; the `zmeu` and `ci` profiles too). **Apache Derby**, the
+former engine (Network Server mode, image built from `docker/derby`), can no
+longer run the server: Flyway 10+ dropped it and the migrations run on every
+start. Only one regression test still uses an in-memory Derby, with Flyway
+off; the pass store's legacy `biblioteca/dev` profile still points at Derby.
+The engine is chosen by the `DB_URL` prefix alone: `DbEngineDefaults` maps it to
 the driver class and Hibernate dialect. Credentials ride in the URL (Derby
 `;user=...;password=...`, PostgreSQL `?user=...&password=...`), and
 `RunStuffOnStartup` redacts them before logging the URL.

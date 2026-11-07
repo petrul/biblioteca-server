@@ -31,8 +31,11 @@ has its own stable URL.
 
 ## Quick start
 
-Prerequisites: Java 25, a PostgreSQL or Derby database (`DB_URL`), and at
-least one TEI repository (`TEI_REPOS`). The vector store, Ollama and Kafka
+Prerequisites: Java 25, a PostgreSQL database (`DB_URL`), and at least one
+TEI repository (`TEI_REPOS`). Derby is no longer a runtime option: Flyway
+10+ dropped it, and the schema migrations run on every start. (The
+pass store's legacy `biblioteca/dev` profile still points at Derby and
+needs moving to PostgreSQL; `zmeu`, `ci` and `prod` use PostgreSQL.) The vector store, Ollama and Kafka
 enable semantic search and vectorization, but the server boots and serves
 texts without them.
 
@@ -63,6 +66,14 @@ OpenAPI YAML, `rake ij` opens a Derby shell, and
 `rake minio-mount` / `rake minio-unmount` mount the profile's MinIO bucket
 read-write at `~/s3-mount/biblioteca-<profile>` (needs `s3fs`).
 
+**GraalVM native image.** `rake graalvm[profile]` compiles the server into
+one executable (`rake ci-graalvm` builds and publishes it as
+`<version>-graalvm` on TeamCity), and `rake graalvm-metadata` regenerates
+what the image must be told, from the whole test suite run under GraalVM's
+tracing agent. It starts in about a second with a third of the memory;
+deployments switch to it per stack, after the JVM release - see
+[native/README.md](native/README.md).
+
 ## Configuration
 
 Spring profiles (`src/main/resources/application-<profile>.properties`)
@@ -73,7 +84,7 @@ variable.
 
 | Variable | Purpose |
 | --- | --- |
-| `DB_URL` | JDBC URL with credentials embedded; the prefix selects PostgreSQL or Derby |
+| `DB_URL` | PostgreSQL JDBC URL, credentials embedded |
 | `TEI_REPOS` | Comma-separated TEI repositories (below) |
 | `WORK_DIR` | Persistent work area: `cache/`, `git-repos/`, `lucene-index/`, `sessions/` |
 | `VECTOR_STORE`, `VECTORSTORE_URL` | `qdrant` (default) or `milvus`, and its URL with port |
@@ -361,6 +372,18 @@ The next family release name was randomly selected: *Fathomless Fountain*.
 | `biblioteca-nestjs` | 0.9.16-SNAPSHOT |
 | `biblioteca-reader` | 0.1.18-SNAPSHOT |
 | `biblioteca-covers` | 0.0.7-SNAPSHOT |
+
+So far:
+
+- The GraalVM native image starts and serves (0.9.16-graalvm restarted in a
+  loop): Flyway's migrations listed instead of scanned, ICU4J, Caffeine,
+  Groovy and Lucene's native calls declared from the test suite run under
+  the tracing agent, persisted sign-in sessions restorable
+  ([native/README.md](native/README.md)).
+- Cover art from any public image host for administrators, with the reason
+  when it cannot be loaded, and uploaded images
+  ([biblioteca-covers](https://github.com/petrul/biblioteca-covers),
+  biblioteca-reader, biblioteca-nestjs).
 
 ### Before the naming began (0.9.1 – 0.9.11)
 
