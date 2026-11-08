@@ -1,0 +1,24 @@
+extend type Query {
+    myReaderState: ReaderWorkspaceStateDto!
+    mySavedSearches: [DivCollectionDto!]!
+}
+
+type ReaderWorkspaceStateDto {
+    revision: Long!
+    lastSearch: JSON
+    workspace: JSON
+    updatedAt: String!
+}
+
+type Mutation {
+    updateMyReaderState(expectedRevision: Long!, lastSearch: JSON, workspace: JSON): ReaderWorkspaceStateDto!
+    saveMySearch(name: String, query: String!, params: String, hits: [SavedSearchHitInput!]): DivCollectionDto!
+    renameMyCollection(id: ID!, name: String!): DivCollectionDto!
+    deleteMyCollection(id: ID!): Boolean!
+}
+
+input SavedSearchHitInput {
+    path: String!
+    snippet: String
+    score: Float
+}

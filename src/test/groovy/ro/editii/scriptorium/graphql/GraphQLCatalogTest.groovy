@@ -185,11 +185,27 @@ class GraphQLCatalogTest {
 
     @Test
     void schemaRemainsReadOnlyAndBadEntityInputsHaveGraphqlErrors() throws Exception {
-        assertTrue(query("{ __schema { mutationType { name } } }", null).at("/data/__schema/mutationType").isNull());
+        assertEquals("Mutation", query("{ __schema { mutationType { name } } }", null).at("/data/__schema/mutationType/name").asText());
         assertTrue(query("{ searchAuthors(q: \"a\") { type } }", null).has("errors"));
         assertTrue(query("{ searchDivHeads(q: \"abc\", limit: 0) { type } }", null).has("errors"));
         assertEquals("NOT_FOUND", query("{ authorDetails(strId: \"no_such_author\") { strId } }", null)
                 .at("/errors/0/extensions/classification").asText());
+    }
+
+    @Test
+    void readerWorkspaceStateIsVersionedAndRequiresTheSignedInReader() throws Exception {
+        def initial = query('{ myReaderState { revision lastSearch workspace } }', 'reader')
+        noErrors(initial)
+        assertEquals(0, initial.at('/data/myReaderState/revision').asInt())
+
+        def updated = query('mutation { updateMyReaderState(expectedRevision: 0, lastSearch: {query: "hamlet"}, workspace: {active: true}) { revision lastSearch workspace } }', 'reader')
+        noErrors(updated)
+        assertEquals(1, updated.at('/data/updateMyReaderState/revision').asInt())
+        assertTrue(updated.toString().contains('hamlet'), updated.toString())
+
+        def stale = query('mutation { updateMyReaderState(expectedRevision: 0, lastSearch: {query: "stale"}) { revision } }', 'reader')
+        assertTrue(stale.has('errors'))
+        assertTrue(query('{ myReaderState { revision } }', null).has('errors'))
     }
 
     void noErrors(JsonNode result) { assertFalse(result.has("errors"), result.toString()); }

@@ -72,7 +72,7 @@ public class DivCollectionRestController {
                         "authenticated as '" + authentication.getName() + "' but no matching AppUser row"));
     }
 
-    private DivCollectionDto toDto(DivCollection collection) {
+    public DivCollectionDto toDto(DivCollection collection) {
         final List<DivCollectionItemDto> items = collection.getItems().stream()
                 .map(this::toDto)
                 .toList();

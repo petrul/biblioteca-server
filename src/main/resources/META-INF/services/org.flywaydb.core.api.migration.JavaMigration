@@ -9,3 +9,4 @@ db.migration.V8__Add_work_enrichment_columns
 db.migration.V9__Clear_image_data_opus_descriptions
 db.migration.V10__Collections_with_uuid_ids
 db.migration.V11__Widen_app_user_avatar_url
+db.migration.V12__Create_reader_workspace_state

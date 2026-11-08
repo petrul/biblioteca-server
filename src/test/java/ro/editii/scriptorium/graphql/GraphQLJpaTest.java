@@ -52,7 +52,7 @@ class GraphQLJpaTest {
     @EnableAutoConfiguration
     @EntityScan(basePackages = {"ro.editii.scriptorium.model", "ro.editii.scriptorium.media", "ro.editii.scriptorium.embedding"})
     @EnableJpaRepositories(basePackages = {"ro.editii.scriptorium.dao", "ro.editii.scriptorium.embedding"})
-    @Import({GraphQLJpaConfig.class, GraphQLCatalogConfig.class, SecurityConfig.class, AdminUsers.class,
+    @Import({GraphQLJpaConfig.class, GraphQLCatalogConfig.class, GraphQLReaderWorkspaceConfig.class, SecurityConfig.class, AdminUsers.class,
             ro.editii.scriptorium.security.InternalApiToken.class})
     static class Application {
         @Bean
