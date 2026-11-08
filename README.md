@@ -6,7 +6,7 @@ every author, work, chapter, paragraph - and any character range inside one -
 has its own stable URL.
 
 ```
-          TEI repositories (scriptorium-masters build, git repos)
+          TEI repositories (scriptorium-masters build under corpus, git repos)
                                │ import
                                ▼
  biblioteca-reader ──/tb/api──▶ biblioteca-server ──Kafka──▶ biblioteca-nestjs
@@ -44,6 +44,7 @@ hostname:
 ```bash
 rake run                  # bootRun on http://localhost:8080
 rake "run[zmeu]"          # with an explicit profile
+rake "run[yoga]"          # yoga development profile
 rake unittest             # network-free unit tests
 rake test                 # unit + integration tests
 rake "test[,FragmentControllerITest]"   # only matching test classes
@@ -53,6 +54,21 @@ rake ci                   # clean, test, build, publish the Docker image (TeamCi
 Open `http://localhost:8080`, with the API docs at `/api/docs.html`.
 Browsers are sent on to the reader app; add `?noredirect` for the server's
 own Thymeleaf pages.
+
+### Yoga development corpus
+
+The yoga pass-store profile must point its local TEI repository at the current
+checkout:
+
+```text
+/home/petru/work/corpus/scriptorium-masters/build
+```
+
+The older `/home/petru/work/scriptorium-masters/build` location is obsolete.
+The directory contains language/source subdirectories such as `ro/`, `en/`,
+and `fr/`; the server imports changed files from it through the `autoimport`
+profile. If the pass-store value still contains the old path, update that
+profile before restarting rather than creating a second empty checkout.
 
 > On zmeu, tests must not run against the shared development database: see
 > [AGENTS.md](AGENTS.md) for the database override. Prefer native Groovy test
@@ -97,7 +113,7 @@ variable.
 **TEI repositories.** Each entry is `url|basepath|filespec`:
 
 ```bash
-/corpus/tei                                       # local folder, all TEI XML
+/home/petru/work/corpus/scriptorium-masters/build # yoga local build, all TEI XML
 https://github.com/petrul/universal-literature-tei/  # git, **/*.tei.xml
 https://github.com/petrul/romcorpus|md|**/*.md       # git, a subfolder, Markdown
 ```
