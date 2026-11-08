@@ -18,6 +18,8 @@ import org.apache.lucene.queryparser.classic.MultiFieldQueryParser;
 import org.apache.lucene.queryparser.classic.ParseException;
 import org.apache.lucene.queryparser.classic.QueryParser;
 import org.apache.lucene.search.IndexSearcher;
+import org.apache.lucene.search.BooleanClause;
+import org.apache.lucene.search.BooleanQuery;
 import org.apache.lucene.search.PrefixQuery;
 import org.apache.lucene.search.Query;
 import org.apache.lucene.search.ScoreDoc;
@@ -683,6 +685,10 @@ public class LuceneIndexService {
     }
 
     public List<LuceneHit> search(String q, int limit) {
+        return search(q, limit, List.of());
+    }
+
+    public List<LuceneHit> search(String q, int limit, List<String> scopes) {
         if (!this.isAvailable())
             return List.of();
         // A long query (a pasted paragraph) expands into more boolean clauses
@@ -692,7 +698,7 @@ public class LuceneIndexService {
         String current = q;
         while (true) {
             try {
-                return searchOnce(current, limit);
+                return searchOnce(current, limit, scopes);
             } catch (IndexSearcher.TooManyClauses e) {
                 final String[] words = current.trim().split("\\s+");
                 if (words.length <= 1) {
@@ -706,7 +712,7 @@ public class LuceneIndexService {
         }
     }
 
-    private List<LuceneHit> searchOnce(String q, int limit) {
+    private List<LuceneHit> searchOnce(String q, int limit, List<String> scopes) {
         final Query query;
         try {
             final Map<String, Float> fieldsAndBoosts = searchFieldsAndBoosts();
@@ -728,7 +734,8 @@ public class LuceneIndexService {
         try {
             final IndexSearcher searcher = this.searcherManager.acquire();
             try {
-                final TopDocs topDocs = searcher.search(query, limit);
+                final Query scopedQuery = scopedQuery(query, scopes);
+                final TopDocs topDocs = searcher.search(scopedQuery, limit);
                 final List<LuceneHit> hits = new ArrayList<>(topDocs.scoreDocs.length);
                 for (ScoreDoc scoreDoc : topDocs.scoreDocs) {
                     final Document doc = searcher.storedFields().document(scoreDoc.doc);
@@ -746,5 +753,19 @@ public class LuceneIndexService {
             log.warn("Lucene search failed for [{}]: {}", q, e.getMessage());
             return List.of();
         }
+    }
+
+    private static Query scopedQuery(Query query, List<String> scopes) {
+        if (scopes == null || scopes.isEmpty()) return query;
+        final BooleanQuery.Builder scopeFilter = new BooleanQuery.Builder();
+        for (String scope : scopes) {
+            scopeFilter.add(new TermQuery(new Term(FIELD_URL, scope)), BooleanClause.Occur.SHOULD);
+            scopeFilter.add(new PrefixQuery(new Term(FIELD_URL, scope + "/")), BooleanClause.Occur.SHOULD);
+        }
+        scopeFilter.setMinimumNumberShouldMatch(1);
+        return new BooleanQuery.Builder()
+                .add(query, BooleanClause.Occur.MUST)
+                .add(scopeFilter.build(), BooleanClause.Occur.FILTER)
+                .build();
     }
 }

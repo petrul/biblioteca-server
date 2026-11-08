@@ -78,6 +78,13 @@ public class MilvusCollection implements VectorCollection {
                 this.search(new float[][] { vector }, topK));
     }
 
+    @Override
+    public List<VectorSearchHit> searchHits(float[] vector, int topK, List<String> scopes) {
+        if (scopes == null || scopes.isEmpty()) return searchHits(vector, topK);
+        return VectorUtils.searchResultsWrapperToSearchHits(
+                this.search(vector, topK, scopes));
+    }
+
     public void load() {
         this.milvusService.loadCollection(name);
     }
@@ -173,6 +180,10 @@ public class MilvusCollection implements VectorCollection {
         return this.search(new float[][] {vector}, topK );
     }
 
+    public SearchResultsWrapper search(float[] vector, int topK, List<String> scopes) {
+        return this.search(VectorUtils.arr2List(new float[][] {vector}), DEFAULT_NPROBE, topK, scopes);
+    }
+
     public SearchResultsWrapper search(float[][] vectors, int topK) {
         final var asList = VectorUtils.arr2List(vectors);
         return this.search(asList, topK);
@@ -203,8 +214,11 @@ public class MilvusCollection implements VectorCollection {
     }
 
     public SearchResultsWrapper search(List<List<Float>> vectors, int nProbe, int topK) {
+        return search(vectors, nProbe, topK, List.of());
+    }
 
-        final SearchParam params = searchParamIvfL2Eventually(vectors, topK, nProbe);
+    private SearchResultsWrapper search(List<List<Float>> vectors, int nProbe, int topK, List<String> scopes) {
+        final SearchParam params = searchParamIvfL2Eventually(vectors, topK, nProbe, scopes);
         final R<SearchResults> respSearch = this.milvusService.milvus.search(params);
 
         final SearchResultsWrapper wrapperSearch = new SearchResultsWrapper(respSearch.getData().getResults());
@@ -227,6 +241,10 @@ public class MilvusCollection implements VectorCollection {
     }
 
     private SearchParam searchParamIvfL2Eventually(List<List<Float>> vectors, int topK, int nProbe) {
+        return searchParamIvfL2Eventually(vectors, topK, nProbe, List.of());
+    }
+
+    private SearchParam searchParamIvfL2Eventually(List<List<Float>> vectors, int topK, int nProbe, List<String> scopes) {
         final String SEARCH_PARAM = String.format("{\"nprobe\": %d, \"offset\":0}", nProbe);
         final List<String> search_output_fields = Arrays.asList(FIELD_SHA_256, FIELD_URL);
         return SearchParam.newBuilder()
@@ -237,8 +255,20 @@ public class MilvusCollection implements VectorCollection {
                 .withTopK(topK)
                 .withVectors(vectors)
                 .withVectorFieldName(FIELD_EMBEDDING)
+                .withExpr(scopeExpression(scopes))
                 .withParams(SEARCH_PARAM)
                 .build();
+    }
+
+    private static String scopeExpression(List<String> scopes) {
+        if (scopes == null || scopes.isEmpty()) return "";
+        return scopes.stream()
+                .map(scope -> "(url == '" + escapeMilvus(scope) + "' || url like '" + escapeMilvus(scope) + "/%')")
+                .collect(Collectors.joining(" || "));
+    }
+
+    private static String escapeMilvus(String value) {
+        return value.replace("\\", "\\\\").replace("'", "\\'");
     }
 
 

@@ -43,6 +43,10 @@ public class VectorTextSearchService {
     }
 
     public List<VectorHit> search(String textQuery, int topK) {
+        return search(textQuery, topK, List.of());
+    }
+
+    public List<VectorHit> search(String textQuery, int topK, List<String> scopes) {
         if (!this.vectorSearchAvailability.isAvailable())
             throw new VectorDependencyUnavailableException("Vector search is temporarily unavailable");
         final float[] vector;
@@ -52,7 +56,7 @@ public class VectorTextSearchService {
             log.warn("Embedder call failed/timed out ({}) - degrading to empty results for this search.", e.getMessage());
             throw new VectorDependencyUnavailableException("Embedding service did not respond in time", e);
         }
-        return this.search(vector, topK);
+        return this.search(vector, topK, scopes);
     }
 
     /**
@@ -71,11 +75,15 @@ public class VectorTextSearchService {
     }
 
     public List<VectorHit> search(float[] vector, int topK) {
+        return search(vector, topK, List.of());
+    }
+
+    public List<VectorHit> search(float[] vector, int topK, List<String> scopes) {
         if (!this.vectorSearchAvailability.isAvailable())
             throw new VectorDependencyUnavailableException("Vector store is temporarily unavailable");
         try {
             return VectorUtils.searchHitsToHits(
-                    this.vectorCollection.searchHits(vector, topK), this.contentResolver);
+                    this.vectorCollection.searchHits(vector, topK, scopes), this.contentResolver);
         } catch (RuntimeException e) {
             // Same degradation as the embedder timeout above: a mid-run store
             // outage/restart must turn this one request into empty results,

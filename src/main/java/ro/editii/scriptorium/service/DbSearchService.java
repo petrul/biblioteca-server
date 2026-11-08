@@ -9,6 +9,7 @@ import ro.editii.scriptorium.model.Author;
 import ro.editii.scriptorium.model.TeiDiv;
 import ro.editii.scriptorium.search.GrepHit;
 import ro.editii.scriptorium.search.LuceneHit;
+import ro.editii.scriptorium.search.SearchScope;
 import ro.editii.scriptorium.search.VectorHit;
 import ro.editii.scriptorium.search.grep.GrepSearchService;
 import ro.editii.scriptorium.search.lucene.LuceneIndexService;
@@ -60,10 +61,27 @@ public class DbSearchService {
         return  divs;
     }
 
+    public List<TeiDiv> findDivHeads(String q, int limit, List<String> scopes) {
+        if (scopes == null || scopes.isEmpty()) return findDivHeads(q, limit);
+        // Complete descendant paths are derived from the parent chain rather
+        // than stored as a database column. Apply the scope before limiting so
+        // unrelated headings cannot consume the requested result count.
+        return this.teiDivRepository.findByHeadContainingIgnoreCase(q).stream()
+                .filter(div -> SearchScope.matches(div.getCompletePath(), scopes))
+                .limit(limit)
+                .toList();
+    }
+
     public List<VectorHit> searchMilvus(String q, int limit) {
         assert limit > 0;
         final var resp = this.vectorTextSearchService.search(q, limit);
         return resp;
+    }
+
+    public List<VectorHit> searchMilvus(String q, int limit, List<String> scopes) {
+        assert limit > 0;
+        if (scopes == null || scopes.isEmpty()) return searchMilvus(q, limit);
+        return this.vectorTextSearchService.search(q, limit, scopes);
     }
 
     public List<LuceneHit> searchLucene(String q, int limit) {
@@ -71,8 +89,20 @@ public class DbSearchService {
         return this.luceneIndexService.search(q, limit);
     }
 
+    public List<LuceneHit> searchLucene(String q, int limit, List<String> scopes) {
+        assert limit > 0;
+        if (scopes == null || scopes.isEmpty()) return searchLucene(q, limit);
+        return this.luceneIndexService.search(q, limit, scopes);
+    }
+
     public List<GrepHit> searchGrep(String q, int limit) {
         assert limit > 0;
         return this.grepSearchService.search(q, limit);
+    }
+
+    public List<GrepHit> searchGrep(String q, int limit, List<String> scopes) {
+        assert limit > 0;
+        if (scopes == null || scopes.isEmpty()) return searchGrep(q, limit);
+        return this.grepSearchService.search(q, limit, scopes);
     }
 }

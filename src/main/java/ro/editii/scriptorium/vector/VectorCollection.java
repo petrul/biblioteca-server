@@ -1,6 +1,7 @@
 package ro.editii.scriptorium.vector;
 
 import java.util.List;
+import ro.editii.scriptorium.search.SearchScope;
 
 /**
  * The store-agnostic vector-collection contract - what
@@ -44,4 +45,18 @@ public interface VectorCollection {
 
     /** Nearest-neighbor search, returning the topK hits in store ranking order. */
     List<VectorSearchHit> searchHits(float[] vector, int topK);
+
+    /**
+     * Scoped search seam. Stores with native prefix filtering should override
+     * this; the default deliberately over-fetches and filters on the server so
+     * a scope never leaks unrelated hits to the reader.
+     */
+    default List<VectorSearchHit> searchHits(float[] vector, int topK, List<String> scopes) {
+        if (scopes == null || scopes.isEmpty()) return searchHits(vector, topK);
+        final int candidateLimit = Math.min(500, Math.max(topK, topK * 20));
+        return searchHits(vector, candidateLimit).stream()
+                .filter(hit -> SearchScope.matches(hit.url(), scopes))
+                .limit(topK)
+                .toList();
+    }
 }

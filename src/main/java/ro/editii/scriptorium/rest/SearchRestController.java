@@ -12,6 +12,8 @@ import org.apache.commons.lang3.time.StopWatch;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.env.Environment;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.http.HttpStatus;
+import org.springframework.web.server.ResponseStatusException;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.util.UriComponentsBuilder;
 import ro.editii.scriptorium.Util;
@@ -23,6 +25,7 @@ import ro.editii.scriptorium.model.Author;
 import ro.editii.scriptorium.model.TeiDiv;
 import ro.editii.scriptorium.model.TeiElem;
 import ro.editii.scriptorium.search.VectorHit;
+import ro.editii.scriptorium.search.SearchScope;
 import ro.editii.scriptorium.search.content.ContentResolver;
 import ro.editii.scriptorium.service.ControllerTool;
 import ro.editii.scriptorium.service.DbSearchService;
@@ -73,6 +76,14 @@ public class SearchRestController extends CommonControllerUtil {
                 Map.of("mode", mode, "query", q, "limit", limit, "results", results)));
     }
 
+    private List<String> normalizedScope(List<String> scope) {
+        try {
+            return SearchScope.normalize(scope);
+        } catch (IllegalArgumentException error) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, error.getMessage(), error);
+        }
+    }
+
     @GetMapping("/authors")
     @ResponseBody
     public List<HitDto> searchAuthors(@RequestParam(name = "q") @Size(min = 3) String q,
@@ -92,14 +103,21 @@ public class SearchRestController extends CommonControllerUtil {
         return resp;
     }
 
+    public List<HitDto> searchDivHeads(@RequestParam(name = "q") @Size(min = 3) String q,
+                                      @RequestParam(name = "limit", required = false, defaultValue = "10") int limit,
+                                      UriComponentsBuilder uriComponentsBuilder) {
+        return searchDivHeads(q, limit, List.of(), uriComponentsBuilder);
+    }
+
     @GetMapping("/divHeads")
     @ResponseBody
     public List<HitDto> searchDivHeads(@RequestParam(name = "q") @Size(min = 3) String q,
                                       @RequestParam(name = "limit", required = false, defaultValue = "10") int limit,
+                                      @RequestParam(name = "scope", required = false) List<String> scope,
                                       UriComponentsBuilder uriComponentsBuilder) {
         final StopWatch watch = new StopWatch(); watch.start();
 
-        final List<TeiDiv> divs = this.dbSearchService.findDivHeads(q, ResourceLimits.searchResults(limit));
+        final List<TeiDiv> divs = this.dbSearchService.findDivHeads(q, ResourceLimits.searchResults(limit), normalizedScope(scope));
         final var resp = divs.stream().map(it -> HitDto.from(it, uriComponentsBuilder)).toList();
 
         watch.stop();
@@ -113,15 +131,23 @@ public class SearchRestController extends CommonControllerUtil {
         return resp;
     }
 
+    public List<HitDto> searchVector(
+            @RequestParam(name = "q") @Size(min = 3) String q,
+            @RequestParam(name = "limit", required = false, defaultValue = "10") int limit,
+            UriComponentsBuilder uriComponentsBuilder) {
+        return searchVector(q, limit, List.of(), uriComponentsBuilder);
+    }
+
     @GetMapping("/vector")
     @ResponseBody
     public List<HitDto> searchVector(
             @RequestParam(name = "q") @Size(min = 3) String q,
             @RequestParam(name = "limit", required = false, defaultValue = "10") int limit,
+            @RequestParam(name = "scope", required = false) List<String> scope,
             UriComponentsBuilder uriComponentsBuilder) {
         final StopWatch watch = new StopWatch(); watch.start();
 
-        final var divs = this.dbSearchService.searchMilvus(q, ResourceLimits.searchResults(limit));
+        final var divs = this.dbSearchService.searchMilvus(q, ResourceLimits.searchResults(limit), normalizedScope(scope));
 
         watch.stop();
 
@@ -137,14 +163,21 @@ public class SearchRestController extends CommonControllerUtil {
 
     }
 
+    public List<HitDto> searchGrep(
+            @RequestParam(name = "q") @Size(min = 3) String q,
+            @RequestParam(name = "limit", required = false, defaultValue = "10") int limit) {
+        return searchGrep(q, limit, List.of());
+    }
+
     @GetMapping("/grep")
     @ResponseBody
     public List<HitDto> searchGrep(
             @RequestParam(name = "q") @Size(min = 3) String q,
-            @RequestParam(name = "limit", required = false, defaultValue = "10") int limit) {
+            @RequestParam(name = "limit", required = false, defaultValue = "10") int limit,
+            @RequestParam(name = "scope", required = false) List<String> scope) {
         final StopWatch watch = new StopWatch(); watch.start();
 
-        final var hits = this.dbSearchService.searchGrep(q, ResourceLimits.searchResults(limit));
+        final var hits = this.dbSearchService.searchGrep(q, ResourceLimits.searchResults(limit), normalizedScope(scope));
 
         watch.stop();
 
@@ -159,15 +192,23 @@ public class SearchRestController extends CommonControllerUtil {
         return resp;
     }
 
+    public List<HitDto> searchLucene(
+            @RequestParam(name = "q") @Size(min = 3) String q,
+            @RequestParam(name = "limit", required = false, defaultValue = "10") int limit,
+            UriComponentsBuilder uriComponentsBuilder) {
+        return searchLucene(q, limit, List.of(), uriComponentsBuilder);
+    }
+
     @GetMapping("/lucene")
     @ResponseBody
     public List<HitDto> searchLucene(
             @RequestParam(name = "q") @Size(min = 3) String q,
             @RequestParam(name = "limit", required = false, defaultValue = "10") int limit,
+            @RequestParam(name = "scope", required = false) List<String> scope,
             UriComponentsBuilder uriComponentsBuilder) {
         final StopWatch watch = new StopWatch(); watch.start();
 
-        final var hits = this.dbSearchService.searchLucene(q, ResourceLimits.searchResults(limit));
+        final var hits = this.dbSearchService.searchLucene(q, ResourceLimits.searchResults(limit), normalizedScope(scope));
 
         watch.stop();
 

@@ -12,6 +12,7 @@ import ro.editii.scriptorium.dao.TeiDivRepository;
 import ro.editii.scriptorium.model.TeiDiv;
 import ro.editii.scriptorium.model.TeiElem;
 import ro.editii.scriptorium.search.GrepHit;
+import ro.editii.scriptorium.search.SearchScope;
 import ro.editii.scriptorium.service.ControllerTool;
 import ro.editii.scriptorium.service.DivService;
 
@@ -47,6 +48,10 @@ public class GrepSearchService {
     private final ControllerTool controllerTool;
 
     public List<GrepHit> search(String q, int limit) {
+        return search(q, limit, List.of());
+    }
+
+    public List<GrepHit> search(String q, int limit, List<String> scopes) {
         final StopWatch watch = new StopWatch();
         watch.start();
 
@@ -60,6 +65,7 @@ public class GrepSearchService {
         do {
             opera = this.teiDivRepository.findOpera(PageRequest.of(pageNr, OPERA_PAGE_SIZE));
             for (TeiDiv opus : opera) {
+                if (!SearchScope.matches(opus.getCompletePath(), scopes)) continue;
                 for (TeiElem para : this.divService.getParagraphs(opus)) {
                     if (scanned++ >= MAX_PARAGRAPHS_SCANNED) {
                         log.warn("grep search [{}] hit the {}-paragraph scan bound with only {} results found - "

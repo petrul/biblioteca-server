@@ -118,6 +118,7 @@ public interface TeiDivRepository extends JpaRepository<TeiDiv, Long> {
     long countOperaForAuthorStrId(String authorStrId);
 
     Page<TeiDiv> findByHeadContainingIgnoreCase(String excerpt, Pageable page);
+    List<TeiDiv> findByHeadContainingIgnoreCase(String excerpt);
     Page<TeiDiv> findByLang(Languages lang, Pageable pageable);
 
     // Explicit order (not just "whatever MySQL happens to return") - both
