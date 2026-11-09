@@ -20,6 +20,29 @@ public final class FragmentProjection {
         } catch (java.io.IOException e) { throw new IllegalStateException(e); }
     });
     public record Span(int start, int end) {}
+
+    /** The source is beyond what a projection may index (text or node count). */
+    public static final class TooLargeException extends IllegalArgumentException {
+        public TooLargeException(String message) { super(message); }
+    }
+
+    /**
+     * Annotates a division for exact quoting (projection ids, source paths,
+     * text offsets and data-fragment-version on its root) when it can be
+     * projected; returns false for one too large, which is then served without
+     * annotations - quoting is unavailable there, but the page still reads.
+     * A whole large book's root asked for at depth 0 (its title page) used to
+     * fail with a 400 here, before the depth pruning that leaves ~1 KB.
+     */
+    public static boolean annotateForQuoting(Node source) {
+        try {
+            var projection = new FragmentProjection(source);
+            ((Element) projection.root).setAttribute("data-fragment-version", projection.version);
+            return true;
+        } catch (TooLargeException e) {
+            return false;
+        }
+    }
     public final Node root;
     public final String text;
     public final String version;
@@ -31,7 +54,7 @@ public final class FragmentProjection {
     public FragmentProjection(Node source) {
         root = source.getNodeType() == Node.DOCUMENT_NODE ? ((Document) source).getDocumentElement() : source;
         if (root.getTextContent().length() > 8 * 1024 * 1024)
-            throw new IllegalArgumentException("Fragment source exceeds the 8 MiB limit");
+            throw new TooLargeException("Fragment source exceeds the 8 MiB limit");
         version = digest("fragment-projection-v1\n" + DomTool.asString(root));
         index(root, "", false);
         String marker = "\uE000" + UUID.randomUUID() + "\uE001";
@@ -61,7 +84,7 @@ public final class FragmentProjection {
     private void index(Node node, String path, boolean preserve) {
         if (!(node instanceof Element element)) return;
         String id = "e" + nextId++;
-        if (nextId > 100000) throw new IllegalArgumentException("Fragment source has too many nodes");
+        if (nextId > 100000) throw new TooLargeException("Fragment source has too many nodes");
         ids.put(node, id); nodes.put(id, node);
         element.setAttribute("data-projection-id", id);
         element.setAttribute("data-source-path", path);

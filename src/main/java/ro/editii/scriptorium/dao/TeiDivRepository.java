@@ -1,5 +1,6 @@
 package ro.editii.scriptorium.dao;
 
+import org.springframework.data.rest.core.annotation.RestResource;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.EntityGraph;
@@ -118,6 +119,10 @@ public interface TeiDivRepository extends JpaRepository<TeiDiv, Long> {
     long countOperaForAuthorStrId(String authorStrId);
 
     Page<TeiDiv> findByHeadContainingIgnoreCase(String excerpt, Pageable page);
+    // For DbSearchService's scoped title search only: exported, it shares the
+    // paged overload's /search path, and Spring Data REST then answers every
+    // /api/drest/teiDivs and /api/docs request with "Ambiguous search mapping".
+    @RestResource(exported = false)
     List<TeiDiv> findByHeadContainingIgnoreCase(String excerpt);
     Page<TeiDiv> findByLang(Languages lang, Pageable pageable);
 

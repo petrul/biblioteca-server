@@ -553,7 +553,11 @@ class WebITest {
             final urls = [
                     url("/cantemir/descrierea_moldovei/_binary/d3e1954"),
                     url("/cantemir/descrierea_moldovei/partea_eclesiastica_si_literara/_binary/d3e1954"),
-                    url("/cantemir/descrierea_moldovei/partea_eclesiastica_si_literara/despre_literile_moldovenilor/_binary/d3e1954")
+                    url("/cantemir/descrierea_moldovei/partea_eclesiastica_si_literara/despre_literile_moldovenilor/_binary/d3e1954"),
+                    // as written in the .html of a page: the book's own root
+                    // page (its title page) carries the extension on the opus
+                    url("/cantemir/descrierea_moldovei.html/_binary/d3e1954"),
+                    url("/cantemir/descrierea_moldovei/partea_eclesiastica_si_literara.html/_binary/d3e1954")
             ]
             for (String url : urls) {
                 final resp = this.restTemplate.getForEntity(url, byte[].class)

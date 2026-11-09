@@ -227,7 +227,10 @@ public class DivController {
         final var binaryObjId = this.isBinaryObjectReq(fragms);
         if (binaryObjId != null) {
             // request of binaryObject
-            this.binaryObject(response, authorId, opusId, binaryObjId);
+            // a page's .html names its images relative to itself: on the
+            // book's root page the extension sits on the opus segment
+            // (/mitru/opus.html/_binary/id), which is not the opus id
+            this.binaryObject(response, authorId, Util.basename(opusId), binaryObjId);
             return;
         }
 
@@ -307,10 +310,11 @@ public class DivController {
                                                       Integer depth) {
         final ElemInfo elemInfo = this.getElemInfo(authorId, request, uriComponentsBuilder);
 
-        if ("1".equals(request.getParameter("fragments"))) {
-            var projection = new ro.editii.scriptorium.fragment.FragmentProjection(elemInfo.getNodeCopy());
-            ((org.w3c.dom.Element) projection.root).setAttribute("data-fragment-version", projection.version);
-        }
+        // Annotated on the whole division, before pruning: the paths and the
+        // version must be those quote resolution computes on the stored source.
+        if ("1".equals(request.getParameter("fragments"))
+                && !ro.editii.scriptorium.fragment.FragmentProjection.annotateForQuoting(elemInfo.getNodeCopy()))
+            log.info("{} is too large to project for quoting; served without fragment annotations", request.getRequestURI());
         Util.pruneDivsBeyondDepth(elemInfo, depth);
 
         final Node selectedDiv = elemInfo.getNodeCopy();

@@ -78,4 +78,24 @@ class UnifiedFragmentNotationTest {
         assertThrows(IllegalArgumentException) { mapped.boundary(FragmentSelector.parse('_1:0..1:99').end(), true) }
         assertThrows(IllegalArgumentException) { mapped.boundary(FragmentSelector.parse('_2').start(), false) }
     }
+
+    private static element(String xml) {
+        def factory = DocumentBuilderFactory.newInstance()
+        factory.namespaceAware = true
+        factory.newDocumentBuilder().parse(new ByteArrayInputStream(xml.bytes)).documentElement
+    }
+
+    @Test void aDivisionTooLargeToProjectIsServedWithoutAnnotationsInsteadOfFailing() {
+        def tei = 'xmlns="http://www.tei-c.org/ns/1.0"'
+        def small = element("<div ${tei}><head>Title</head><p>Text</p></div>")
+        assert FragmentProjection.annotateForQuoting(small)
+        assert small.getAttribute('data-fragment-version')
+
+        // a whole book's root (Mitru's Pacala si Tandala is over 8 MiB): its
+        // title page at depth 0 must still render, only without quoting
+        def big = element("<div ${tei}><head>Book</head><div><head>Ch</head><p>${'x' * (8 * 1024 * 1024 + 1)}</p></div></div>")
+        assert !FragmentProjection.annotateForQuoting(big)
+        assert !big.getAttribute('data-fragment-version')
+        assertThrows(FragmentProjection.TooLargeException) { new FragmentProjection(big) }
+    }
 }
