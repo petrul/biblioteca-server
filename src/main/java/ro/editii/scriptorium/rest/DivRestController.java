@@ -28,6 +28,7 @@ import ro.editii.scriptorium.dto.BookMetadataDto;
 import ro.editii.scriptorium.dto.TeiDivDto;
 import ro.editii.scriptorium.dto.TeiElemDto;
 import ro.editii.scriptorium.model.TeiDiv;
+import ro.editii.scriptorium.model.TeiElem;
 import ro.editii.scriptorium.service.ControllerTool;
 import ro.editii.scriptorium.service.DivService;
 import ro.editii.scriptorium.tei.TeiRepo;
@@ -49,9 +50,13 @@ public class DivRestController {
     final TeiRepo teiRepo;
     final CoverEnrichmentRequests coverEnrichmentRequests;
     final ro.editii.scriptorium.dao.DivMediaAssociationRepository divMedia;
+    final ro.editii.scriptorium.service.RelocationService relocationService;
 
     @ExceptionHandler(RuntimeException.class)
     public ResponseEntity<String> handleTeiFailure(RuntimeException error) {
+        if (error instanceof ro.editii.scriptorium.web.RelocatedException relocated)
+            return ResponseEntity.status(HttpStatus.MOVED_PERMANENTLY)
+                    .header(HttpHeaders.LOCATION, relocated.getLocation()).build();
         final String summary = RestUtil.summarize(error);
 
         // A read that timed out waiting for the importer's write locks is
@@ -93,7 +98,21 @@ public class DivRestController {
             @RequestParam(name = "path") String path,
             UriComponentsBuilder uriComponentsBuilder) {
 
-        var elem = this.divService.getByPath(path);
+        TeiElem elem;
+        try {
+            elem = this.divService.getByPath(path);
+        } catch (ResponseStatusException notFound) {
+            // a path a reimport gave another address: 301 to this same query
+            // for the new path (RelocationService); a live path always wins
+            if (notFound.getStatusCode().value() == HttpStatus.NOT_FOUND.value())
+                this.relocationService.resolve(path).ifPresent(relocation -> {
+                    throw new ro.editii.scriptorium.web.RelocatedException(
+                            org.springframework.web.servlet.support.ServletUriComponentsBuilder.fromCurrentRequest()
+                                    .replaceQueryParam("path", relocation.getNewPath().substring(1))
+                                    .build().toUriString());
+                });
+            throw notFound;
+        }
         // getByPath returns an element of this request's own session or - when
         // the path ends on a paragraph - an in-memory leaf without an id.
         // Merging that leaf would persist it: nextval() inside this read-only

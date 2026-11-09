@@ -49,6 +49,27 @@ public class TeiFileDbService {
     final TeifileParser teifileParser;
     final LanguageDetectionService languageDetectionService;
     final TeiElemRepository teiElemRepository;
+    final RelocationService relocationService;
+    final jakarta.persistence.EntityManager entityManager;
+
+    /** Snapshots taken before a destroy-all wiped every file at once (see
+     *  AdminService.destroyAllExistingAndReimportAllTeis): their files are then
+     *  reimported with nothing left to snapshot, so these stand in, once each. */
+    private final java.util.Map<String, RelocationService.Snapshot> pendingSnapshots = new java.util.concurrent.ConcurrentHashMap<>();
+
+    private RelocationService.Snapshot snapshotQuietly(TeiFile file) {
+        try {
+            return this.relocationService.snapshot(file);
+        } catch (RuntimeException e) {
+            log.warn("{}: could not snapshot its divisions before the reimport - no relocations will be recorded: {}",
+                    file.getFilename(), e.toString(), e);
+            return null;
+        }
+    }
+
+    public void rememberSnapshots(java.util.Map<String, RelocationService.Snapshot> snapshots) {
+        this.pendingSnapshots.putAll(snapshots);
+    }
 
 //
 //    ParseTeiFileIntoDb newParser(String filename, InputStream is, Languages langHint) {
@@ -162,14 +183,35 @@ public class TeiFileDbService {
                 });
 
         final Optional<TeiFile> optionalTeiFile = this.teiFileRepository.getByFilename(teiFilename);
+        // the divisions as they are before the reimport replaces them: where
+        // each one went is recorded below (Relocation), so its old URL keeps
+        // working. Same transaction as the delete and the parse - a failed
+        // import rolls back to the old divisions, relocations unchanged.
+        RelocationService.Snapshot before = this.pendingSnapshots.get(teiFilename);
         if (optionalTeiFile.isPresent()) {
-            if (forceReimport)
+            if (forceReimport) {
+                if (before == null) before = this.snapshotQuietly(optionalTeiFile.get());
                 this.deleteTeiFile(teiFilename);
-            else
+            } else
                 return;
         }
 
         this.teifileParser.parse(teiFilename, content, langHint);
+        if (before != null && !before.divisions().isEmpty()) {
+            // never fails the import: a TEI rewritten beyond recognition just
+            // relocates little; anything going wrong is logged, its writes
+            // rolled back to their savepoint (RelocationService)
+            try {
+                this.entityManager.flush();
+                final RelocationService.Snapshot previous = before;
+                this.teiFileRepository.getByFilename(teiFilename).ifPresent(imported ->
+                        this.relocationService.recordRelocations(previous, this.relocationService.snapshot(imported)));
+            } catch (RuntimeException e) {
+                log.warn("{}: reimported, but its relocations could not be recorded - old URLs of moved divisions will 404: {}",
+                        teiFilename, e.toString(), e);
+            }
+        }
+        this.pendingSnapshots.remove(teiFilename); // used (a retry after a failure still finds it)
 
         // Not threaded through TeifileParser.parse's own overload chain
         // (unlike langHint, which was already a parameter there) - that

@@ -23,7 +23,7 @@ class TeiFileDbServiceDeletionTest {
     private final TeiElemRepository elements = mock(TeiElemRepository.class);
     private final AuthorRepository authors = mock(AuthorRepository.class);
     private final TeiFileDbService service = new TeiFileDbService(files, authors,
-            divs, opera, null, null, null, null, null, null, null, null, elements);
+            divs, opera, null, null, null, null, null, null, null, null, elements, null, null);
 
     private TeiDiv mixedTree() {
         TeiElem note = new TeiElem();

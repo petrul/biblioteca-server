@@ -29,7 +29,7 @@ class PruneConnectionPoolTest {
         config.setConnectionTimeout(1000);
         // No repositories should be accessed when another prune owns the lock.
         // Null dependencies deliberately fail if the request goes past that guard.
-        var advice = new TeiSourceMissingAdvice(new AdminService(null, null, null, null, null, null, null, null));
+        var advice = new TeiSourceMissingAdvice(new AdminService(null, null, null, null, null, null, null, null, null));
         CountDownLatch allConnectionsBorrowed = new CountDownLatch(10);
         CountDownLatch startCleanup = new CountDownLatch(1);
 

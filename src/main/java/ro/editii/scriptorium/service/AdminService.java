@@ -43,6 +43,7 @@ public class AdminService {
     final TeiFileRepository teiFileRepository;
     final TeiDivRepository teiDivRepository;
     final TeiFileDbService teiFileDbService;
+    final RelocationService relocationService;
     final JdbcTemplate jdbcTemplate;
     final LuceneIndexService luceneIndexService;
     final AuthorRepository authorRepository;
@@ -189,15 +190,20 @@ public class AdminService {
                     // do nothing if already imported and file is not fresher than import
                     continue;
                 } else {
+                    // importTeiFile replaces an existing import itself, in one
+                    // transaction with the parse: it snapshots the old divisions
+                    // first, to relocate the ones whose path changes
+                    // (RelocationService). Deleting here, in a transaction of its
+                    // own, would lose them - and leave the file deleted but not
+                    // imported when the import fails.
                     if (existingTimestamp != null) {
-                        log.info("will delete existing import for {} ", filename);
-                        writeLn(logActivity, "will delete existing import for " + filename);
-                        this.teiFileDbService.deleteTeiFile(filename);
+                        log.info("will replace existing import for {} ", filename);
+                        writeLn(logActivity, "will replace existing import for " + filename);
                     }
 
                     try {
                         log.info("will import {} ", filename);
-                        writeLn(logActivity, "will delete existing import for " + filename);
+                        writeLn(logActivity, "will import " + filename);
                         this.importWithContentionRetry(filename, logActivity);
                     } catch (TeiFileAlreadyImportedException e) {
                         log.error(e.getMessage(), e);
@@ -232,9 +238,9 @@ public class AdminService {
             Optional<TeiFile> optionalTeiFile = this.teiFileRepository.getByFilename(filename);
 
             if (optionalTeiFile.isPresent()) {
-                log.info("will delete existing import for {} ", filename);
-                writeLn(logActivity, "will delete existing import for " + filename);
-                this.teiFileDbService.deleteTeiFile(filename);
+                // replaced by importTeiFile itself - see reimportFresherTeis
+                log.info("will replace existing import for {} ", filename);
+                writeLn(logActivity, "will replace existing import for " + filename);
             }
 
             try {
@@ -260,15 +266,20 @@ public class AdminService {
                     // do nothing if already imported and file is not fresher than import
                     continue;
                 } else {
+                    // importTeiFile replaces an existing import itself, in one
+                    // transaction with the parse: it snapshots the old divisions
+                    // first, to relocate the ones whose path changes
+                    // (RelocationService). Deleting here, in a transaction of its
+                    // own, would lose them - and leave the file deleted but not
+                    // imported when the import fails.
                     if (existingTimestamp != null) {
-                        log.info("will delete existing import for {} ", filename);
-                        writeLn(logActivity, "will delete existing import for " + filename);
-                        this.teiFileDbService.deleteTeiFile(filename);
+                        log.info("will replace existing import for {} ", filename);
+                        writeLn(logActivity, "will replace existing import for " + filename);
                     }
 
                     try {
                         log.info("will import {} ", filename);
-                        writeLn(logActivity, "will delete existing import for " + filename);
+                        writeLn(logActivity, "will import " + filename);
                         this.importWithContentionRetry(filename, logActivity);
                     } catch (TeiFileAlreadyImportedException e) {
                         log.error(e.getMessage(), e);
@@ -454,6 +465,9 @@ public class AdminService {
      */
     public void destroyAllExistingAndReimportAllTeis(Writer logActivity, boolean iUnderstandThatThisIsAPotentiallyDangerousOperation) {
         try (Globals.ImportLock ignored = Globals.lockImports()) {
+            // the divisions as they are now, before the bulk delete below:
+            // each file's reimport relocates the paths that change
+            this.teiFileDbService.rememberSnapshots(this.relocationService.snapshotAll());
             writeLn(logActivity, "will first destroy existing data...");
 
             // DELETE FROM, not TRUNCATE: Derby refuses to TRUNCATE any table

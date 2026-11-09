@@ -444,6 +444,7 @@ public class TeifileParser {
                     .trim();
             final int size = trimmed.length();
             final int wordSize = trimmed.split("\\s+").length;
+            div.setTxtSha256(textDigest(head, trimmed));
             div.setSize(size);
             div.setWordSize(wordSize);
             div.setNth(nth + 1); // because we store xpath-style, which starts at 1, not at 0
@@ -598,4 +599,21 @@ public class TeifileParser {
         return head.matches("(?i)^.*?[\\[|/]x+[\\]|/].*$");
     }
 
+
+    /**
+     * SHA-256 of a division's text without its own heading (sub-divisions
+     * included): the same text keeps the same digest across a reimport even
+     * when its heading - hence its path - changed, which is how
+     * RelocationService recognises a moved or retitled division.
+     */
+    static byte[] textDigest(String head, String trimmedText) {
+        final String heading = head == null ? "" : head.replaceAll("\\s+", " ").trim();
+        final String body = !heading.isEmpty() && trimmedText.startsWith(heading)
+                ? trimmedText.substring(heading.length()).trim() : trimmedText;
+        try {
+            return java.security.MessageDigest.getInstance("SHA-256").digest(body.getBytes(java.nio.charset.StandardCharsets.UTF_8));
+        } catch (java.security.NoSuchAlgorithmException e) {
+            throw new IllegalStateException(e);
+        }
+    }
 }

@@ -34,7 +34,6 @@ import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 import ro.editii.scriptorium.Util;
 import ro.editii.scriptorium.dao.AuthorRepository;
-import ro.editii.scriptorium.dao.RelocationRepository;
 import ro.editii.scriptorium.dao.TeiDivRepository;
 import ro.editii.scriptorium.dao.TeiFileRepository;
 import ro.editii.scriptorium.model.*;
@@ -93,7 +92,7 @@ public class DivController {
     final TeiFileRepository teiFileRepository;
     final TeiDivRepository  teiDivRepository;
     final DivService        divService;
-    final RelocationRepository relocationRepository;
+    final ro.editii.scriptorium.service.RelocationService relocationService;
     final EntityManager     em;
     final TeiRepo           teiRepo;
     final ThymeleafViewResolver viewResolver;
@@ -576,9 +575,19 @@ public class DivController {
         final String pathRequestAttribute = (String) request.getAttribute(HandlerMapping.PATH_WITHIN_HANDLER_MAPPING_ATTRIBUTE);
         final String pathNoExt = Util.basename(Util.urlDecode(pathRequestAttribute));
 
-        checkRelocation(pathNoExt, uriComponentsBuilder);
-
-        final TeiElem elem = this.divService.getByPath(pathNoExt);
+        final TeiElem elem;
+        try {
+            elem = this.divService.getByPath(pathNoExt);
+        } catch (ResponseStatusException notFound) {
+            // a live path always wins; only a path that no longer names a
+            // division follows its relocation (RelocationService)
+            if (notFound.getStatusCode().value() == HttpStatus.NOT_FOUND.value())
+                this.relocationService.resolve(pathNoExt).ifPresent(relocation -> {
+                    throw new RelocatedException(relocatedUrl(uriComponentsBuilder, relocation.getNewPath(),
+                            Util.getExtension(pathRequestAttribute), request.getQueryString()));
+                });
+            throw notFound;
+        }
         resp.teiElem(elem);
 
         final var children = elem.getDbChildren();
@@ -601,11 +610,13 @@ public class DivController {
     }
 
 
-    protected void checkRelocation(String path, UriComponentsBuilder uriComponentsBuilder) {
-        final Optional<Relocation> byId = this.relocationRepository.findById(path);
-        if (byId.isPresent()) {
-            throw new RelocationException(uriComponentsBuilder, byId.get().getNewPath());
-        }
+    /** The relocated division's URL, keeping the request's extension (.html, .txt...) and query. */
+    static String relocatedUrl(UriComponentsBuilder base, String newPath, String extension, String query) {
+        return base.cloneBuilder()
+                .path(newPath + (extension == null ? "" : "." + extension))
+                .query(query)
+                .build(true)
+                .toUriString();
     }
 
 
@@ -620,27 +631,4 @@ public class DivController {
         return IMAGE_URLS;
     }
 
-}
-
-
-@ResponseStatus(HttpStatus.MOVED_PERMANENTLY)
-class RelocationException extends ResponseStatusException {
-
-    private final String path;
-
-    UriComponentsBuilder uriComponentsBuilder;
-
-    public RelocationException(UriComponentsBuilder uriComponentsBuilder, String newPath) {
-        super(HttpStatus.MOVED_PERMANENTLY);
-        this.uriComponentsBuilder = uriComponentsBuilder;
-        this.path = newPath;
-    }
-
-    @Override
-    public HttpHeaders getHeaders() {
-        final HttpHeaders resp = new HttpHeaders();
-        resp.addAll(super.getHeaders());
-        resp.set(HttpHeaders.LOCATION, uriComponentsBuilder.path(this.path).toUriString());
-        return resp;
-    }
 }
