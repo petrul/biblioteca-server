@@ -100,8 +100,13 @@ class GraphQLSmokeITest {
 
     @Test
     void schemaAndEveryPublicRepositoryQueryWork() {
-        def schema = query('{ __schema { queryType { fields { name } } mutationType { name } } }').__schema
-        assert schema.mutationType == null
+        // two introspection queries: graphql-java rejects one query asking
+        // __Type.fields several times (BadFaithIntrospection)
+        def schema = query('{ __schema { queryType { fields { name } } } }').__schema
+        // The corpus surface stays read-only; the only mutations are the
+        // reader's personal workspace roots (GraphQLReaderWorkspaceConfig).
+        assert query('{ __schema { mutationType { fields { name } } } }').__schema.mutationType.fields*.name ==
+                ['updateMyReaderState', 'saveMySearch', 'renameMyCollection', 'deleteMyCollection']
         def names = schema.queryType.fields*.name
         (PUBLIC + PRIVATE).each { assert names.containsAll([it, "${it}List".toString()]) }
         def lists = query('{ ' + PUBLIC.collect { "${it}List(size:1) { __typename }" }.join(' ') + ' }')

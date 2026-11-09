@@ -21,6 +21,10 @@ class GraphQLNativeMocks {
     final List<Object> coverRequests = []
 
     final TeiRepo teiRepo = [getStreamForName: { String filename -> stream(filename) }] as TeiRepo
+    final RelocationService relocationService = ProxyGenerator.INSTANCE.instantiateAggregateFromBaseClass(
+            // the HTTP tests exercise live paths; nothing resolves a relocation
+            [resolve: { String ignored -> Optional.empty() }],
+            RelocationService, [null, null, null, null, null] as Object[]) as RelocationService
     final DivService divService = ProxyGenerator.INSTANCE.instantiateAggregateFromBaseClass([
             getByPath: { String path -> byPath(path) },
             getOpera: { String author -> opera(author) },
@@ -64,7 +68,8 @@ class GraphQLNativeMockConfig {
     }
     @Bean DivRestController divisions(TeiDivRepository divs, EntityManager em,
                                      DivMediaAssociationRepository media, GraphQLNativeMocks mocks) {
-        new DivRestController(divs, mocks.divService, mocks.controllerTool, em, mocks.teiRepo, mocks.covers, media)
+        new DivRestController(divs, mocks.divService, mocks.controllerTool, em, mocks.teiRepo, mocks.covers, media,
+                mocks.relocationService)
     }
     @Bean DivCollectionService collectionsService(DivCollectionRepository collections,
                                                   DivCollectionItemRepository items, GraphQLNativeMocks mocks) {

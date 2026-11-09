@@ -266,6 +266,13 @@ dependencies {
 
     implementation('org.springdoc:springdoc-openapi-starter-webmvc-ui:3.0.2')
 
+    // MCP server (Model Context Protocol, streamable HTTP at /mcp): read-only
+    // corpus access for AI agents, calling the existing REST controllers and
+    // the spring-graphql layer in-process - see ro.editii.scriptorium.mcp and
+    // README.md's MCP section. The BOM pairs with this Spring Boot version.
+    implementation platform('org.springframework.ai:spring-ai-bom:2.1.0-RC2')
+    implementation 'org.springframework.ai:spring-ai-starter-mcp-server-webmvc'
+
     implementation('com.github.ben-manes.caffeine:caffeine')
 
     implementation group: 'commons-cli', name: 'commons-cli', version: '1.4'
@@ -322,10 +329,12 @@ dependencies {
     // exportedOpenApiYamlIsValidAndInternallyConsistent already does for
     // the REST side, just for the hand-maintained async side instead of
     // a live-generated one.
-    // Pinned to the 1.x line deliberately - 3.x is a from-scratch API
-    // rewrite (Schema/Validator instead of JsonSchema/JsonSchemaFactory)
-    // that isn't worth chasing here.
-    testImplementation 'com.networknt:json-schema-validator:1.5.9'
+    // Not pinned: the MCP server stack (Spring AI's MCP SDK) needs the
+    // json-schema-validator 3.x API (dialect.Dialects), which resolves
+    // transitively to the SDK's own required version. The contract tests
+    // above are written against that 3.x API (SchemaRegistry/Specification
+    // instead of the 1.x JsonSchemaFactory/SpecVersion).
+    testImplementation 'com.networknt:json-schema-validator'
 
 
 //    swaggerCodegen 'io.swagger:swagger-codegen-cli:2.4.34'             // Swagger Codegen V2

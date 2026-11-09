@@ -37,6 +37,7 @@ public class SecurityConfig {
             "/api/drest/embeddingBatchStats", "/api/drest/embeddingBatchStats/**",
             "/api/drest/opusVectorizingStats", "/api/drest/opusVectorizingStats/**",
             "/graphql",
+            "/mcp",
     };
 
     // Real authentication is now backed by AppUserDetailsService (real,

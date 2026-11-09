@@ -141,11 +141,13 @@ container.
 | `/api/admin/*` | Administration: imports, reindexing, runtime configuration |
 | `/api/drest/*` | Spring Data REST; full CRUD only on authors, elements and divs, for biblioteca-nestjs |
 | `/graphql` | Read queries over the entities; needs `BIBLIOTECA_INTERNAL_API_TOKEN` |
+| `/mcp` | The MCP server: read-only, corpus-facing tools for AI agents; needs `BIBLIOTECA_INTERNAL_API_TOKEN` (see below) |
 
 **Public vs internal.** The internet reaches only the reading surface (`/`,
-`/app`, fragment URLs, TOC and search pages). `/api/**`, `/graphql` and
-`/actuator/*` are internal: sibling services call `http://server:8080` on
-the Docker network. The one bridge from a browser is biblioteca-reader's
+`/app`, fragment URLs, TOC and search pages). `/api/**`, `/graphql`,
+`/actuator/*` and `/mcp` are internal: sibling services call
+`http://server:8080` on the Docker network. The one bridge from a browser is
+biblioteca-reader's
 server-side relay (`/tb/api/**`), an explicit allowlist of the paths its
 frontend uses.
 
@@ -161,6 +163,37 @@ allowlisted view of the operational settings. `PUT`/`DELETE
 only; settings marked `restartRequired` need a restart.
 `GET /api/admin/config`, which biblioteca-nestjs reads, comes from the same
 store.
+
+**MCP server.** `POST /mcp` speaks the Model Context Protocol over
+streamable HTTP: the same machine-facing, token-gated deal as `/graphql`,
+but for AI agents. The tool set in `ro.editii.scriptorium.mcp` is a thin,
+in-process layer over the existing REST handlers and the spring-graphql
+engine - no second server, no data copy - and deliberately exposes the book
+material only:
+
+- *search tools* - the six search modes (`search_authors`, `search_div_heads`,
+  `search_lucene`, `search_grep`, `search_vector`, `search_ann`), with the same
+  scopes and limits the REST handlers enforce;
+- *catalog & structure tools* - authors, works, divs, TOCs, paragraphs,
+  system collections, cover metadata, relocations and build identity;
+- *text tools* - `read_text` (a division as plain text, TEI XML or a JSON
+  AST, the same rendering the `.txt`/`.xml`/`.json` pages serve) and
+  `quote_fragment` (the /quote pages' dot-path quoting, as plain paragraphs);
+- `graphql_query` - an arbitrary read-only GraphQL query against the same
+  schema `/graphql` serves, with the user-data roots (`appUser*`,
+  `*Preference*`, `readingProgress*`, personal `divCollection*`, `my*`)
+  denied outright; the GraphQL layer's own admin gate on those private types
+  remains the second barrier.
+
+Nothing user-related or administrative is reachable through a tool (no
+`/api/users/*`, no reading progress, no personal collections, no `/api/admin`);
+every tool call runs through the same read-only service paths a REST read
+uses. Register a client with the server URL plus the internal API token, e.g.
+`claude mcp add --transport http biblioteca http://server:8080/mcp --header
+"X-Internal-Api-Token: Bearer <token>"`. The wire protocol, the session
+handshake, and the read-only/no-user-information contract are covered by
+`McpSmokeITest`; the wrapper contracts have network-free Groovy tests beside
+the tool classes.
 
 ## How it works
 

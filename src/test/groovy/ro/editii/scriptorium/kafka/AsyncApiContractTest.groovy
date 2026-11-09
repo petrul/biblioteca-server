@@ -2,17 +2,17 @@ package ro.editii.scriptorium.kafka
 
 import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.ObjectMapper
-import com.networknt.schema.JsonSchema
-import com.networknt.schema.JsonSchemaFactory
-import com.networknt.schema.SpecVersion
-import com.networknt.schema.ValidationMessage
+import com.networknt.schema.Schema
+import com.networknt.schema.SchemaLocation
+import com.networknt.schema.SchemaRegistry
+import com.networknt.schema.SpecificationVersion
+import tools.jackson.databind.json.JsonMapper
 import org.junit.jupiter.api.Test
 import ro.editii.scriptorium.dto.AuthorDto
 import ro.editii.scriptorium.dto.OpusRemovedDto
 import ro.editii.scriptorium.dto.TeiDivDto
 import ro.editii.scriptorium.dto.UserLoggedInDto
 
-import java.nio.file.Files
 import java.time.Instant
 
 import static org.junit.jupiter.api.Assertions.assertTrue
@@ -34,37 +34,40 @@ import static org.junit.jupiter.api.Assertions.assertTrue
  */
 class AsyncApiContractTest {
 
-    // asyncapi.yml is YAML; networknt's schema factory resolves $ref by
-    // fetching a URI + JSON pointer fragment and expects JSON at that
-    // URI. Converting to a temp JSON file once and pointing the factory
-    // at *that* lets $ref: '#/components/schemas/X' resolve normally
-    // against the whole document, including the couple of
-    // self-referential/cross-referential ones (TeiDivDto.children ->
-    // TeiDivDto, TeiDivDto.author -> AuthorDto) - rather than hand-rolling
-    // ref resolution for a document this shape.
-    private static File asyncApiAsJsonFile() {
-        final yamlMapper = new com.fasterxml.jackson.databind.ObjectMapper(
-                new com.fasterxml.jackson.dataformat.yaml.YAMLFactory())
+    // asyncapi.yml is YAML; the registry wants JSON, so convert once (~ the
+    // 1.x flow's temp file, in memory). Registering the whole document as one
+    // resource lets $ref: '#/components/schemas/X' resolve normally against
+    // the whole document, including the couple of self-referential/
+    // cross-referential ones (TeiDivDto.children -> TeiDivDto, TeiDivDto.author
+    // -> AuthorDto) - rather than hand-rolling ref resolution for a document
+    // this shape.
+    private static final String ASYNCAPI_BASE = 'https://biblioteca.invalid/asyncapi.json'
+
+    private static String asyncApiAsJson() {
+        final yamlMapper = new ObjectMapper(new com.fasterxml.jackson.dataformat.yaml.YAMLFactory())
         final JsonNode root = yamlMapper.readTree(
                 AsyncApiContractTest.class.getResourceAsStream('/static/asyncapi.yml'))
-        final tmp = Files.createTempFile('asyncapi', '.json').toFile()
-        tmp.deleteOnExit()
-        new ObjectMapper().writeValue(tmp, root)
-        return tmp
+        return new ObjectMapper().writeValueAsString(root)
     }
 
-    private static JsonSchema schemaFor(String schemaName) {
-        final file = asyncApiAsJsonFile()
-        final factory = JsonSchemaFactory.getInstance(SpecVersion.VersionFlag.V202012)
-        return factory.getSchema(URI.create("file://${file.absolutePath}#/components/schemas/${schemaName}"))
+    private static Schema schemaFor(String schemaName) {
+        // json-schema-validator 3.x (the version the MCP server stack brings):
+        // schemas resolve through a registry's resource loader, here an
+        // in-memory document registered under ASYNCAPI_BASE.
+        final loader = new com.networknt.schema.resource.SchemaLoader(
+                new com.networknt.schema.resource.MapResourceLoader([(ASYNCAPI_BASE): asyncApiAsJson()]))
+        final registry = SchemaRegistry.withDefaultDialect(SpecificationVersion.DRAFT_2020_12) { builder ->
+            builder.schemaLoader(loader)
+        }
+        return registry.getSchema(SchemaLocation.of("${ASYNCAPI_BASE}#/components/schemas/${schemaName}"))
     }
 
     // The exact serialization KafkaTextbaseEventsPublisher.signalNewOpusImported/
     // signalOpusReimported/signalUserLoggedIn actually use (KafkaProducer.sendAsJson).
-    private static JsonNode serializeLikeKafkaProducerDoes(Object dto) {
-        final mapper = new tools.jackson.databind.json.JsonMapper()
+    private static tools.jackson.databind.JsonNode serializeLikeKafkaProducerDoes(Object dto) {
+        final mapper = new JsonMapper()
         final String json = mapper.writeValueAsString(dto)
-        return new ObjectMapper().readTree(json)
+        return mapper.readTree(json)
     }
 
     @Test
