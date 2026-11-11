@@ -47,7 +47,7 @@ class AdminServicePruneRemovedTeisTest {
     final TextbaseEventsPublisher eventsPublisher = Mockito.mock(TextbaseEventsPublisher)
 
     final AdminService adminService = new AdminService(teiRepo, teiFileRepository, teiDivRepository,
-            teiFileDbService, jdbcTemplate, luceneIndexService, authorRepository, eventsPublisher)
+            teiFileDbService, null, jdbcTemplate, luceneIndexService, authorRepository, eventsPublisher)
 
     static TeiFile teiFile(long id, String filename) {
         final tf = new TeiFile()

@@ -37,7 +37,7 @@ class AdminServicePostImportHooksTest {
         teiFile.authors = []
         def files = [getByFilename: { String f -> Optional.of(teiFile) }] as TeiFileRepository
         def divs = [getOperaForTeiFileId: loadOpera] as TeiDivRepository
-        def admin = new AdminService([:] as TeiRepo, files, divs, null, null, null, [:] as AuthorRepository, [:] as TextbaseEventsPublisher)
+        def admin = new AdminService([:] as TeiRepo, files, divs, null, null, null, null, [:] as AuthorRepository, [:] as TextbaseEventsPublisher)
         admin.incrementalLuceneEnabled = false
         admin.transactionTemplate = new TransactionTemplate(transactions)
         admin

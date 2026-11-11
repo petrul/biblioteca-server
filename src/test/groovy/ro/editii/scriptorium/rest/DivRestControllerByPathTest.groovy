@@ -7,7 +7,13 @@ import ro.editii.scriptorium.model.Author
 import ro.editii.scriptorium.model.TeiDiv
 import ro.editii.scriptorium.model.TeiElem
 import ro.editii.scriptorium.model.TeiFile
+import java.util.Optional
 import ro.editii.scriptorium.service.DivService
+import ro.editii.scriptorium.service.RelocationService
+
+import static org.mockito.ArgumentMatchers.any
+import static org.mockito.Mockito.mock
+import static org.mockito.Mockito.when
 
 /**
  * GET /api/divs?path= on a paragraph path: getByPath navigates to an
@@ -37,7 +43,9 @@ class DivRestControllerByPathTest {
                 contains: { Object it -> false },
                 merge: { Object it -> merged << ((TeiElem) it).completePath; it },
         ] as EntityManager
-        return new DivRestController(null, divService, null, entityManager, null, null, null)
+        def relocation = mock(RelocationService)
+        when(relocation.resolve(any())).thenReturn(Optional.empty())
+        return new DivRestController(null, divService, null, entityManager, null, null, null, relocation)
     }
 
     @Test

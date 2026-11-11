@@ -36,7 +36,7 @@ class AdminServiceRetentionPolicyTest {
     /** Records deleteTeiFile calls instead of touching the DB. */
     static class RecordingTeiFileDbService extends TeiFileDbService {
         final List<String> deleted = []
-        RecordingTeiFileDbService() { super(null, null, null, null, null, null, null, null, null, null, null, null, null) }
+        RecordingTeiFileDbService() { super(null, null, null, null, null, null, null, null, null, null, null, null, null, null, null) }
         @Override
         void deleteTeiFile(String teiFilename) { this.deleted << teiFilename }
     }
@@ -118,12 +118,12 @@ class AdminServiceRetentionPolicyTest {
         luceneIndexService.reindexOpus(opus)
         assertEquals(1, luceneIndexService.search("content", 1000).size())
 
-        // jdbcTemplate and authorRepository are never touched on this
+        // relocationService, jdbcTemplate and authorRepository are never touched on this
         // path - null is safe and, better than a mock, makes any future
         // usage on this path fail this test loudly instead of silently
         // passing against a fake.
         new AdminService(teiRepo, teiFileRepository, teiDivRepository, teiFileDbService,
-                null, luceneIndexService, null, eventsPublisher)
+                null, null, luceneIndexService, null, eventsPublisher)
                 .pruneRemovedTeis(new StringWriter())
 
         // The DB prune happened...

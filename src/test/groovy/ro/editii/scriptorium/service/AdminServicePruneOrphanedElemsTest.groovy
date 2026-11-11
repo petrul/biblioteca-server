@@ -32,7 +32,7 @@ class AdminServicePruneOrphanedElemsTest {
         Set<Long> failOnIds = [] as Set
 
         RecordingTeiFileDbService() {
-            super(null, null, null, null, null, null, null, null, null, null, null, null, null)
+            super(null, null, null, null, null, null, null, null, null, null, null, null, null, null, null)
         }
 
         void deleteOrphanedElems(TeiDiv root) {
@@ -70,7 +70,7 @@ class AdminServicePruneOrphanedElemsTest {
         // The JdbcTemplate and LuceneIndexService are never reached by
         // pruneOrphanedElems - null makes any accidental use fail loudly.
         this.adminService = new AdminService([:] as TeiRepo, [:] as TeiFileRepository, teiDivRepository,
-                this.teiFileDbService, null, null, [:] as AuthorRepository, eventsPublisher)
+                this.teiFileDbService, null, null, null, [:] as AuthorRepository, eventsPublisher)
     }
 
     @Test
