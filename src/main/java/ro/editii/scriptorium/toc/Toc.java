@@ -25,6 +25,46 @@ public class Toc implements Iterable<TeiDiv>, Serializable {
         this.init(div);
     }
 
+    private Toc() {}
+
+    /**
+     * The same table of contents as {@code new Toc(root)}, from rows loaded
+     * in one query - each division of the work with its parent's id - instead
+     * of one lazy dbChildren query per division (thousands for the Bible:
+     * 12-15 s per cold page, see docs/caching-plan.md). Siblings are ordered
+     * by id, as {@link TeiElem#getDbChildren()} orders them; rows outside
+     * root's subtree are ignored.
+     */
+    public static Toc fromRows(TeiDiv root, Collection<DivRow> rows) {
+        final Map<Long, List<TeiDiv>> childrenOf = new HashMap<>();
+        for (DivRow row : rows) {
+            if (row.parentId() != null) childrenOf.computeIfAbsent(row.parentId(), k -> new ArrayList<>()).add(row.div());
+        }
+        childrenOf.values().forEach(siblings -> siblings.sort(Comparator.comparing(TeiDiv::getId)));
+        final Toc toc = new Toc();
+        final List<TeiDiv> list = new ArrayList<>();
+        if (root != null) {
+            final Deque<TeiDiv> stack = new ArrayDeque<>();
+            stack.push(root);
+            while (!stack.isEmpty()) {
+                final TeiDiv div = stack.pop();
+                toc.div_indices.put(div.getId(), list.size());
+                list.add(div);
+                final List<TeiDiv> children = childrenOf.getOrDefault(div.getId(), List.of());
+                for (int i = children.size() - 1; i >= 0; i--) stack.push(children.get(i)); // first child on top
+            }
+        }
+        toc.list_divs = list;
+        return toc;
+    }
+
+    /** A division and its parent's id (null for a work's root), as one query returns them. */
+    public record DivRow(TeiDiv div, Long parentId) implements Serializable {}
+
+    public int size() {
+        return this.list_divs.size();
+    }
+
     private void init(TeiDiv div) {
         final TeiDiv crt = div;
         final List list = new LinkedList();

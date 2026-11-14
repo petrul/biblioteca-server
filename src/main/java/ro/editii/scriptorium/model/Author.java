@@ -174,13 +174,29 @@ public class Author implements Comparable<Author>, Serializable {
      *
      * @param originalNameInTeiFile
      */
+    /** A fresh, unsaved Author with a special author's names and strId. */
+    Author specialCopy() {
+        return Author.builder()
+                .originalNameInTeiFile(this.originalNameInTeiFile)
+                .strId(this.strId)
+                .firstName(this.firstName)
+                .lastName(this.lastName)
+                .displayName(this.displayName)
+                .build();
+    }
+
     public static Author newFromOriginalNameInTeiFile(String originalNameInTeiFile) {
         assert originalNameInTeiFile != null;
 
         originalNameInTeiFile = originalNameInTeiFile.trim();
 
+        // A copy, never the shared instance: saving an Author assigns its id,
+        // and a shared instance would keep the id of a row that a rolled-back
+        // import never committed - every later import of that author then
+        // merged a non-existent row ("Row was already updated or deleted by
+        // another transaction", Pline le Jeune, 2026-11). docs/caching-plan.md
         if (Author.SPECIAL_AUTHORS.containsKey(originalNameInTeiFile))
-            return Author.SPECIAL_AUTHORS.get(originalNameInTeiFile);
+            return Author.SPECIAL_AUTHORS.get(originalNameInTeiFile).specialCopy();
 
         // Every spelling of "anonymous" is the one anonymous author, so all
         // anonymous works share a single row (and its strId, trad).

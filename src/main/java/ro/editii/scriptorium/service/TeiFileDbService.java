@@ -52,6 +52,10 @@ public class TeiFileDbService {
     final RelocationService relocationService;
     final jakarta.persistence.EntityManager entityManager;
 
+    /** What an import changes in the caches, after it commits (a field, so the unit tests' constructor stays as it is). */
+    @org.springframework.beans.factory.annotation.Autowired
+    ro.editii.scriptorium.cache.ImportCacheMaintenance importCacheMaintenance;
+
     /** Snapshots taken before a destroy-all wiped every file at once (see
      *  AdminService.destroyAllExistingAndReimportAllTeis): their files are then
      *  reimported with nothing left to snapshot, so these stand in, once each. */
@@ -158,9 +162,10 @@ public class TeiFileDbService {
 
     @Transactional
     public void importTeiFile(String teiFilename, boolean forceReimport) throws TeiFileAlreadyImportedException {
-        // invalidate caches
-        this.allDiskCaches.deleteAll();
-        this.evictAllCaches();
+        // Only this file's parse is forgotten up front; the caches it changes
+        // are updated once the import commits (ImportCacheMaintenance) - not
+        // cleared wholesale before it starts, which a failing TEI repeated
+        // every minute (docs/caching-plan.md).
         TeiElem.forgetParsedFile(teiFilename);
 
         final String content;
@@ -188,6 +193,9 @@ public class TeiFileDbService {
         // working. Same transaction as the delete and the parse - a failed
         // import rolls back to the old divisions, relocations unchanged.
         RelocationService.Snapshot before = this.pendingSnapshots.get(teiFilename);
+        final List<Long> oldOpusIds = optionalTeiFile
+                .map(tf -> this.teiDivRepository.getOperaForTeiFileId(tf.getId()).stream().map(TeiDiv::getId).toList())
+                .orElse(List.of());
         if (optionalTeiFile.isPresent()) {
             if (forceReimport) {
                 if (before == null) before = this.snapshotQuietly(optionalTeiFile.get());
@@ -224,9 +232,12 @@ public class TeiFileDbService {
             this.teiFileRepository.save(teiFile);
         });
 
-        this.evictAllCaches();
-        // again: a request may have cached a parse during the import
-        TeiElem.forgetParsedFile(teiFilename);
+        final List<Long> newOpusIds = this.teiFileRepository.getByFilename(teiFilename)
+                .map(tf -> this.teiDivRepository.getOperaForTeiFileId(tf.getId()).stream().map(TeiDiv::getId).toList())
+                .orElse(List.of());
+        // after commit: the path-keyed caches, the old TOC, the new TOC, and
+        // the parse again (a request may have cached one during the import)
+        if (this.importCacheMaintenance != null) this.importCacheMaintenance.afterImportCommits(teiFilename, oldOpusIds, newOpusIds);
     }
 
     public void evictAllCaches() {

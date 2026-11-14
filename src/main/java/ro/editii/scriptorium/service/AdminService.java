@@ -43,6 +43,10 @@ public class AdminService {
     final TeiFileRepository teiFileRepository;
     final TeiDivRepository teiDivRepository;
     final TeiFileDbService teiFileDbService;
+
+    /** Failed files and their back-off (a field with a default, so the unit tests' constructor stays as it is). */
+    @org.springframework.beans.factory.annotation.Autowired
+    ImportFailures importFailures = new ImportFailures();
     final RelocationService relocationService;
     final JdbcTemplate jdbcTemplate;
     final LuceneIndexService luceneIndexService;
@@ -189,6 +193,9 @@ public class AdminService {
                 if (existingTimestamp != null && existingTimestamp.getTime() > file.lastModified()) {
                     // do nothing if already imported and file is not fresher than import
                     continue;
+                } else if (this.importFailures.holdBack(filename, file.lastModified())) {
+                    // failed as it is now: retried after its back-off, or once it changes
+                    continue;
                 } else {
                     // importTeiFile replaces an existing import itself, in one
                     // transaction with the parse: it snapshots the old divisions
@@ -205,12 +212,13 @@ public class AdminService {
                         log.info("will import {} ", filename);
                         writeLn(logActivity, "will import " + filename);
                         this.importWithContentionRetry(filename, logActivity);
+                        this.importFailures.succeeded(filename);
                     } catch (TeiFileAlreadyImportedException e) {
                         log.error(e.getMessage(), e);
                     } catch (RuntimeException e) {
                         final Throwable cause = e.getCause() != null ? e.getCause() : e;
-                        log.error("caught {} importing {}, will continue with other files", cause.getMessage(), filename);
-                        log.debug("stacktrace", e);
+                        writeLn(logActivity, "failed to import " + filename + ": " + cause.getMessage());
+                        this.importFailures.failed(filename, file.lastModified(), cause);
                     }
                 }
             }

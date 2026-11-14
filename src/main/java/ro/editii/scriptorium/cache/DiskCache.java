@@ -24,18 +24,35 @@ public class DiskCache {
         this(new File(basedir, name));
     }
 
+    /**
+     * Written to a temporary file and moved into place, so a concurrent
+     * reader never sees half an entry (getAt used to read it, fail, and
+     * delete the entry another request had just written).
+     */
     public void putAt(Object key, Object value) {
         ensureBasedirExists(basedir);
         final File file = new File(this.basedir, key.toString());
-        try (
-            final FileOutputStream  fos = new FileOutputStream(file);
-            final BufferedOutputStream bos = new BufferedOutputStream(fos);
-            final ObjectOutputStream oos = new ObjectOutputStream(bos)
-        ) {
-            oos.writeObject(value);
+        File tmp = null;
+        try {
+            tmp = File.createTempFile(".writing-" + key + "-", ".tmp", this.basedir); // a prefix of at least 3 characters
+            try (
+                final FileOutputStream  fos = new FileOutputStream(tmp);
+                final BufferedOutputStream bos = new BufferedOutputStream(fos);
+                final ObjectOutputStream oos = new ObjectOutputStream(bos)
+            ) {
+                oos.writeObject(value);
+            }
+            Files.move(tmp.toPath(), file.toPath(), java.nio.file.StandardCopyOption.REPLACE_EXISTING,
+                    java.nio.file.StandardCopyOption.ATOMIC_MOVE);
         } catch (IOException  e) {
+            if (tmp != null) tmp.delete();
             throw new RuntimeException(e);
         }
+    }
+
+    /** Removes one entry; nothing happens if it is not there. */
+    public void remove(Object key) {
+        new File(this.basedir, key.toString()).delete();
     }
 
     public boolean has(Object key) {

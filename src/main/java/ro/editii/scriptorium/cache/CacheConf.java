@@ -55,6 +55,13 @@ public class CacheConf {
         cacheManager.registerCustomCache(CACHE_HIT_TEXT, Caffeine.newBuilder()
                 .maximumSize(5_000)
                 .build());
+        // The 50 above suited a handful of works; crawlers walk thousands, and
+        // evicted the TOCs, nodes and works every few seconds. A TOC holds a
+        // work's division entities (its disk cache stays the backing store);
+        // nodes and works are small. docs/caching-plan.md
+        cacheManager.registerCustomCache("toc", Caffeine.newBuilder().maximumSize(500).build());
+        cacheManager.registerCustomCache("node", Caffeine.newBuilder().maximumSize(5_000).build());
+        cacheManager.registerCustomCache("opus", Caffeine.newBuilder().maximumSize(5_000).build());
         return cacheManager;
     }
 }

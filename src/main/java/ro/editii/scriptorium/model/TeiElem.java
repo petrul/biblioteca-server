@@ -142,6 +142,10 @@ public class TeiElem implements Comparable<TeiElem>, Serializable  {
     // their own make siblings out of several XML parents' children).
     @OneToMany(mappedBy = "parent", fetch = FetchType.LAZY)
     @OrderBy("id asc")
+    // Walking a work (its TOC, its paragraphs) touches every division's
+    // children: loaded for up to 100 divisions per query instead of one query
+    // each (thousands for the Bible - docs/caching-plan.md).
+    @org.hibernate.annotations.BatchSize(size = 100)
     @ToString.Exclude
     @JsonIgnore // would lead to very large listings
     protected List<TeiElem> dbChildren;

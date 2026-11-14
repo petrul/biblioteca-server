@@ -158,6 +158,14 @@ public interface TeiDivRepository extends JpaRepository<TeiDiv, Long> {
     @EntityGraph(attributePaths = {"teiFile", "teiFile.authors"})
     List<TeiDiv> findAllOpera();
 
+    /** Every division of a TEI file with its parent's id, in one query: what a table of contents is built from. */
+    @Query("select new ro.editii.scriptorium.toc.Toc$DivRow(div, div.parent.id) from TeiDiv div where div.teiFile.id = ?1")
+    List<ro.editii.scriptorium.toc.Toc.DivRow> findDivRowsByTeiFileId(long teiFileId);
+
+    /** The works' ids: what the cache check walks (ids only - there are tens of thousands). */
+    @Query("select div.id from TeiDiv div where div.parent is null order by div.id")
+    List<Long> findOperaIds();
+
     /**
      * The DAV export's opus listing: routing fields only, one row per
      * (opus, author; authorless opera have null author fields). The DAV

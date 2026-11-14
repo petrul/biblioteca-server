@@ -1,5 +1,8 @@
 package ro.editii.scriptorium.service;
 
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CompletableFuture;
 import editii.commons.xml.TeiDocument;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
@@ -70,19 +73,73 @@ public class DivService {
     @Cacheable("toc")
     @Transactional
     public Toc getToc(long opId) {
-
-        TeiDiv div = this.teiDivRepository.findById(opId).get();
-        final Long id = div.getId();
-        final Object cached = this.cacheToc.getAt(id);
+        final Object cached = this.cacheToc.getAt(opId);
         if (cached != null)
             return (Toc) cached;
 
-        div = this.entityManager.merge(div);
+        // One build per work at a time: concurrent requests for a work whose
+        // TOC is missing (crawlers, a cold cache) wait for the build in flight
+        // instead of each running their own (thread dumps showed five at once).
+        final CompletableFuture<Toc> mine = new CompletableFuture<>();
+        final CompletableFuture<Toc> inFlight = this.tocBuilds.putIfAbsent(opId, mine);
+        if (inFlight != null) {
+            try {
+                return inFlight.get(2, TimeUnit.MINUTES);
+            } catch (Exception e) {
+                log.warn("waiting for the TOC of {} failed ({}), building it here", opId, e.toString());
+                return this.buildToc(opId);
+            }
+        }
+        try {
+            final Toc toc = this.buildToc(opId);
+            mine.complete(toc);
+            return toc;
+        } catch (RuntimeException e) {
+            mine.completeExceptionally(e);
+            throw e;
+        } finally {
+            this.tocBuilds.remove(opId, mine);
+        }
+    }
 
-        final Toc toc = new Toc(div);
-        this.cacheToc.putAt(id, toc);
+    /** Builds a work's TOC in one query (Toc.fromRows) and stores it in the disk cache. */
+    private Toc buildToc(long opId) {
+        final long started = System.nanoTime();
+        final TeiDiv op = this.teiDivRepository.findById(opId)
+                .orElseThrow(() -> new java.util.NoSuchElementException("no work " + opId));
+        final Toc toc = Toc.fromRows(op, this.teiDivRepository.findDivRowsByTeiFileId(op.getTeiFile().getId()));
+        // A cached TOC's divisions are used detached - isLeaf(), their DTOs,
+        // their paragraphs - so their children are loaded now, as the old
+        // per-division walk did, in batches of 100 (@BatchSize on dbChildren).
+        for (TeiDiv div : toc) org.hibernate.Hibernate.initialize(div.getDbChildren());
+        this.cacheToc.putAt(opId, toc);
+        log.info("built the TOC of work {} ({} divisions) in {} ms", opId, toc.size(), (System.nanoTime() - started) / 1_000_000);
         return toc;
     }
+
+    /** Whether a work's TOC is in the disk cache. */
+    public boolean hasToc(long opId) {
+        return this.cacheToc.has(opId);
+    }
+
+    /** The works whose TOC is not in the disk cache, at most `limit` of them, and how many works there are. */
+    public record MissingTocs(List<Long> missing, int works) {}
+
+    @Transactional(readOnly = true)
+    public MissingTocs operaMissingToc(int limit) {
+        final List<Long> opera = this.teiDivRepository.findOperaIds();
+        final List<Long> missing = opera.stream().filter(id -> !this.cacheToc.has(id)).limit(limit).toList();
+        return new MissingTocs(missing, opera.size());
+    }
+
+    /** Forgets a work's TOC, on disk and in memory (its work was reimported or removed). */
+    public void forgetToc(long opId) {
+        this.cacheToc.remove(opId);
+        final var cache = this.cacheManager.getCache("toc");
+        if (cache != null) cache.evict(opId);
+    }
+
+    private final ConcurrentHashMap<Long, CompletableFuture<Toc>> tocBuilds = new ConcurrentHashMap<>();
 
     /**
      * this method is doubly cached. once by a manual lookup inside

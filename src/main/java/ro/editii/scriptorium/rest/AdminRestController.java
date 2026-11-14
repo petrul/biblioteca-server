@@ -119,6 +119,15 @@ public class AdminRestController {
     }
 
 
+    /** The TEI files whose import failed, and when the sweep retries them (ImportFailures). */
+    @GetMapping("/teirepos/failures")
+    public List<ro.editii.scriptorium.service.ImportFailures.Failure> teiReposFailures() {
+        return this.importFailures.all();
+    }
+
+    @org.springframework.beans.factory.annotation.Autowired
+    ro.editii.scriptorium.service.ImportFailures importFailures;
+
     @PostMapping("/teirepos/reimportAll")
     public void teiReposReimportAll() {
         this.adminService.reimportAllTeis(new NoWriter());
