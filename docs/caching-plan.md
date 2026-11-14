@@ -132,13 +132,17 @@ cause and the things that made it expensive, on the 0.9.17-SNAPSHOT
 ### biblioteca-reader
 
 10. **One request per chapter.** The plain text is derived from the HTML in
-    the browser (text content, block elements as line breaks, notes'
-    `title` text excluded as today). The `.txt` request is gone; the
+    the browser, following `tei2text.xsl`: block elements as line breaks,
+    a note's text inline in brackets, illustrations as `[IMAGE].`. The `.txt` request is gone; the
     "download as text" button keeps using the derived text.
 11. **No repeated calls on crawler and SEO pages.**
-    - The text twin passes the divisions it already read to `buildPageSeo`.
-    - The first illustration comes from `/api/divs`'s `imageUrls`, not from
-      downloading the whole division's XML.
+    - The text twin passes the divisions it already read to `buildPageSeo`,
+      and skips the illustration lookup (it sets the cover as the image
+      anyway).
+    - `/api/divs`'s `imageUrls` turned out to be enrichment art, not the
+      chapter's illustrations, so the SEO illustration lookup still reads
+      XML, but only a leaf chapter's own. A section's preview is its work
+      cover. This runs on every SPA reader page, not only for crawlers.
 
 ## Verification
 
