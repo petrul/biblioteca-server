@@ -159,10 +159,16 @@ public interface TeiDivRepository extends JpaRepository<TeiDiv, Long> {
     List<TeiDiv> findAllOpera();
 
     /** Every division of a TEI file with its parent's id, in one query: what a table of contents is built from. */
+    // internal: not a public /api/drest search (it would also renumber the
+    // generated client's executeSearchTeidivGetN names)
+    @RestResource(exported = false)
     @Query("select new ro.editii.scriptorium.toc.Toc$DivRow(div, div.parent.id) from TeiDiv div where div.teiFile.id = ?1")
     List<ro.editii.scriptorium.toc.Toc.DivRow> findDivRowsByTeiFileId(long teiFileId);
 
     /** The works' ids: what the cache check walks (ids only - there are tens of thousands). */
+    // internal: not a public /api/drest search (it would also renumber the
+    // generated client's executeSearchTeidivGetN names)
+    @RestResource(exported = false)
     @Query("select div.id from TeiDiv div where div.parent is null order by div.id")
     List<Long> findOperaIds();
 

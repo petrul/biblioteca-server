@@ -33,7 +33,13 @@ import java.util.stream.IntStream;
 @Entity
 @DiscriminatorColumn(name="name", discriminatorType = DiscriminatorType.STRING)
 @Inheritance(strategy = InheritanceType.SINGLE_TABLE)
-@Table(name = "_tei_elem", indexes = {@Index(columnList = "urlFragment")})
+// parent_id and tei_file_id: every children lookup and every per-work
+// query filters on them; without these indexes each one scanned the whole
+// table (the Bible's TOC took 12-15 s - docs/caching-plan.md).
+@Table(name = "_tei_elem", indexes = {
+        @Index(columnList = "urlFragment"),
+        @Index(name = "idx_tei_elem_parent", columnList = "parent_id"),
+        @Index(name = "idx_tei_elem_tei_file", columnList = "tei_file_id")})
 @Data
 @Log4j2 @NoArgsConstructor @AllArgsConstructor @Builder
 @EqualsAndHashCode(onlyExplicitlyIncluded = true) @ToString

@@ -40,6 +40,10 @@ cause and the things that made it expensive, on the 0.9.17-SNAPSHOT
    - The Spring caches (`toc`, `node`, `opus`) share one Caffeine spec of
      **50 entries**, so even without the wipe, crawling evicts them quickly.
 
+   - **Root cause of the per-query cost:** `_tei_elem` (172k rows in
+     production) had no index on `parent_id` or `tei_file_id`, so every
+     children lookup scanned the whole table.
+
 4. **The reader asks for every chapter twice.**
    - `fetchRealChapterContent` requests both `.txt` and `.html`, so the
      server transforms the chapter twice.
@@ -91,6 +95,15 @@ cause and the things that made it expensive, on the 0.9.17-SNAPSHOT
      paragraphs), so their children are initialised at build time, as the old
      walk did, in batches of 100 (`@BatchSize` on `TeiElem.dbChildren`):
      tens of queries for the Bible instead of thousands.
+   - **Indexes** on `_tei_elem(parent_id)` and `_tei_elem(tei_file_id)`,
+     declared on the entity and created by `ddl-auto=update` (as the
+     `url_fragment` index is). Measured on the dev profile (database on srv2):
+     a 10-division work went from 11 s to 16 ms, a 57-division one from 41 s
+     to well under a second, and the largest dev work (Orlando Furioso,
+     4,878 divisions) builds in 2.8 s.
+   - The new repository queries are `@RestResource(exported = false)`: not
+     public `/api/drest` searches, and the generated clients'
+     `executeSearchTeidivGetN` names stay unchanged.
 5. **One build per work at a time.** Concurrent requests for the same
    missing TOC wait for a single build (a per-work in-flight future); they do
    not each build their own.
