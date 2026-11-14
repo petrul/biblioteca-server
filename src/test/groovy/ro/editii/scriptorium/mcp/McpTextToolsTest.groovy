@@ -42,7 +42,7 @@ class McpTextToolsTest {
             DivService, [null, null, null] as Object[]) as DivService
 
     final ControllerTool controllerTool = ProxyGenerator.INSTANCE.instantiateAggregateFromBaseClass(
-            [teiElemToTextInOutputStream: { ElemInfo info, OutputStream out, Integer depth ->
+            [teiElemToDocumentText: { ElemInfo info, OutputStream out, Integer depth ->
                 calls << ['text', depth]; out.write('rendered text'.bytes); null }],
             ControllerTool, [null] as Object[]) as ControllerTool
 

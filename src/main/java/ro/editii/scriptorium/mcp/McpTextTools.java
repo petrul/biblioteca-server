@@ -71,7 +71,7 @@ public class McpTextTools {
             case txt -> {
                 try {
                     final var out = new ByteArrayOutputStream();
-                    this.controllerTool.getObject().teiElemToTextInOutputStream(elemInfo, out, depth);
+                    this.controllerTool.getObject().teiElemToDocumentText(elemInfo, out, depth);
                     yield out.toString(StandardCharsets.UTF_8);
                 } catch (IOException e) {
                     throw new IllegalStateException("text rendering failed", e);

@@ -74,8 +74,6 @@ cause and the things that made it expensive, on the 0.9.17-SNAPSHOT
    not every minute. The failure is logged once, with its cause. It is
    visible in the importer's status: the admin list of failed imports
    (`GET /api/admin/teirepos/failures`).
-   - Note: the sweep stores filenames with a leading `/`, the manual
-     `reimportFile` without it; the same file can appear under both.
 3. **Evict only what an import changes, and only once it has succeeded.**
    - `importTeiFile` no longer clears everything up front. After a
      successful commit it evicts what belongs to that file: the old work's
@@ -95,9 +93,10 @@ cause and the things that made it expensive, on the 0.9.17-SNAPSHOT
      paragraphs), so their children are initialised at build time, as the old
      walk did, in batches of 100 (`@BatchSize` on `TeiElem.dbChildren`):
      tens of queries for the Bible instead of thousands.
-   - **Indexes** on `_tei_elem(parent_id)` and `_tei_elem(tei_file_id)`,
-     declared on the entity and created by `ddl-auto=update` (as the
-     `url_fragment` index is). Measured on the dev profile (database on srv2):
+   - **Indexes** on `_tei_elem(parent_id)` and `_tei_elem(tei_file_id)`:
+     Flyway `V14__Index_tei_elem_parent_and_file` creates them on existing
+     databases, and the entity declares them under the same names for a
+     fresh one (ddl-auto creates the table after Flyway runs). Measured on the dev profile (database on srv2):
      a 10-division work went from 11 s to 16 ms, a 57-division one from 41 s
      to well under a second, and the largest dev work (Orlando Furioso,
      4,878 divisions) builds in 2.8 s.
@@ -143,6 +142,27 @@ cause and the things that made it expensive, on the 0.9.17-SNAPSHOT
       chapter's illustrations, so the SEO illustration lookup still reads
       XML, but only a leaf chapter's own. A section's preview is its work
       cover. This runs on every SPA reader page, not only for crawlers.
+
+### Also fixed on the way
+
+12. **The server's `.txt` of a division ran words together** ("LORD
+    BACONA GARDENGOD almighty", "CHAPTER 1CHAPTER 2"). `tei2text.xsl` only
+    separated a block from a following sibling, and had no template for
+    `subtitle`, `item`, `cell`, `closer` and others. It now has a document
+    mode for whole divisions: the `.txt` export, DAV and MCP. A
+    paragraph-level element's text, and its `.txt` export, is unchanged
+    byte for byte (checked on 274,017 paragraphs and 5,899 divisions from
+    150 corpus files). Lucene, grep, quote fragments and the vectors'
+    `text_sha256` are computed from that text, so nothing is re-indexed or
+    re-embedded.
+13. **A manual re-import without the leading `/`** (`fr/x.tei.xml`) missed
+    the existing `/fr/x.tei.xml` import and imported the file a second
+    time. Names are now normalised; a successful manual re-import also ends
+    the sweep's back-off for that file.
+
+The reader does not need `.txt`: it derives a chapter's plain text from the
+HTML (step 10). `.txt` remains a public export (the TXT download in the
+work page's DAV links, crawlers, MCP).
 
 ## Verification
 

@@ -239,7 +239,19 @@ public class AdminService {
                         TeiFileRepository.FilenameAndTimestamp::getTimestamp));
     }
 
+    /**
+     * A repository file's name as the repositories list it and the database
+     * stores it: "/" plus its path inside the repository. The manual
+     * reimport accepted "fr/x.tei.xml" as well, which then missed the
+     * existing "/fr/x.tei.xml" import and imported the file a second time.
+     */
+    static String canonicalFilename(String filename) {
+        final String name = filename.trim().replace('\\', '/');
+        return name.startsWith("/") ? name : "/" + name;
+    }
+
     public void reimportFile(String filename, Writer logActivity) {
+        filename = canonicalFilename(filename);
         try (Globals.ImportLock ignored = Globals.lockImports()) {
             writeLn(logActivity,String.format("will now import %s ...", filename));
             File file = teiRepo.getFile(filename);
@@ -255,6 +267,8 @@ public class AdminService {
                 log.info("will import {} ", filename);
                 writeLn(logActivity, "will import " + filename);
                 this.importWithContentionRetry(filename, logActivity);
+                // a manual retry that works ends the sweep's back-off too
+                this.importFailures.succeeded(filename);
             } catch (TeiFileAlreadyImportedException e) {
                 log.error(e.getMessage(), e);
             }

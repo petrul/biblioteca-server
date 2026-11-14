@@ -30,7 +30,8 @@ public class DavExportRenderer {
         div.setTeiRepo(teiRepo);
         final Node node = DomTool.deepCopy(div.getNode());
         final String value = switch (format) {
-            case TXT -> XsltTool.apply(TEXT.get(), node, Map.of());
+            // a document: every block on its own line (tei2text.xsl)
+            case TXT -> XsltTool.apply(TEXT.get(), node, Map.of("document", "true"));
             case JSON -> XsltTool.apply(JSON.get(), node, Map.of("use-rabbitfish", "true"));
             case XML -> DomTool.serialize(node);
             case XHTML -> asXhtmlDocument(div, node, requestUri);

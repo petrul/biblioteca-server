@@ -11,3 +11,4 @@ db.migration.V10__Collections_with_uuid_ids
 db.migration.V11__Widen_app_user_avatar_url
 db.migration.V12__Create_reader_workspace_state
 db.migration.V13__Widen_relocation_paths
+db.migration.V14__Index_tei_elem_parent_and_file

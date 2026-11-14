@@ -45,7 +45,18 @@ public class ControllerTool {
         response.setCharacterEncoding(StandardCharsets.UTF_8.name());
         response.addHeader(HttpHeaders.CONTENT_TYPE, MimeTypeUtils.TEXT_PLAIN_VALUE + "; charset=utf-8");
 
-        this.teiElemToTextInOutputStream(elemInfo, response.getOutputStream(), maxDepth);
+        this.teiElemToDocumentText(elemInfo, response.getOutputStream(), maxDepth);
+    }
+
+    /**
+     * A division as a readable text document (the .txt export, MCP): every
+     * block on its own line - tei2text.xsl's document mode. A paragraph-level
+     * element is rendered exactly as {@link #teiElemToString}. Not for
+     * paragraph text that is indexed, quoted or hashed: that is
+     * {@link #teiElemToString}, whose output must stay the same.
+     */
+    public void teiElemToDocumentText(ElemInfo elemInfo, OutputStream outputStream, Integer maxDepth) throws IOException {
+        this.teiElemToText(elemInfo, outputStream, maxDepth, true);
     }
 
     public void teiElemToTextInOutputStream(ElemInfo elemInfo, OutputStream outputStream) throws IOException {
@@ -60,18 +71,28 @@ public class ControllerTool {
      *                 see {@link Util#pruneDivsBeyondDepth}
      */
     public void teiElemToTextInOutputStream(ElemInfo elemInfo, OutputStream outputStream, Integer maxDepth) throws IOException {
+        this.teiElemToText(elemInfo, outputStream, maxDepth, false);
+    }
+
+    private void teiElemToText(ElemInfo elemInfo, OutputStream outputStream, Integer maxDepth, boolean document) throws IOException {
         Util.pruneDivsBeyondDepth(elemInfo, maxDepth);
 
         final Node selectedDiv = elemInfo.getNodeCopy();
+        // A single paragraph's export stays its indexed text, which quote
+        // fragments refer to; only a division is laid out as a document.
+        final String name = selectedDiv.getLocalName() != null ? selectedDiv.getLocalName() : selectedDiv.getNodeName();
+        document = document && (name.equals("div") || name.endsWith(":div"));
 
         // tei2text.xsl has no template matching tei:div, so the XSLT built-in
         // rule just recurses into whatever survived pruning above, rendering
         // nested sub-chapters' heads/paragraphs/etc in reading order.
         final var xslt2txt = this.getTei2TxtTransformer();
+        // Always passed: the per-thread transformer keeps parameters set by
+        // an earlier call.
         XsltTool.apply(xslt2txt,
                 selectedDiv,
                 outputStream,
-                Map.of());
+                Map.of("document", String.valueOf(document)));
     }
 
     public String teiElemToString(ElemInfo elemInfo)  {

@@ -35,7 +35,9 @@ import java.util.stream.IntStream;
 @Inheritance(strategy = InheritanceType.SINGLE_TABLE)
 // parent_id and tei_file_id: every children lookup and every per-work
 // query filters on them; without these indexes each one scanned the whole
-// table (the Bible's TOC took 12-15 s - docs/caching-plan.md).
+// table (the Bible's TOC took 12-15 s - docs/caching-plan.md). Flyway V14
+// creates them on existing databases; declared here, under the same names,
+// for a fresh one (ddl-auto creates the table after Flyway has run).
 @Table(name = "_tei_elem", indexes = {
         @Index(columnList = "urlFragment"),
         @Index(name = "idx_tei_elem_parent", columnList = "parent_id"),

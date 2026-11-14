@@ -114,12 +114,12 @@ class ImportCachesTest {
         // its only file deleted: the author row goes too - and the shared
         // special-author instance used to keep that row's id, so the next
         // import merged a row that no longer existed
-        new TransactionTemplate(transactionManager).executeWithoutResult { teiFileDbService.deleteTeiFile('pline.xml') }
+        new TransactionTemplate(transactionManager).executeWithoutResult { teiFileDbService.deleteTeiFile('/pline.xml') }
         assert authorRows('pline_le_jeune') == 0
 
         reimport('pline.xml')
         assert authorRows('pline_le_jeune') == 1
-        assert opusIds('pline.xml').size() == 1
+        assert opusIds('/pline.xml').size() == 1
     }
 
     @Test
@@ -128,16 +128,28 @@ class ImportCachesTest {
         write('hamlet.xml', tei('Ion Scriitorul', 'Tragedia', ['Actul I']))
         reimport('pline.xml')
         reimport('hamlet.xml')
-        def pline = opusIds('pline.xml')[0], hamlet = opusIds('hamlet.xml')[0]
+        def pline = opusIds('/pline.xml')[0], hamlet = opusIds('/hamlet.xml')[0]
         assert divService.hasToc(pline) && divService.hasToc(hamlet) // built at import
 
         write('hamlet.xml', tei('Ion Scriitorul', 'Tragedia', ['Actul I', 'Actul II']))
         reimport('hamlet.xml')
-        def hamletNow = opusIds('hamlet.xml')[0]
+        def hamletNow = opusIds('/hamlet.xml')[0]
         assert hamletNow != hamlet
         assert !divService.hasToc(hamlet) && divService.hasToc(hamletNow)
         assert divService.getToc(hamletNow).size() == 3
         assert divService.hasToc(pline) // untouched
+    }
+
+    @Test
+    void aManualReimportWithoutTheLeadingSlashReplacesTheSweepsImport() {
+        write('pline.xml', tei('Pline le Jeune', 'Lettres', ['Livre I']))
+        adminService.reimportFresherTeis(new StringWriter())
+        def before = opusIds('/pline.xml')
+
+        reimport('pline.xml') // as typed into the admin endpoint
+
+        assert jdbcTemplate.queryForObject("select count(*) from _tei_file where filename like '%pline.xml'", Integer) == 1
+        assert opusIds('/pline.xml').size() == 1 && opusIds('/pline.xml') != before
     }
 
     @Test
