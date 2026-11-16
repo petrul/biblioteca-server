@@ -47,6 +47,7 @@ public class AuthorDto  {
     /** Number of root works associated with this author, keyed by strId. */
     Long worksCount;
     OpusDto[] opera;
+    /** Legacy field retained for API compatibility; bundled source portraits are no longer served. */
     String image_href;
     /** Associated image URLs (author_media); filled by GET /api/authors/{strId} only. */
     java.util.List<String> imageUrls;

@@ -3,9 +3,7 @@ package ro.editii.scriptorium.rest;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.core.env.Environment;
-import org.springframework.core.io.ClassPathResource;
 import org.springframework.web.util.UriComponentsBuilder;
-import ro.editii.scriptorium.Util;
 
 import java.util.Arrays;
 
@@ -25,22 +23,14 @@ public class CommonControllerUtil {
     }
 
     protected String getAuthorImage(String strid, UriComponentsBuilder uriComponentsBuilder, HttpServletRequest httpServletRequest) {
-        final String resName = String.format("/img/authors/%s.jpg", strid);
-        return this.getResource(resName, uriComponentsBuilder, httpServletRequest);
-    }
-
-    protected String getResource(String strid, UriComponentsBuilder uriComponentsBuilder, HttpServletRequest httpServletRequest) {
-        final String resName = strid;
-        final ClassPathResource resource = new ClassPathResource("/static" + resName);
-        if (resource.exists()) {
-            UriComponentsBuilder ucb = Util.cloneUriComponentBuilder(uriComponentsBuilder, httpServletRequest);
-            return this.devOrProd(resName, ucb);
-        }
+        // Bundled author portraits were removed from the application source.
+        // Cover art now comes only from explicitly associated/enriched media.
         return null;
     }
 
     String getAuthorThumb(String strid, UriComponentsBuilder uriComponentsBuilder, HttpServletRequest httpServletRequest) {
-        final String resName = String.format("/img/authors/thumbs/200px/%s.webp", strid);
-        return this.getResource(resName, uriComponentsBuilder, httpServletRequest);
+        // Keep the catalogue contract nullable: there is no source-bundled
+        // thumbnail to advertise or accidentally reuse as cover art.
+        return null;
     }
 }
