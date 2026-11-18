@@ -15,6 +15,8 @@ import org.springframework.security.authentication.AuthenticationCredentialsNotF
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.support.TransactionTemplate;
 import ro.editii.scriptorium.dao.AppUserRepository;
 import ro.editii.scriptorium.dao.ReaderWorkspaceStateRepository;
 import ro.editii.scriptorium.collection.DivCollectionService;
@@ -35,15 +37,25 @@ public class GraphQLReaderWorkspaceConfig {
     @Bean
     RuntimeWiringConfigurer readerWorkspaceWiring(ReaderWorkspaceStateRepository states, AppUserRepository users,
                                                  ObjectProvider<DivCollectionService> collections,
-                                                 ObjectProvider<DivCollectionRestController> collectionController) {
+                                                 ObjectProvider<DivCollectionRestController> collectionController,
+                                                 PlatformTransactionManager transactionManager) {
+        // GraphQL data fetchers are lambdas invoked after this configuration
+        // bean has been created.  @Transactional on the private helper
+        // methods below is therefore not applied through Spring's proxy (and
+        // PostgreSQL OID-backed @Lob columns fail with "Large Objects may not
+        // be used in auto-commit mode").  Make the transaction boundary
+        // explicit at the fetcher, where the repository access actually runs.
+        final var readTransaction = new TransactionTemplate(transactionManager);
+        readTransaction.setReadOnly(true);
+        final var writeTransaction = new TransactionTemplate(transactionManager);
         return wiring -> wiring
                 .type(TypeRuntimeWiring.newTypeWiring("Query")
-                        .dataFetcher("myReaderState", env -> load(states, users))
+                        .dataFetcher("myReaderState", env -> readTransaction.execute(status -> load(states, users)))
                         .dataFetcher("mySavedSearches", env -> collections.getObject().listCollections(currentUser(users)).stream()
                                 .filter(collection -> collection.getKind().name().equals("SEARCH"))
                                 .map(collectionController.getObject()::toDto).toList()))
                 .type(TypeRuntimeWiring.newTypeWiring("Mutation")
-                        .dataFetcher("updateMyReaderState", env -> update(states, users, env))
+                        .dataFetcher("updateMyReaderState", env -> writeTransaction.execute(status -> update(states, users, env)))
                         .dataFetcher("saveMySearch", env -> saveSearch(collections.getObject(), collectionController.getObject(), users, env))
                         .dataFetcher("renameMyCollection", env -> collectionController.getObject().toDto(collections.getObject().renameCollection(currentUser(users), java.util.UUID.fromString(env.getArgument("id")), env.getArgument("name"))))
                         .dataFetcher("deleteMyCollection", env -> { collections.getObject().deleteCollection(currentUser(users), java.util.UUID.fromString(env.getArgument("id"))); return true; }));
