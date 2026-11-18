@@ -2,6 +2,11 @@
 import { endpointFrom, McpClient } from './mcp-client.mjs';
 
 const MODEL = 'qwen3.5:9b';
+// Keep the generating model resident on the shared Ollama instance for the
+// same six-hour window as the NestJS chat adaptor.  Without this, Ollama's
+// five-minute default unloads Qwen between questions and the next request
+// pays the full model-load latency.
+const KEEP_ALIVE = '6h';
 const MAX_ROUNDS = 6;
 const MAX_TOOL_RESULT_CHARS = 12_000;
 const DEFAULT_TOOLS = [
@@ -110,7 +115,7 @@ for (let round = 1; round <= MAX_ROUNDS; round++) {
   const response = await fetch(ollamaEndpoint(), {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ model: MODEL, messages, tools, stream: false, think: false }),
+    body: JSON.stringify({ model: MODEL, messages, tools, stream: false, think: false, keep_alive: KEEP_ALIVE }),
   });
   if (!response.ok) throw new Error(`Ollama ${response.status}: ${(await response.text()).slice(0, 500)}`);
   const message = (await response.json()).message;
