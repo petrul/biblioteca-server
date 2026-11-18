@@ -1,0 +1,165 @@
+
+### 'Cumani și pecenegi'  (15 relevant of 202)
+  dense (today)              P@10 0.0  nDCG@10 0.00  MRR 0.08
+      -   21ch  Osmanlii și bostangii
+      -   27ch  Capitaneus et Commissarius.
+      -   21ch  Copaciul și dovleacul
+  dense, passages only       P@10 0.8  nDCG@10 0.87  MRR 1.00
+      +  197ch  Aci apare deodată în fruntea unor evenimente nouă o naționalitate care pân-atunci pare a nu fi 
+      +  708ch  Tot astfel, în izvoarele externe, bunăoară în actele cancelariei regelui Ottacar al Boemiei, di
+      +  852ch  Peste patru zile, într-o altă direcţie, a văzut de departe o armată de cumani care se apropia, 
+  sparse                     P@10 0.7  nDCG@10 0.76  MRR 1.00
+      +  197ch  Aci apare deodată în fruntea unor evenimente nouă o naționalitate care pân-atunci pare a nu fi 
+      +  708ch  Tot astfel, în izvoarele externe, bunăoară în actele cancelariei regelui Ottacar al Boemiei, di
+      +  929ch  Între timp, mulţimea cumanilor s-a temut ca nu cumva împăratul să pună la cale şi împotriva lor
+  multi-vector               P@10 0.6  nDCG@10 0.70  MRR 1.00
+      +  197ch  Aci apare deodată în fruntea unor evenimente nouă o naționalitate care pân-atunci pare a nu fi 
+      +  708ch  Tot astfel, în izvoarele externe, bunăoară în actele cancelariei regelui Ottacar al Boemiei, di
+      +  929ch  Între timp, mulţimea cumanilor s-a temut ca nu cumva împăratul să pună la cale şi împotriva lor
+  dense+sparse+multi         P@10 0.3  nDCG@10 0.40  MRR 1.00
+      +  197ch  Aci apare deodată în fruntea unor evenimente nouă o naționalitate care pân-atunci pare a nu fi 
+      -   21ch  Osmanlii și bostangii
+      +  708ch  Tot astfel, în izvoarele externe, bunăoară în actele cancelariei regelui Ottacar al Boemiei, di
+  all three, passages only   P@10 1.0  nDCG@10 1.00  MRR 1.00
+      +  197ch  Aci apare deodată în fruntea unor evenimente nouă o naționalitate care pân-atunci pare a nu fi 
+      +  708ch  Tot astfel, în izvoarele externe, bunăoară în actele cancelariei regelui Ottacar al Boemiei, di
+      +  929ch  Între timp, mulţimea cumanilor s-a temut ca nu cumva împăratul să pună la cale şi împotriva lor
+
+### 'popoarele nomade din stepă care atacau Bizanțul'  (21 relevant of 202)
+  dense (today)              P@10 0.2  nDCG@10 0.23  MRR 0.50
+      -  521ch  Dar nu erau țările noastre ținta cuceririlor. Precum popoarele germanice tindeau la Roma, cetat
+      + 2433ch  The Slavs did not invade the Balkan peninsula alone but in the company of the Avars, a terrible
+      -  140ch  Les sauvages s’approchaient, sans courir, mais ils prodiguaient les démonstrations les plus hos
+  dense, passages only       P@10 0.6  nDCG@10 0.52  MRR 0.50
+      -  521ch  Dar nu erau țările noastre ținta cuceririlor. Precum popoarele germanice tindeau la Roma, cetat
+      + 2433ch  The Slavs did not invade the Balkan peninsula alone but in the company of the Avars, a terrible
+      +  577ch  Apoi veniră, pustiind, cetele de călăreţi sprinteni ale hunilor şi avarilor. Ele pătrunseră pân
+  sparse                     P@10 0.4  nDCG@10 0.34  MRR 0.33
+      -  521ch  Dar nu erau țările noastre ținta cuceririlor. Precum popoarele germanice tindeau la Roma, cetat
+      - 1242ch  III. Nu se ştie precis în ce au constat epidemiile de ciumă, care atât de multă vreme au pustii
+      +  788ch  Între timp, cumanii aflaseră de la vlahi care erau trecerile prin defileuri şi ajunseseră astfe
+  multi-vector               P@10 0.3  nDCG@10 0.30  MRR 0.50
+      -  521ch  Dar nu erau țările noastre ținta cuceririlor. Precum popoarele germanice tindeau la Roma, cetat
+      +  169ch  These nomadic Fairies, possibly resentful of the coming of the others, or, maybe, just because 
+      -  107ch  Unde mai erau vremurile când el însuși putea merge la bătălie și cuceri un imperiu așa cum a fo
+  dense+sparse+multi         P@10 0.4  nDCG@10 0.39  MRR 0.50
+      -  521ch  Dar nu erau țările noastre ținta cuceririlor. Precum popoarele germanice tindeau la Roma, cetat
+      + 2433ch  The Slavs did not invade the Balkan peninsula alone but in the company of the Avars, a terrible
+      +  169ch  These nomadic Fairies, possibly resentful of the coming of the others, or, maybe, just because 
+  all three, passages only   P@10 0.6  nDCG@10 0.55  MRR 0.50
+      -  521ch  Dar nu erau țările noastre ținta cuceririlor. Precum popoarele germanice tindeau la Roma, cetat
+      + 2433ch  The Slavs did not invade the Balkan peninsula alone but in the company of the Avars, a terrible
+      +  169ch  These nomadic Fairies, possibly resentful of the coming of the others, or, maybe, just because 
+
+### 'uciderea lui Mihai Viteazul'  (16 relevant of 202)
+  dense (today)              P@10 0.2  nDCG@10 0.31  MRR 1.00
+      +   26ch  Moartea lui Mihai Viteazul
+      -   21ch  Moartea lui Alexandru
+      -   23ch  Moartea lui Alexandru I
+  dense, passages only       P@10 0.7  nDCG@10 0.60  MRR 0.50
+      -  774ch  Oricât de ciudată ni s-ar părea la prima vedere ipoteza că măcelul din noaptea sfântului Bartho
+      +  267ch  Vorbele lui cheamă pe ostași la loc Și le-aprinde sânul de eroic foc. Domnul țării însuși merge
+      +  212ch  În cetatea Clujul, într-un vechi palat, Stă Mihai Viteazul rege coronat. Ungurii, românii, sași
+  sparse                     P@10 0.7  nDCG@10 0.77  MRR 1.00
+      +   39ch  — Bine! Dar Moartea lui Mihai Viteazul?
+      +  212ch  În cetatea Clujul, într-un vechi palat, Stă Mihai Viteazul rege coronat. Ungurii, românii, sași
+      +  495ch  După ce am explicat astfel lipsa de știri din călătorii pe vremea lui Mihai Viteazul, să venim 
+  multi-vector               P@10 0.2  nDCG@10 0.36  MRR 1.00
+      +   26ch  Moartea lui Mihai Viteazul
+      +   39ch  — Bine! Dar Moartea lui Mihai Viteazul?
+      -   27ch  Cântecul lui Mihai Viteazul
+  dense+sparse+multi         P@10 0.2  nDCG@10 0.36  MRR 1.00
+      +   26ch  Moartea lui Mihai Viteazul
+      +   39ch  — Bine! Dar Moartea lui Mihai Viteazul?
+      -   27ch  Cântecul lui Mihai Viteazul
+  all three, passages only   P@10 0.8  nDCG@10 0.86  MRR 1.00
+      +  212ch  În cetatea Clujul, într-un vechi palat, Stă Mihai Viteazul rege coronat. Ungurii, românii, sași
+      +  495ch  După ce am explicat astfel lipsa de știri din călătorii pe vremea lui Mihai Viteazul, să venim 
+      +  267ch  Vorbele lui cheamă pe ostași la loc Și le-aprinde sânul de eroic foc. Domnul țării însuși merge
+
+### 'bătălia de la Borodino'  (24 relevant of 202)
+  dense (today)              P@10 0.8  nDCG@10 0.79  MRR 1.00
+      +  785ch  Aşadar, bătălia de la Borodino s-a desfăşurat cu totul altfel de cum este descrisă (anume ca să
+      -   43ch  — Apropo, ştii ce s-a întâmpâat cu Borodin?
+      +  805ch  El, acest Kutuzov, care tărăgănează lucrurile şi a cărui deviză este: răbdare şi răgaz, el, duş
+  dense, passages only       P@10 1.0  nDCG@10 1.00  MRR 1.00
+      +  785ch  Aşadar, bătălia de la Borodino s-a desfăşurat cu totul altfel de cum este descrisă (anume ca să
+      +  805ch  El, acest Kutuzov, care tărăgănează lucrurile şi a cărui deviză este: răbdare şi răgaz, el, duş
+      +  422ch  În seara de 26 august, atât Kutuzov, cât şi armata rusă în întregimea ei erau convinşi că bătăl
+  sparse                     P@10 1.0  nDCG@10 1.00  MRR 1.00
+      +  707ch  ACŢIUNEA PRINCIPALĂ A bătăliei de la Borodino a avut loc într-un spaţiu de o mie de stânjeni, î
+      + 1094ch  Până la bătălia de la Borodino, forţele noastre erau, faţă de cele franceze, în raport de aprox
+      +  785ch  Aşadar, bătălia de la Borodino s-a desfăşurat cu totul altfel de cum este descrisă (anume ca să
+  multi-vector               P@10 1.0  nDCG@10 1.00  MRR 1.00
+      +  785ch  Aşadar, bătălia de la Borodino s-a desfăşurat cu totul altfel de cum este descrisă (anume ca să
+      +  181ch  Armata rusă, în retragerea ei de la Smolensk, şi-ar fi căutat, chipurile, poziţia cea mai bună 
+      +  422ch  În seara de 26 august, atât Kutuzov, cât şi armata rusă în întregimea ei erau convinşi că bătăl
+  dense+sparse+multi         P@10 1.0  nDCG@10 1.00  MRR 1.00
+      +  785ch  Aşadar, bătălia de la Borodino s-a desfăşurat cu totul altfel de cum este descrisă (anume ca să
+      +  422ch  În seara de 26 august, atât Kutuzov, cât şi armata rusă în întregimea ei erau convinşi că bătăl
+      +  805ch  El, acest Kutuzov, care tărăgănează lucrurile şi a cărui deviză este: răbdare şi răgaz, el, duş
+  all three, passages only   P@10 1.0  nDCG@10 1.00  MRR 1.00
+      +  785ch  Aşadar, bătălia de la Borodino s-a desfăşurat cu totul altfel de cum este descrisă (anume ca să
+      +  422ch  În seara de 26 august, atât Kutuzov, cât şi armata rusă în întregimea ei erau convinşi că bătăl
+      +  805ch  El, acest Kutuzov, care tărăgănează lucrurile şi a cărui deviză este: răbdare şi răgaz, el, duş
+
+### 'epidemia de ciumă'  (22 relevant of 202)
+  dense (today)              P@10 0.8  nDCG@10 0.86  MRR 1.00
+      +  225ch  91. Marea ciumă — îngrozitoare epidemie de ciumă care a făcut ravagii în Europa apuseană în 134
+      +  220ch  91. Marea ciumă — îngrozitoare epidemie de ciumă care a făcut ravagii în Europa apuseană în 134
+      + 1242ch  III. Nu se ştie precis în ce au constat epidemiile de ciumă, care atât de multă vreme au pustii
+  dense, passages only       P@10 1.0  nDCG@10 1.00  MRR 1.00
+      +  225ch  91. Marea ciumă — îngrozitoare epidemie de ciumă care a făcut ravagii în Europa apuseană în 134
+      +  220ch  91. Marea ciumă — îngrozitoare epidemie de ciumă care a făcut ravagii în Europa apuseană în 134
+      + 1242ch  III. Nu se ştie precis în ce au constat epidemiile de ciumă, care atât de multă vreme au pustii
+  sparse                     P@10 1.0  nDCG@10 1.00  MRR 1.00
+      +  530ch  După croniști vrednici de crezare, spun că ciuma s-ar fi ivit înaintea erei creștine încă (125 
+      +  225ch  91. Marea ciumă — îngrozitoare epidemie de ciumă care a făcut ravagii în Europa apuseană în 134
+      +  220ch  91. Marea ciumă — îngrozitoare epidemie de ciumă care a făcut ravagii în Europa apuseană în 134
+  multi-vector               P@10 0.8  nDCG@10 0.87  MRR 1.00
+      +  225ch  91. Marea ciumă — îngrozitoare epidemie de ciumă care a făcut ravagii în Europa apuseană în 134
+      +  220ch  91. Marea ciumă — îngrozitoare epidemie de ciumă care a făcut ravagii în Europa apuseană în 134
+      +  530ch  După croniști vrednici de crezare, spun că ciuma s-ar fi ivit înaintea erei creștine încă (125 
+  dense+sparse+multi         P@10 0.9  nDCG@10 0.93  MRR 1.00
+      +  225ch  91. Marea ciumă — îngrozitoare epidemie de ciumă care a făcut ravagii în Europa apuseană în 134
+      +  220ch  91. Marea ciumă — îngrozitoare epidemie de ciumă care a făcut ravagii în Europa apuseană în 134
+      +  530ch  După croniști vrednici de crezare, spun că ciuma s-ar fi ivit înaintea erei creștine încă (125 
+  all three, passages only   P@10 1.0  nDCG@10 1.00  MRR 1.00
+      +  225ch  91. Marea ciumă — îngrozitoare epidemie de ciumă care a făcut ravagii în Europa apuseană în 134
+      +  220ch  91. Marea ciumă — îngrozitoare epidemie de ciumă care a făcut ravagii în Europa apuseană în 134
+      +  530ch  După croniști vrednici de crezare, spun că ciuma s-ar fi ivit înaintea erei creștine încă (125 
+
+### 'the plague epidemic'  (31 relevant of 202)
+  dense (today)              P@10 0.8  nDCG@10 0.86  MRR 1.00
+      +   55ch  “Do not touch me. Did you not hear? I have the plague.”
+      +   46ch  O, that I should have to endure such a plague.
+      +   25ch  Brigands, Pirates, Plague
+  dense, passages only       P@10 1.0  nDCG@10 1.00  MRR 1.00
+      + 1242ch  III. Nu se ştie precis în ce au constat epidemiile de ciumă, care atât de multă vreme au pustii
+      +  402ch  Mai târziu, când treburile nu prea mergeau cum trebuie la Londra, Reading a fost considerat un 
+      +  225ch  91. Marea ciumă — îngrozitoare epidemie de ciumă care a făcut ravagii în Europa apuseană în 134
+  sparse                     P@10 1.0  nDCG@10 1.00  MRR 1.00
+      +   54ch  “Is it ... the plague?” quoth Holles in a quiet voice.
+      +   55ch  “Do not touch me. Did you not hear? I have the plague.”
+      +   26ch  A plague on the Oropians!’
+  multi-vector               P@10 0.9  nDCG@10 0.94  MRR 1.00
+      +   46ch  O, that I should have to endure such a plague.
+      +   25ch  Brigands, Pirates, Plague
+      +   55ch  “Do not touch me. Did you not hear? I have the plague.”
+  dense+sparse+multi         P@10 0.9  nDCG@10 0.94  MRR 1.00
+      +   55ch  “Do not touch me. Did you not hear? I have the plague.”
+      +   46ch  O, that I should have to endure such a plague.
+      +   25ch  Brigands, Pirates, Plague
+  all three, passages only   P@10 1.0  nDCG@10 1.00  MRR 1.00
+      +  402ch  Mai târziu, când treburile nu prea mergeau cum trebuie la Londra, Reading a fost considerat un 
+      + 1242ch  III. Nu se ştie precis în ce au constat epidemiile de ciumă, care atât de multă vreme au pustii
+      +  225ch  91. Marea ciumă — îngrozitoare epidemie de ciumă care a făcut ravagii în Europa apuseană în 134
+
+### mean over 6 queries
+  method                      P@10  nDCG@10   MRR
+  dense (today)               0.47     0.51  0.76
+  dense, passages only        0.85     0.83  0.83
+  sparse                      0.80     0.81  0.89
+  multi-vector                0.63     0.69  0.92
+  dense+sparse+multi          0.62     0.67  0.92
+  all three, passages only    0.90     0.90  0.92
