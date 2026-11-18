@@ -311,6 +311,26 @@ task :run, [:task_profile] do |_task, args|
     sh "#{GRADLE} -Pprofile=#{run_profile} bootRun"
 end
 
+desc "Ask qwen3.5:9b a question using the Biblioteca MCP tools"
+task :chat, [:task_profile, :question, :work] do |_task, args|
+    task_profile = args[:task_profile] || profile
+    load_profile_env(task_profile)
+    Rake::Task['check-env'].invoke(task_profile)
+    if ENV['BIBLIOTECA_INTERNAL_API_TOKEN'].to_s.strip.empty?
+      raise 'Missing BIBLIOTECA_INTERNAL_API_TOKEN (required by the MCP endpoint)'
+    end
+    question = args[:question].to_s
+    if question.empty?
+      print 'Question: '
+      question = STDIN.gets.to_s.chomp
+    end
+    raise 'A question is required: rake chat[profile,"your question"]' if question.strip.empty?
+
+    command = ['node', 'bin/ollama-with-tools/chat.mjs', '--question', question]
+    command += ['--work', args[:work]] if args[:work] && !args[:work].empty?
+    sh Shellwords.join(command)
+end
+
 task :build, [:task_profile] do |_task, args|
     task_profile = args[:task_profile] || profile
     puts "Building application..."

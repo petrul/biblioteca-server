@@ -3,7 +3,9 @@
 .env.prod
 .gradle
 /build/
-/bin/
+/bin/*
+!/bin/ollama-with-tools/
+!/bin/ollama-with-tools/**
 !gradle/wrapper/gradle-wrapper.jar
 .vscode/
 .claude/
