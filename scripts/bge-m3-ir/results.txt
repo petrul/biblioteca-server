@@ -20,6 +20,10 @@
       +  197ch  Aci apare deodată în fruntea unor evenimente nouă o naționalitate care pân-atunci pare a nu fi 
       -   21ch  Osmanlii și bostangii
       +  708ch  Tot astfel, în izvoarele externe, bunăoară în actele cancelariei regelui Ottacar al Boemiei, di
+  dense+sparse, passages only P@10 0.8  nDCG@10 0.87  MRR 1.00
+      +  197ch  Aci apare deodată în fruntea unor evenimente nouă o naționalitate care pân-atunci pare a nu fi 
+      +  708ch  Tot astfel, în izvoarele externe, bunăoară în actele cancelariei regelui Ottacar al Boemiei, di
+      +  929ch  Între timp, mulţimea cumanilor s-a temut ca nu cumva împăratul să pună la cale şi împotriva lor
   all three, passages only   P@10 1.0  nDCG@10 1.00  MRR 1.00
       +  197ch  Aci apare deodată în fruntea unor evenimente nouă o naționalitate care pân-atunci pare a nu fi 
       +  708ch  Tot astfel, în izvoarele externe, bunăoară în actele cancelariei regelui Ottacar al Boemiei, di
@@ -46,6 +50,10 @@
       -  521ch  Dar nu erau țările noastre ținta cuceririlor. Precum popoarele germanice tindeau la Roma, cetat
       + 2433ch  The Slavs did not invade the Balkan peninsula alone but in the company of the Avars, a terrible
       +  169ch  These nomadic Fairies, possibly resentful of the coming of the others, or, maybe, just because 
+  dense+sparse, passages only P@10 0.6  nDCG@10 0.53  MRR 0.50
+      -  521ch  Dar nu erau țările noastre ținta cuceririlor. Precum popoarele germanice tindeau la Roma, cetat
+      + 2433ch  The Slavs did not invade the Balkan peninsula alone but in the company of the Avars, a terrible
+      +  577ch  Apoi veniră, pustiind, cetele de călăreţi sprinteni ale hunilor şi avarilor. Ele pătrunseră pân
   all three, passages only   P@10 0.6  nDCG@10 0.55  MRR 0.50
       -  521ch  Dar nu erau țările noastre ținta cuceririlor. Precum popoarele germanice tindeau la Roma, cetat
       + 2433ch  The Slavs did not invade the Balkan peninsula alone but in the company of the Avars, a terrible
@@ -72,6 +80,10 @@
       +   26ch  Moartea lui Mihai Viteazul
       +   39ch  — Bine! Dar Moartea lui Mihai Viteazul?
       -   27ch  Cântecul lui Mihai Viteazul
+  dense+sparse, passages only P@10 0.7  nDCG@10 0.74  MRR 1.00
+      +  212ch  În cetatea Clujul, într-un vechi palat, Stă Mihai Viteazul rege coronat. Ungurii, românii, sași
+      +  267ch  Vorbele lui cheamă pe ostași la loc Și le-aprinde sânul de eroic foc. Domnul țării însuși merge
+      -  774ch  Oricât de ciudată ni s-ar părea la prima vedere ipoteza că măcelul din noaptea sfântului Bartho
   all three, passages only   P@10 0.8  nDCG@10 0.86  MRR 1.00
       +  212ch  În cetatea Clujul, într-un vechi palat, Stă Mihai Viteazul rege coronat. Ungurii, românii, sași
       +  495ch  După ce am explicat astfel lipsa de știri din călătorii pe vremea lui Mihai Viteazul, să venim 
@@ -98,6 +110,10 @@
       +  785ch  Aşadar, bătălia de la Borodino s-a desfăşurat cu totul altfel de cum este descrisă (anume ca să
       +  422ch  În seara de 26 august, atât Kutuzov, cât şi armata rusă în întregimea ei erau convinşi că bătăl
       +  805ch  El, acest Kutuzov, care tărăgănează lucrurile şi a cărui deviză este: răbdare şi răgaz, el, duş
+  dense+sparse, passages only P@10 1.0  nDCG@10 1.00  MRR 1.00
+      +  785ch  Aşadar, bătălia de la Borodino s-a desfăşurat cu totul altfel de cum este descrisă (anume ca să
+      +  805ch  El, acest Kutuzov, care tărăgănează lucrurile şi a cărui deviză este: răbdare şi răgaz, el, duş
+      +  422ch  În seara de 26 august, atât Kutuzov, cât şi armata rusă în întregimea ei erau convinşi că bătăl
   all three, passages only   P@10 1.0  nDCG@10 1.00  MRR 1.00
       +  785ch  Aşadar, bătălia de la Borodino s-a desfăşurat cu totul altfel de cum este descrisă (anume ca să
       +  422ch  În seara de 26 august, atât Kutuzov, cât şi armata rusă în întregimea ei erau convinşi că bătăl
@@ -121,6 +137,10 @@
       +  220ch  91. Marea ciumă — îngrozitoare epidemie de ciumă care a făcut ravagii în Europa apuseană în 134
       +  530ch  După croniști vrednici de crezare, spun că ciuma s-ar fi ivit înaintea erei creștine încă (125 
   dense+sparse+multi         P@10 0.9  nDCG@10 0.93  MRR 1.00
+      +  225ch  91. Marea ciumă — îngrozitoare epidemie de ciumă care a făcut ravagii în Europa apuseană în 134
+      +  220ch  91. Marea ciumă — îngrozitoare epidemie de ciumă care a făcut ravagii în Europa apuseană în 134
+      +  530ch  După croniști vrednici de crezare, spun că ciuma s-ar fi ivit înaintea erei creștine încă (125 
+  dense+sparse, passages only P@10 1.0  nDCG@10 1.00  MRR 1.00
       +  225ch  91. Marea ciumă — îngrozitoare epidemie de ciumă care a făcut ravagii în Europa apuseană în 134
       +  220ch  91. Marea ciumă — îngrozitoare epidemie de ciumă care a făcut ravagii în Europa apuseană în 134
       +  530ch  După croniști vrednici de crezare, spun că ciuma s-ar fi ivit înaintea erei creștine încă (125 
@@ -150,6 +170,10 @@
       +   55ch  “Do not touch me. Did you not hear? I have the plague.”
       +   46ch  O, that I should have to endure such a plague.
       +   25ch  Brigands, Pirates, Plague
+  dense+sparse, passages only P@10 1.0  nDCG@10 1.00  MRR 1.00
+      + 1242ch  III. Nu se ştie precis în ce au constat epidemiile de ciumă, care atât de multă vreme au pustii
+      +  402ch  Mai târziu, când treburile nu prea mergeau cum trebuie la Londra, Reading a fost considerat un 
+      +  225ch  91. Marea ciumă — îngrozitoare epidemie de ciumă care a făcut ravagii în Europa apuseană în 134
   all three, passages only   P@10 1.0  nDCG@10 1.00  MRR 1.00
       +  402ch  Mai târziu, când treburile nu prea mergeau cum trebuie la Londra, Reading a fost considerat un 
       + 1242ch  III. Nu se ştie precis în ce au constat epidemiile de ciumă, care atât de multă vreme au pustii
@@ -162,4 +186,5 @@
   sparse                      0.80     0.81  0.89
   multi-vector                0.63     0.69  0.92
   dense+sparse+multi          0.62     0.67  0.92
+  dense+sparse, passages only  0.85     0.86  0.92
   all three, passages only    0.90     0.90  0.92

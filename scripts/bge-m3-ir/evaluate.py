@@ -39,6 +39,8 @@ def scores(qi):
     colbert = [m3.colbert_score(q, d) for d in docs]
     # the BGE-M3 paper's combination: dense + 0.3 sparse + colbert
     hybrid = [d + 0.3 * s + c for d, s, c in zip(dense, sparse, colbert)]
+    # without multi-vector: what a dense + sparse index alone gives
+    dense_sparse = [d + 0.3 * s for d, s in zip(dense, sparse)]
     longish = [len(t) >= MIN_LEN for t in texts]
     cut = lambda values: [v if keep else -1e9 for v, keep in zip(values, longish)]
     return {
@@ -47,6 +49,7 @@ def scores(qi):
         "sparse": sparse,
         "multi-vector": colbert,
         "dense+sparse+multi": hybrid,
+        "dense+sparse, passages only": cut(dense_sparse),
         "all three, passages only": cut(hybrid),
     }
 

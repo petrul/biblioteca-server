@@ -45,6 +45,7 @@ Means over the six queries (`results.txt` has each query's top hits):
 | sparse | 0.80 | 0.81 | 0.89 |
 | multi-vector | 0.63 | 0.69 | 0.92 |
 | dense + sparse + multi | 0.62 | 0.67 | 0.92 |
+| dense + sparse, passages only | 0.85 | 0.86 | 0.92 |
 | **all three, passages only** | **0.90** | **0.90** | **0.92** |
 
 "Cumani și pecenegi": dense today P@10 0.0 -> all three, passages only 1.0.
@@ -59,6 +60,10 @@ What it shows:
   sub-words with "epidemie"), dense carries paraphrases, multi-vector puts a
   relevant passage first most often (MRR 0.92);
 - no single mode wins every query; the combination does.
+
+Multi-vector's own share, over dense + sparse on passages: +0.05 P@10
+(two of six queries: "Cumani și pecenegi" 0.8 -> 1.0, "uciderea lui Mihai
+Viteazul" 0.7 -> 0.8).
 
 Caveats: a small corpus, labels by regex (spot-checked by reading),
 passages truncated at 1024 tokens. A sample, not a benchmark.
